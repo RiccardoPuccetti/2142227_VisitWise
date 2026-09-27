@@ -168,6 +168,7 @@ export interface PlanParameters {
   averageSpeedKmh: number;
   roadFactor: number;
   maxDistanceKm: number;
+  /** Filled by the planner form from the tenant starting base (US-35); config default until one is saved. */
   base: GeoPoint;
   /** Opportunity cost of travel (EUR per km) used to trade revenue against distance. */
   travelCostPerKm: number;
@@ -278,4 +279,15 @@ export interface UpdateProfileRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface SaveStartingBaseRequest {
+  address: string;
+  city: string;
+}
+
+/** The tenant's starting base: every planned working day starts and ends here (US-35). */
+export interface StartingBase extends GeoPoint {
+  address: string;
+  city: string;
 }

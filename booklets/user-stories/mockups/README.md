@@ -7,16 +7,16 @@ One mockup per screen. Every user story points to its screen in `../USER_STORIES
 | S1 Imports list | `S1-imports-list.bmpr` + `S1-imports-list.png` | Puccetti | Card/table toggle, name, created date, status badge, "New import", delete |
 | S2 Wizard - upload | `S2-wizard-upload.*` | Puccetti | Stepper (1 of 4), drag & drop area, "Download template" link |
 | S3 Wizard - mapping | `S3-wizard-mapping.*` | Puccetti | Preview table (10 rows), one select per field (Customer, Delivery point, Address, City, Agent, Lat, Lon), required markers |
-| S4 Wizard - enterprises & name | `S4-wizard-enterprises.*` | Puccetti | Checkbox list of numeric columns, display name + color per enterprise (pre-filled from the tenant profile, badge "from profile"), editable headquarters address, "Also save to profile", import name, Confirm |
+| S4 Wizard - enterprises & name | `S4-wizard-enterprises.*` | Puccetti | Checkbox list of numeric columns, display name + color per enterprise, import name, Confirm |
 | S5 Import report / detail | `S5-import-detail.*` | Puccetti | Counts (total/imported/skipped), geocoding progress bar, points table with "Not found" filter and lat/lon edit, buttons Map / Planner |
 | S6 Map dashboard | `S6-map-dashboard.*` | Rivera | Map with colored markers, filter bar (enterprise, agent, city, min revenue), popup, KPI side panel, legend |
-| S7 Planner - parameters | `S7-planner-parameters.*` | Marzella | Campaign presets, start date, max working days, enterprise weight sliders, agents, advanced section, Simulate |
+| S7 Planner - parameters | `S7-planner-parameters.*` | Marzella (starting base field: Puccetti) | Starting base (address, city, Save, geocoded position or "not found"), campaign presets, start date, max working days, enterprise weight sliders, agents, advanced section, Simulate |
 | S8 Planner - result | `S8-planner-result.*` | Marzella | KPI cards, timeline per agent/day, map with day route + day selector, not-planned list, warnings, Save scenario |
 | S9 What-if | `S9-what-if.*` | Marzella | Horizon chips (10/20/30/40/60), coverage curve, marginal revenue bars, table |
 | S10 Scenarios compare | `S10-scenarios-compare.*` | Marzella | 2-3 columns of KPIs with differences highlighted |
 | S11 Agent plan | `S11-agent-plan.*` | Rivera | Agent selector, day-by-day calendar, Export Excel, Directions link per visit |
-| S12 Register / Log in | `S12-register-login.*` | Puccetti | Log in form (email, password, generic error), Register form (tenant name, email, password) with optional "Your enterprises" step, Skip |
-| S13 Tenant profile | `S13-tenant-profile.*` | Puccetti | Tenant name, change password (current + new), enterprises table (name, ERP column, color, VAT, headquarters address, geocoding status), add / edit / delete |
+| S12 Register / Log in | `S12-register-login.*` | Puccetti | Log in form (email, password, generic error), Register form (tenant name, email, password) |
+| S13 Tenant profile | `S13-tenant-profile.*` | Puccetti | Tenant name, change password (current + new) |
 
 Rules
 

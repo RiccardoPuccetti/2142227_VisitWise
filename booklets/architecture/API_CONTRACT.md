@@ -143,7 +143,7 @@ Parsing rules (both preview and import):
   "averageSpeedKmh": 25,
   "roadFactor": 1.3,
   "maxDistanceKm": 80,
-  "base": { "latitude": 41.8960, "longitude": 12.4823 },
+  "base": { "latitude": 41.8960, "longitude": 12.4823 },   // filled by the planner form from the tenant starting base (endpoint 26); config default until one is saved
   "travelCostPerKm": 2.0,
   "minRevenue": 0
 }
@@ -206,8 +206,10 @@ One account per tenant. See `AUTHENTICATION.md` for the security design.
 | 21 | POST | `/api/auth/login` | *Public.* form-encoded `username` (email), `password` -> `200` `CurrentTenant` and a new session. `401` "Invalid email or password" for any failure | 32 |
 | 22 | POST | `/api/auth/logout` | `204`, session invalidated, cookies cleared | 32 |
 | 23 | GET | `/api/auth/me` | `200` `CurrentTenant`, `401` when not logged in | 32 |
-| 24 | PATCH | `/api/profile` | body `{ "name": "Demo federation" }` -> `200` `CurrentTenant` | 37 |
-| 25 | PUT | `/api/profile/password` | body `ChangePasswordRequest` -> `204`; the tenant's other sessions are logged out. `400` wrong current password or password rules | 37 |
+| 24 | PATCH | `/api/profile` | body `{ "name": "Demo federation" }` -> `200` `CurrentTenant` | 34 |
+| 25 | PUT | `/api/profile/password` | body `ChangePasswordRequest` -> `204`; the tenant's other sessions are logged out. `400` wrong current password or password rules | 34 |
+| 26 | GET | `/api/profile/base` | `200` `StartingBase`, or `204` when the tenant has not saved one yet (the planner then uses the configured default) | 35 |
+| 27 | PUT | `/api/profile/base` | body `SaveStartingBaseRequest` -> geocodes address + city (Nominatim, cached) and saves -> `200` `StartingBase`. `422` "Address not found" (saved base unchanged), `503` geocoder unavailable | 35 |
 
 **RegisterRequest** `{ "tenantName": "Demo federation", "email": "demo@visitwise.test", "password": "correct horse battery" }`
 
@@ -216,5 +218,9 @@ One account per tenant. See `AUTHENTICATION.md` for the security design.
 **CurrentTenant** `{ "id": 1, "name": "Demo federation", "email": "demo@visitwise.test" }`
 
 **ChangePasswordRequest** `{ "currentPassword": "...", "newPassword": "..." }`
+
+**SaveStartingBaseRequest** `{ "address": "Via del Corso 1", "city": "Roma" }` (address 1-255, city 1-120)
+
+**StartingBase** `{ "address": "Via del Corso 1", "city": "Roma", "latitude": 41.9008, "longitude": 12.4817 }`
 
 Validation errors (`400`) are problem+json with the reason in `detail`, e.g. `"detail": "Password must be at least 8 characters"`.

@@ -70,7 +70,7 @@ The engine sits behind a `VisitPlanner` interface (Strategy pattern): a Timefold
 | Planning mode | Per agent | `PER_AGENT`: each agent visits his own customers, calendars run in parallel (matches the data). `SINGLE_VISITOR`: one person visits everyone (e.g. the owner) |
 | Visit duration | 210 min | 3-4 h from the brief |
 | Working day | 480 min | 8 h including travel |
-| Starting point | Rome, Piazza Venezia | Each day starts and ends here (agent's base) |
+| Starting point | Tenant starting base (US-35); Rome, Piazza Venezia until one is saved | Each day starts and ends here (agent's base) |
 | Max distance | 80 km | Day trips only: far-away customers (other cities) are excluded and listed as "out of range" |
 | Average speed / road factor | 25 km/h / 1.3 | Travel time = straight-line km x road factor / speed (urban Rome) |
 | Travel penalty | 2 EUR/km | Trade-off knob: how much revenue a km of driving must be worth |

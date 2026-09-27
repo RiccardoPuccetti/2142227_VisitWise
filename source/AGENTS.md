@@ -19,7 +19,7 @@ How each tool loads this file (it lives in `source/` because the course allows o
 **VisitWise - smart visit planning for sales territories.** Hackathon project of team TeamLab (3 people, a few days).
 A web dashboard for a federation of companies that supply customers at delivery points.
 The analyst uploads the yearly ERP Excel export through a wizard (any column order, any number of enterprise columns), the data is saved in PostgreSQL and geocoded, customers are shown on an OpenStreetMap map per enterprise, and a planner proposes **which customers to visit, in which order and on which working day (Mon-Fri)** to maximize revenue within a maximum number of days, with **what-if analysis** over different horizons.
-Each federation is a **tenant** with its own login: its data is invisible to other tenants, and its enterprises registered in the profile pre-fill the import wizard.
+Each federation is a **tenant** with its own login: its data is invisible to other tenants, and it saves one starting base used by every plan.
 Read these before working on the related area:
 
 - `booklets/architecture/OPTIMIZATION_STRATEGY.md` - how the planner works and why (ACCEPTED decision).
@@ -148,7 +148,7 @@ Before every `git push`, add **one new file** in `booklets/devlog/` (one file pe
 - The real ERP file is under NDA. Keep it **outside the repo** or in `source/data-private/` (gitignored). `*.xlsx` is gitignored except the synthetic samples and the import template.
 - Never put real customer names, addresses or revenue in code, tests, fixtures, docs, screenshots committed to the repo, or prompts to external services beyond what the task strictly needs. Use `source/sample-data/` for tests and screenshots.
 - Nothing derived from the real file is committed either: no counts, totals, percentages or column layout. Figures in docs, screenshots and slides come from `source/sample-data/`.
-- The only external service that receives data is the geocoder (Nominatim), and it receives **only address fields** (street, postal code, city, province) of delivery points and enterprise headquarters.
+- The only external service that receives data is the geocoder (Nominatim), and it receives **only address + city** of delivery points and of the tenant starting base.
 
 ## 9. Definition of Done (for every task)
 

@@ -15,16 +15,16 @@ Priority (MoSCoW): **Must** = demo blocker, **Should** = expected, **Could** = i
 | S1 | Imports list (cards / table) | US-10, US-12 |
 | S2 | Wizard - upload & template | US-01, US-02 |
 | S3 | Wizard - preview & column mapping | US-03, US-04 |
-| S4 | Wizard - enterprises & name | US-05, US-06, US-35, US-36 |
+| S4 | Wizard - enterprises & name | US-05, US-06 |
 | S5 | Import report / detail | US-07, US-08, US-09, US-11 |
 | S6 | Map dashboard | US-13, US-14, US-15, US-16, US-17, US-18 |
-| S7 | Planner - parameters | US-19, US-20, US-21, US-22 |
+| S7 | Planner - parameters | US-19, US-20, US-21, US-22, US-35 |
 | S8 | Planner - result (calendar + map + KPIs) | US-23, US-24, US-25 |
 | S9 | What-if analysis | US-26 |
 | S10 | Scenarios compare | US-27 |
 | S11 | Agent plan (calendar, export, directions) | US-28, US-29, US-30 |
-| S12 | Register / Log in | US-31, US-32, US-34 |
-| S13 | Tenant profile | US-34, US-37 |
+| S12 | Register / Log in | US-31, US-32 |
+| S13 | Tenant profile | US-34 |
 
 ## Stories
 
@@ -50,7 +50,7 @@ Priority (MoSCoW): **Must** = demo blocker, **Should** = expected, **Could** = i
 | US-18 | Sales Manager | to see summary indicators (revenue per enterprise, per agent, per city, top customers, revenue concentration) | I can understand where the value is | Should | S6 | Rivera | Indicators consistent with the import totals (same rounding rules) | TODO |
 | US-19 | Analyst | to choose a commercial campaign (before Christmas, before Easter, end of summer or custom dates) | visits are concentrated in the periods of greatest interest | Must | S7 | Marzella | Campaign windows computed for any year (Easter via computus); Italian public holidays excluded | TODO |
 | US-20 | Analyst | to set the maximum number of working days within which the visits must be completed | the plan fits the available time | Must | S7 | Marzella | Working days only Monday to Friday; 1..260 days accepted | TODO |
-| US-21 | Analyst | to set the visit parameters (visit duration, working hours, starting point, maximum distance) | the plan is realistic | Should | S7 | Marzella | Defaults: visit 210 min, workday 480 min, base Rome centre, max 80 km; invalid values rejected with a clear message | TODO |
+| US-21 | Analyst | to set the visit parameters (visit duration, working hours, maximum distance) | the plan is realistic | Should | S7 | Marzella | Defaults: visit 210 min, workday 480 min, max 80 km; every day starts and ends at the tenant starting base (US-35); invalid values rejected with a clear message | TODO |
 | US-22 | Analyst | to choose which enterprises and agents to include and give priority weights to the enterprises | the plan follows the commercial goals of the campaign | Must | S7 | Marzella | Weight 0 excludes an enterprise; weights >= 0 | TODO |
 | US-23 | Analyst | the system to propose which customers to visit, in which order and on which day (Monday to Friday, public holidays excluded) | the expected revenue is maximized | Must | S8 | Marzella | Deterministic (same input, same plan); < 2 s for 1,000 points; never exceeds the working day capacity | TODO |
 | US-24 | Analyst | to see the itinerary of each day on the map | I can check that the route makes sense | Should | S8 | Marzella | Itinerary drawn base -> visits -> base; one day selectable at a time | TODO |
@@ -63,15 +63,13 @@ Priority (MoSCoW): **Must** = demo blocker, **Should** = expected, **Could** = i
 | US-31 | Tenant admin | to register my tenant with its name, my email and a password | my team gets its own private workspace | Must | S12 | Puccetti | One account per tenant; password 8-64 characters (minimum configurable), no composition rules, stored hashed with Argon2id (OWASP ASVS 5.0); email unique (case-insensitive) | TODO |
 | US-32 | User | to log in and log out | only my team can see our data | Must | S12 | Puccetti | Server session in an HttpOnly, SameSite=Lax cookie; CSRF token on every state-changing request; generic "invalid email or password" message; every `/api` endpoint except register and login returns 401 without a session | TODO |
 | US-33 | Tenant admin | the imports, maps and plans of my tenant to be invisible to any other tenant | our confidential revenue data stays private (NDA) | Must | - | Puccetti | Enforced by one backend guard on all `/api/imports/{id}/**` and `/api/plans/{planId}/**` routes; another tenant's id returns 404, not 403; covered by an automated isolation test | TODO |
-| US-34 | Tenant admin | to register the enterprises of my tenant (name, column header in our ERP export, color and optionally VAT number and headquarters address), at registration or later | I enter them once instead of at every import | Should | S12, S13 | Puccetti | Optional at registration; name and ERP column unique per tenant (case-insensitive); headquarters geocoded with the same cache and rate limit as delivery points | TODO |
-| US-35 | Analyst | the import wizard to match the file columns to my registered enterprises and pre-fill their names, colors and addresses | importing a new yearly file takes fewer steps | Should | S4 | Puccetti | Case- and accent-insensitive match on the ERP column, then on the name; numeric columns that match nothing are still suggested as new enterprises | TODO |
-| US-36 | Analyst | to change the enterprise data (including the headquarters address) for a single import in the wizard | I can try alternatives and see how they change the results | Should | S4 | Puccetti | Values copied into the import (snapshot); the profile changes only if "Also save to profile" is ticked; editing the profile never changes existing imports | TODO |
-| US-37 | Tenant admin | a profile page to change the tenant name, the password and the enterprises | our information stays up to date | Should | S13 | Puccetti | Password change requires the current password and logs out the other sessions; deleting an enterprise does not change existing imports | TODO |
+| US-34 | Tenant admin | a profile page to change the tenant name and the password | our information stays up to date | Should | S13 | Puccetti | Password change requires the current password and logs out the other sessions | TODO |
+| US-35 | Analyst | to set the starting base of my tenant once by typing its address in the planner | every plan starts from our real base without entering it again | Should | S7 | Puccetti | One base per tenant, stored in the database; address + city geocoded with the Nominatim cache and rate limit; address not found -> clear message and the saved base unchanged; until a base is set the planner uses the configured default (Rome centre) | TODO |
 
 ## Cross-cutting non-functional requirements
 
 - **Deployability (IaC)**: the whole system starts with `docker compose up --build` on any machine with Docker; the database schema is created by Liquibase.
-- **Confidentiality (NDA)**: the real dataset is never committed; only address fields (street, postal code, city, province) are sent to the external geocoder.
+- **Confidentiality (NDA)**: the real dataset is never committed; only address + city are sent to the external geocoder.
 - **Security and tenant isolation**: every API call needs a logged-in session; a tenant never sees another tenant's data; passwords only stored hashed.
 - **Accessibility**: WCAG AA (contrast, focus, keyboard navigation, ARIA labels).
 - **Portability of data**: the tool works with any yearly export (other years, other column names/orders, any number of enterprises).

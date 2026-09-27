@@ -1,6 +1,6 @@
 # Authentication - registration, login, profile
 
-> Owner: Puccetti (PUC-8, PUC-9, PUC-10). Stories: US-31, US-32, US-33, US-37. Decision: D-09.
+> Owner: Puccetti (PUC-8, PUC-9). Stories: US-31, US-32, US-33, US-34. Decision: D-09.
 > Implemented step by step on branch `tenant_login`: every step ends with a check that must pass before the next one starts.
 
 ## 1. Scope
@@ -69,4 +69,4 @@ The branch is merged into `develop` only after step 8, so teammates never meet a
 | 8 | Tenant isolation: `import_batch.tenant_id`, tenant guard, imports list filtered, demo tenant in the dev seed, test helper `@WithTenant` for teammates' controller tests | Isolation test: tenant B gets 404 on every import / plan URL of tenant A and does not see it in the list |
 | 9 | Hardening and docs: nginx security headers (CSP allowing OSM tiles, `Referrer-Policy`, `Permissions-Policy`), `SESSION_COOKIE_SECURE` in compose, `Student_doc.md` (endpoints, pages, tables), `ARCHITECTURE.md`, README (demo account, password reset procedure) | `docker compose down -v && docker compose up --build` end to end; response headers checked in the browser |
 
-Enterprises in the profile and the wizard pre-fill (US-34, US-35, US-36) follow as PUC-10 and PUC-11 after step 9.
+The tenant starting base (US-35, PUC-10, D-10) follows after step 9.
