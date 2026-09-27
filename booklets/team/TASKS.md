@@ -24,7 +24,7 @@ Status: `TODO` / `DOING` / `REVIEW` / `DONE` - update it in your PR.
 | UI kit + shared components, incl. `MapView` (RIV-1) | Rivera | Everyone's pages |
 | Points list endpoint (RIV-2) | Rivera | Puccetti's import detail page |
 | Plans API (MAR-3) | Marzella | Rivera's agent plan page (uses the contract example JSON until then) |
-| Login + tenant guard + demo tenant in the dev seed (PUC-8) | Puccetti | Nobody is blocked: until it merges nothing changes. After it merges every `/api` call needs a session: log in with the dev demo account and use the PUC-8 test helper in controller tests |
+| Login + tenant guard + demo tenant in the dev seed (PUC-8) | Puccetti | Nobody is blocked: until it merges nothing changes. After it merges every `/api` call needs a session: log in with the demo tenant (`demo.federation@visitwise.test` / `visitwise-demo`, see `source/README.md`) and use `TenantTestSupport.asTenant(id)` in controller tests (`source/AGENTS.md`) |
 | `StartingBaseField` component + starting base API (PUC-10) | Puccetti | Marzella: put the field at the top of the planner form; it fills the existing `base` parameter (until then, the configured default) |
 
 ## Puccetti - Import

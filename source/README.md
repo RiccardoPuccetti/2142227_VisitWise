@@ -21,6 +21,10 @@ docker compose up --build
 
 Reset all data: `docker compose down -v`.
 
+Log in with the **demo tenant** `demo.federation@visitwise.test` / `visitwise-demo`, or register a new one.
+The demo tenant exists only with `LIQUIBASE_CONTEXTS=dev` (the compose default). Its password is public: on the
+machine that holds the real data set `LIQUIBASE_CONTEXTS=default` before the first start and register a tenant.
+
 ## Develop
 
 ```bash

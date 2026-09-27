@@ -7,3 +7,8 @@ databaseChangeLog:
       file: db/changelog/changes/001-initial-schema.sql
   - include:
       file: db/changelog/changes/002-tenant.sql
+  - include:
+      file: db/changelog/changes/003-import-tenant.sql
+  # Development data: only with the Liquibase context "dev" (LIQUIBASE_CONTEXTS). Keep it last.
+  - include:
+      file: db/changelog/dev/100-demo-tenant.sql

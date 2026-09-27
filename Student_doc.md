@@ -191,7 +191,7 @@ Single database `visitwise`, schema `public`.
 
 	**_tenant_** :	| **_id_** | name | email | password_hash | failed_login_count | locked_until | password_changed_at | last_login_at | created_at |
 
-	**_import_batch_** :	| **_id_** | name | source_file_name | created_at | status | total_rows | imported_rows | skipped_rows | geocoded_rows | column_mapping | error_message |
+	**_import_batch_** :	| **_id_** | tenant_id | name | source_file_name | created_at | status | total_rows | imported_rows | skipped_rows | geocoded_rows | column_mapping | error_message |
 
 	**_enterprise_** :	| **_id_** | import_id | source_column | name | color | position |
 

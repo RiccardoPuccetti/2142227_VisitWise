@@ -31,6 +31,8 @@ services:
       GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT:-VisitWise-hackathon/0.1}
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
+      # dev = also the demo tenant (see README). Use LIQUIBASE_CONTEXTS=default on the demo laptop with real data.
+      LIQUIBASE_CONTEXTS: ${LIQUIBASE_CONTEXTS:-dev}
     ports:
       - "8080:8080"
     depends_on:

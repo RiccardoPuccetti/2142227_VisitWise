@@ -13,22 +13,24 @@ import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /**
- * Security configuration (AUTHENTICATION.md A4-A9): every request needs a session except the public list below;
+ * Security configuration (AUTHENTICATION.md A4-A12): every request needs a session except the public list below;
  * form login at {@code POST /api/auth/login} with JSON answers; logout at {@code POST /api/auth/logout}; CSRF token in
  * the {@code XSRF-TOKEN} cookie, echoed by the SPA in {@code X-XSRF-TOKEN}; errors as problem+json; login and
- * registration rate-limited per IP. Session cookie attributes are in application.yml ({@code server.servlet.session}).
+ * registration rate-limited per IP; another tenant's imports and plans answer 404 ({@link TenantGuardFilter}).
+ * Session cookie attributes are in application.yml ({@code server.servlet.session}).
  */
 @Configuration
 public class SecurityConfig {
 
     @Bean
     SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailsSecurityHandler problems, LoginHandlers loginHandlers,
-            SessionRegistry sessionRegistry,
+            SessionRegistry sessionRegistry, TenantOwnership ownership,
             @Value("${visitwise.auth.rate-limit.per-minute:20}") int attemptsPerMinute) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
@@ -59,7 +61,9 @@ public class SecurityConfig {
                         .authenticationEntryPoint(problems)
                         .accessDeniedHandler(problems))
                 .addFilterBefore(new AuthRateLimitFilter(attemptsPerMinute, problems, Clock.systemUTC()),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                // After authorization: only logged-in requests reach it; it hides other tenants' data (D-09).
+                .addFilterAfter(new TenantGuardFilter(ownership, problems), AuthorizationFilter.class);
         return http.build();
     }
 
