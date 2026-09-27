@@ -10,6 +10,7 @@ Documents produced during the development process (design, requirements, slides)
 | `architecture/ARCHITECTURE.md` | Context, containers, components, data model, frontend structure |
 | `architecture/OPTIMIZATION_STRATEGY.md` | How the brief was interpreted and how the visit planner works |
 | `architecture/API_CONTRACT.md` | REST API contract between frontend and backend |
+| `architecture/AUTHENTICATION.md` | Registration, login, profile: security decisions and implementation steps |
 | `architecture/DECISIONS.md` | Decision log |
 | `team/TASKS.md` | Tasks per member and hand-offs between members |
 | `devlog/` | One entry per push: what, why, verification, slide notes |

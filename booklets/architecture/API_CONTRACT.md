@@ -8,6 +8,7 @@ Conventions
 
 - Base path `/api`. JSON in camelCase. Money = number with 2 decimals (EUR). `LocalDate` = `"YYYY-MM-DD"`, timestamps = ISO-8601 with offset.
 - Errors: RFC 9457 `application/problem+json` -> `{ "type", "title", "status", "detail", "instance" }`. 400 validation, 404 not found, 409 conflict, 422 unprocessable file.
+- Authentication (section 4): every endpoint needs a logged-in session except those marked *public*; without it the answer is `401`. State-changing requests (POST, PUT, PATCH, DELETE) carry the CSRF token from cookie `XSRF-TOKEN` in header `X-XSRF-TOKEN` (Angular `HttpClient` does it automatically for relative URLs); missing token -> `403`. Data of another tenant answers `404`.
 - Swagger UI (generated from code) at `http://localhost:8080/swagger-ui.html`: it must stay consistent with this file.
 
 ## 1. Imports - owner Puccetti (endpoint 7: Rivera)
@@ -193,3 +194,27 @@ Validation: `workingDays` 1..260, `visitDurationMinutes` 30..480, `workdayMinute
 ```
 
 **PlanSummary** `{ "id": 3, "name": "Xmas 20d enterprise A x1.5", "createdAt": "...", "parameters": {}, "kpis": {} }`
+
+## 4. Authentication and profile - owner Puccetti
+
+One account per tenant. See `AUTHENTICATION.md` for the security design.
+
+| # | Method | URL | Description | US |
+|---|---|---|---|---|
+| 19 | GET | `/api/auth/csrf` | *Public.* `204`, sets the `XSRF-TOKEN` cookie. Called once at startup | 31, 32 |
+| 20 | POST | `/api/auth/register` | *Public.* body `RegisterRequest` -> `201` `CurrentTenant` (not logged in: the SPA calls 21 next). `400` password rules, `409` email in use | 31 |
+| 21 | POST | `/api/auth/login` | *Public.* form-encoded `username` (email), `password` -> `200` `CurrentTenant` and a new session. `401` "Invalid email or password" for any failure | 32 |
+| 22 | POST | `/api/auth/logout` | `204`, session invalidated, cookies cleared | 32 |
+| 23 | GET | `/api/auth/me` | `200` `CurrentTenant`, `401` when not logged in | 32 |
+| 24 | PATCH | `/api/profile` | body `{ "name": "Demo federation" }` -> `200` `CurrentTenant` | 37 |
+| 25 | PUT | `/api/profile/password` | body `ChangePasswordRequest` -> `204`; the tenant's other sessions are logged out. `400` wrong current password or password rules | 37 |
+
+**RegisterRequest** `{ "tenantName": "Demo federation", "email": "demo@visitwise.test", "password": "correct horse battery" }`
+
+- `tenantName` 1-150 chars; `email` valid, max 254, compared case-insensitively; `password` 8-64 characters (minimum configurable), no composition rules.
+
+**CurrentTenant** `{ "id": 1, "name": "Demo federation", "email": "demo@visitwise.test" }`
+
+**ChangePasswordRequest** `{ "currentPassword": "...", "newPassword": "..." }`
+
+Validation errors (`400`) are problem+json with the reason in `detail`, e.g. `"detail": "Password must be at least 8 characters"`.

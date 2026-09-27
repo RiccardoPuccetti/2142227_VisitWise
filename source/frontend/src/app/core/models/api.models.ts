@@ -255,3 +255,27 @@ export interface CreatePlanRequest {
   name: string;
   parameters: PlanParameters;
 }
+
+// ---------- Authentication and profile (owner: Puccetti) ----------
+
+export interface RegisterRequest {
+  tenantName: string;
+  email: string;
+  password: string;
+}
+
+/** The logged-in account: one per tenant. */
+export interface CurrentTenant {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface UpdateProfileRequest {
+  name: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}

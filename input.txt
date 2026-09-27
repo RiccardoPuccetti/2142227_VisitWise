@@ -48,4 +48,4 @@ The target users are the tenant admin who registers the federation and its enter
 34) As a Tenant admin, I want to register the enterprises of my tenant (name, column header in our ERP export, color and optionally VAT number and headquarters address), at registration or later, so that I enter them once instead of at every import
 35) As an Analyst, I want the import wizard to match the file columns to my registered enterprises and pre-fill their names, colors and addresses, so that importing a new yearly file takes fewer steps
 36) As an Analyst, I want to change the enterprise data (including the headquarters address) for a single import in the wizard, so that I can try alternatives and see how they change the results
-37) As a Tenant admin, I want a profile page to change the tenant name, my password and the enterprises, so that our information stays up to date
+37) As a Tenant admin, I want a profile page to change the tenant name, the password and the enterprises, so that our information stays up to date
