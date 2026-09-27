@@ -14,6 +14,12 @@ describe('problemDetail', () => {
     );
   });
 
+  it('explains a request refused for its size (nginx answers 413 with an HTML page)', () => {
+    expect(problemDetail(new HttpErrorResponse({ status: 413, error: '<html>413 Request Entity Too Large</html>' }))).toBe(
+      'The file is too large: the limit is 20 MB.',
+    );
+  });
+
   it('falls back to a generic message', () => {
     expect(problemDetail(new HttpErrorResponse({ status: 500, error: 'boom' }))).toBe(
       'Something went wrong. Please try again.',
