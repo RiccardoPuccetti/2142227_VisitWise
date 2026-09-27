@@ -26,7 +26,7 @@ flowchart LR
 | Container | Image / build | Port (host:container) | State |
 |---|---|---|---|
 | visitwise-frontend | `source/frontend/Dockerfile` (node build -> nginx) | 4200:80 | stateless |
-| visitwise-backend | `source/backend/Dockerfile` (maven build -> JRE) | 8080:8080 | stateless |
+| visitwise-backend | `source/backend/Dockerfile` (maven build -> JRE) | 127.0.0.1:8080:8080 (this machine only) | login sessions in memory |
 | visitwise-db | `postgres:17-alpine` | 5432:5432 | volume `visitwise-db-data` |
 
 Infrastructure as Code: `source/docker-compose.yml` + Dockerfiles + Liquibase changelog + GitHub Actions CI (`.github/workflows/ci.yml`). A fresh machine needs only Docker.
@@ -42,10 +42,11 @@ flowchart TB
     pl[planning<br/>API + persistence]
     eng[planning.engine<br/>calendar, campaigns, travel model, planner<br/>PURE JAVA]
     com[common<br/>problem+json errors]
+    ten[tenant<br/>accounts, login, profile, tenant guard]
   end
   imp --> geo
   pl --> eng
-  imp & geo & ana & pl --> db[(PostgreSQL)]
+  imp & geo & ana & pl & ten --> db[(PostgreSQL)]
 ```
 
 Key flows
@@ -57,6 +58,7 @@ Key flows
 
 ```mermaid
 erDiagram
+  TENANT ||--o{ IMPORT_BATCH : owns
   IMPORT_BATCH ||--o{ ENTERPRISE : has
   IMPORT_BATCH ||--o{ DELIVERY_POINT : has
   DELIVERY_POINT ||--o{ REVENUE : has
@@ -69,10 +71,18 @@ erDiagram
 
 - Enterprises are **data, not columns**: any number of companies per import (the file is parametric).
 - `geocode_cache` is global: next year's file re-uses all known addresses.
-- Deleting an import cascades to everything (FK `ON DELETE CASCADE`).
+- Deleting an import cascades to everything (FK `ON DELETE CASCADE`); deleting a tenant deletes its imports.
+- `tenant` is both the federation and its only login (email + Argon2id hash). `import_batch.tenant_id` is the only tenant column: everything else hangs off the import.
 - Schema source: `source/backend/src/main/resources/db/changelog/`.
 
-## 5. Frontend structure
+## 5. Security (details: `AUTHENTICATION.md`, decisions D-09, D-10)
+
+- **Login**: one account per tenant; Spring Security form login, server session in an HttpOnly SameSite=Lax cookie (30 min idle), CSRF token in the `XSRF-TOKEN` cookie sent back by Angular `HttpClient`. Every `/api` call needs a session except register, login, csrf, health, API docs.
+- **Passwords**: 8-64 characters (minimum configurable, `PASSWORD_MIN_LENGTH`), NFKC, Argon2id (OWASP parameters); failed logins lock the account from the 5th attempt (1 min doubling to 15 min); login, register and password change limited per client IP.
+- **Tenant isolation**: `TenantGuardFilter` checks every URL under `/api/imports/{id}` and `/api/plans/{id}` before any controller; another tenant's id answers the same 404 as a missing one.
+- **Browser**: nginx sends a Content Security Policy (`script-src 'self'`, map tiles only from `tile.openstreetmap.org`), `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`, `nosniff`; the API is published on `127.0.0.1` only, users go through nginx.
+
+## 6. Frontend structure
 
 ```
 src/app/
@@ -86,7 +96,7 @@ src/app/
 
 Routes (all lazy): `/imports`, `/imports/new`, `/imports/:importId`, `/imports/:importId/map`, `/imports/:importId/planner`, `/imports/:importId/scenarios`, `/imports/:importId/plans/:planId`.
 
-## 6. Technology choices (summary - details in DECISIONS.md)
+## 7. Technology choices (summary - details in DECISIONS.md)
 
 | Concern | Choice | Why |
 |---|---|---|

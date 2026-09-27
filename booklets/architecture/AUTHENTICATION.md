@@ -2,6 +2,7 @@
 
 > Owner: Puccetti (PUC-8, PUC-9). Stories: US-31, US-32, US-33, US-34. Decision: D-09.
 > Implemented step by step on branch `tenant_login`: every step ends with a check that must pass before the next one starts.
+> **Status: steps 0-9 done.** Next: the tenant starting base (US-35, PUC-10).
 
 ## 1. Scope
 

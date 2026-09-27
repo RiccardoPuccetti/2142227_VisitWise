@@ -52,7 +52,7 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 ## CONTAINER_NAME: visitwise-frontend
 
 ### DESCRIPTION: 
-Single page web application used by analysts, sales managers and sales agents. It is served by nginx, which also forwards every `/api` request to the backend container.
+Single page web application used by analysts, sales managers and sales agents. It is served by nginx, which also forwards every `/api` request to the backend container and adds the browser security headers (Content Security Policy, Referrer-Policy, Permissions-Policy, X-Frame-Options).
 
 ### USER STORIES:
 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35
@@ -98,19 +98,19 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 ## CONTAINER_NAME: visitwise-backend
 
 ### DESCRIPTION: 
-REST API that imports the Excel files, stores and geolocates the data, computes the analytics and the visit plans.
+REST API that registers and logs in the tenants (federations), imports the Excel files, stores and geolocates the data, computes the analytics and the visit plans. Each tenant sees only its own data.
 
 ### USER STORIES:
 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 31, 32, 33, 34, 35
 
 ### PORTS: 
-8080:8080
+127.0.0.1:8080:8080 (published only on the host itself: users reach the API through the frontend container)
 
 ### DESCRIPTION:
 A Spring Boot application organized by feature (imports, geocoding, analytics, planning). The database schema is created and versioned by Liquibase at startup. The planning engine is plain Java code with no framework dependency, so it is fast and fully unit tested.
 
 ### PERSISTENCE EVALUATION
-The backend is stateless: every import, delivery point, revenue, geocoding result and saved plan is stored in the visitwise-db container. Uploaded Excel files are parsed in memory and not kept.
+Every tenant, import, delivery point, revenue, geocoding result and saved plan is stored in the visitwise-db container. Only the login sessions are kept in the backend memory: restarting the backend logs everybody out. Uploaded Excel files are parsed in memory and not kept.
 
 ### EXTERNAL SERVICES CONNECTIONS
 Nominatim (OpenStreetMap geocoding, https://nominatim.openstreetmap.org) to turn addresses into coordinates: at most 1 request per second with an identifying User-Agent, as required by its usage policy. Every result is cached in the database, so an address is geocoded only once. Only address and city are sent: customer names and revenues never leave the system.
@@ -122,9 +122,9 @@ Nominatim (OpenStreetMap geocoding, https://nominatim.openstreetmap.org) to turn
 - DESCRIPTION: Import of Excel files, geocoding, analytics and visit planning.
 - PORTS: 8080
 - TECHNOLOGICAL SPECIFICATION:
-Java 21, Spring Boot 4.1 (Web MVC, Data JPA, Validation, Actuator), Liquibase for database migrations, PostgreSQL JDBC driver, Apache POI for reading and writing Excel files, springdoc-openapi for the Swagger UI (`/swagger-ui.html`), Maven as build tool, JUnit 5 for tests.
+Java 21, Spring Boot 4.1 (Web MVC, Data JPA, Validation, Actuator, Security), BouncyCastle for Argon2id password hashing, Liquibase for database migrations, PostgreSQL JDBC driver, Apache POI for reading and writing Excel files, springdoc-openapi for the Swagger UI (`/swagger-ui.html`), Maven as build tool, JUnit 5 for tests.
 - SERVICE ARCHITECTURE: 
-Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle), `geocoding` (background geocoding with cache), `analytics` (aggregated indicators), `planning` (REST API and persistence of plans) with `planning.engine` (working calendar, campaign windows, travel model, visit planner heuristic), `common` (error handling as RFC 9457 problem details).
+Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle), `geocoding` (background geocoding with cache), `analytics` (aggregated indicators), `planning` (REST API and persistence of plans) with `planning.engine` (working calendar, campaign windows, travel model, visit planner heuristic), `tenant` (registration, login, profile, security configuration, tenant isolation guard), `common` (error handling as RFC 9457 problem details).
 
 - ENDPOINTS:
 		

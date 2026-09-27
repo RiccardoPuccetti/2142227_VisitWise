@@ -15,7 +15,7 @@ docker compose up --build
 | What | URL |
 |---|---|
 | Web app | http://localhost:4200 |
-| API docs (Swagger UI) | http://localhost:8080/swagger-ui.html |
+| API docs (Swagger UI) | http://localhost:8080/swagger-ui.html (this machine only) |
 | Health | http://localhost:8080/actuator/health |
 | PostgreSQL | localhost:5432, db/user/password `visitwise` |
 
@@ -24,6 +24,13 @@ Reset all data: `docker compose down -v`.
 Log in with the **demo tenant** `demo.federation@visitwise.test` / `visitwise-demo`, or register a new one.
 The demo tenant exists only with `LIQUIBASE_CONTEXTS=dev` (the compose default). Its password is public: on the
 machine that holds the real data set `LIQUIBASE_CONTEXTS=default` before the first start and register a tenant.
+
+**Forgotten password or locked account** (there is no email reset): set the password to `visitwise-demo` and unlock,
+then log in and change it at once in Profile. Replace the email:
+
+```bash
+docker compose exec db psql -U visitwise -d visitwise -c "UPDATE tenant SET password_hash = '{argon2}\$argon2id\$v=19\$m=19456,t=2,p=1\$/b3IGPBu1LUaNd2VbqK/Bw\$zcVDzhody8uIo0mdpcETy5wx9nl/j4/VovVxRvE6kF0', failed_login_count = 0, locked_until = NULL WHERE email = 'someone@example.com'"
+```
 
 ## Develop
 
