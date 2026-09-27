@@ -29,6 +29,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-visitwise}
       GEOCODING_BASE_URL: ${GEOCODING_BASE_URL:-https://nominatim.openstreetmap.org}
       GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT:-VisitWise-hackathon/0.1}
+      PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
     ports:
       - "8080:8080"
     depends_on:
