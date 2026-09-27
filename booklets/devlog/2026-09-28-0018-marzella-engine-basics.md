@@ -21,9 +21,26 @@
   The backend JAR was built successfully. Maven was invoked from the existing
   wrapper distribution with an explicit local repository path because the
   sandbox could not launch the wrapper or access the user cache correctly.
-  Docker Compose and database integration tests were not run: Docker is not
-  installed on this machine. No API, database, frontend or infrastructure files
-  were changed.
+  Docker was initially unavailable to the session; subsequent checks found that
+  the WSL2 hypervisor was not active. After the host was configured, the Docker
+  verification below completed successfully. No API, database, frontend or
+  infrastructure files were changed.
+- **Docker verification (2026-09-28):** `docker compose up -d --build` built and
+  started PostgreSQL, the backend and the frontend successfully. Built a test
+  image from the existing backend Dockerfile with `docker build --target build
+  --tag visitwise-mar1-tests ./backend`, then ran `mvn -B --no-transfer-progress
+  verify` in that image against a separate PostgreSQL 17 container on a temporary
+  network. All **155 backend tests passed**, including the 76 MAR-1 cases:
+  zero failures, errors or skipped tests. Liquibase initialized the empty test
+  database successfully. HTTP checks: backend `/actuator/health` returned `UP`,
+  frontend `/` returned 200, and `/api/auth/csrf` through the frontend proxy
+  returned 204 with the CSRF cookie. Reports and logs are saved locally under
+  `source/backend/target/docker-mar1-reports/` and
+  `source/backend/target/docker-mar1-test.log` (gitignored). The temporary test
+  resources were removed after verification; the application stack was left
+  running. The frontend build emitted four CSS syntax warnings and npm reported
+  seven high-severity dependency vulnerabilities; no frontend files or
+  dependencies were changed because they are outside MAR-1.
 - **Slide note:** Calendar, campaign and travel rules can be verified without a
   database. The distance model uses local Haversine estimates and includes the
   return to base in the workday budget.
