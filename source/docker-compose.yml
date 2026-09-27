@@ -33,8 +33,11 @@ services:
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       # dev = also the demo tenant (see README). Use LIQUIBASE_CONTEXTS=default on the demo laptop with real data.
       LIQUIBASE_CONTEXTS: ${LIQUIBASE_CONTEXTS:-dev}
+      # true when the app is served over HTTPS (the session cookie is then never sent over plain HTTP).
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     ports:
-      - "8080:8080"
+      # Only this machine: users go through nginx (4200). Direct access could fake X-Forwarded-For (rate limit).
+      - "127.0.0.1:8080:8080"
     depends_on:
       db:
         condition: service_healthy
