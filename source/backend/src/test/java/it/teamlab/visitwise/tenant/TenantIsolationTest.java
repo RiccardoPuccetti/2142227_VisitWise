@@ -1,8 +1,8 @@
 package it.teamlab.visitwise.tenant;
 
 import static it.teamlab.visitwise.tenant.TenantTestSupport.asTenant;
+import static it.teamlab.visitwise.tenant.TenantTestSupport.xsrf;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -121,7 +121,7 @@ class TenantIsolationTest {
     void anotherTenantCannotChangeOrDeleteTheImport() throws Exception {
         for (MockHttpServletRequestBuilder request : new MockHttpServletRequestBuilder[] {
                 delete(importUrl("")), post(importUrl("/plans/simulate")), post(importUrl("/geocoding/retry"))}) {
-            mvc.perform(request.with(asTenant(other.getId())).with(csrf())
+            mvc.perform(request.with(asTenant(other.getId())).with(xsrf())
                             .contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().isNotFound());
         }
@@ -133,7 +133,7 @@ class TenantIsolationTest {
         mvc.perform(get(planUrl(suffix)).with(asTenant(other.getId())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.detail").value("Plan " + ownersPlanId + " not found"));
-        mvc.perform(delete(planUrl(suffix)).with(asTenant(other.getId())).with(csrf()))
+        mvc.perform(delete(planUrl(suffix)).with(asTenant(other.getId())).with(xsrf()))
                 .andExpect(status().isNotFound());
     }
 

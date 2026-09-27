@@ -69,7 +69,7 @@ The root contains **exactly** these four visible items. **Never create any other
 - **Tenant isolation** (D-09): endpoints on tenant data live under `/api/imports/{id}/...` or `/api/plans/{planId}/...`, where the tenant guard checks ownership centrally. Never add an endpoint that lists or reads data across imports without filtering by the current tenant.
 - `planning.engine` is **pure Java** (no Spring, no JPA): unit-test it with plain JUnit.
 - Tests: JUnit 5 + AssertJ. Every engine rule has a unit test. Controllers: at least one happy-path test.
-- **Testing as a tenant**: every `/api` call needs a login. In MockMvc tests use `.with(TenantTestSupport.asTenant(tenantId))` (test sources, package `tenant`) and, for POST/PUT/PATCH/DELETE, `.with(csrf())` (the parameter form: `csrf().asHeader()` is rejected by the SPA CSRF setup). The tenant guard still checks ownership, so create the tenant (`TenantRepository`) and the import with its id (`new ImportBatch(tenantId, name, fileName)`) in the test. Example: `TenantIsolationTest`.
+- **Testing as a tenant**: every `/api` call needs a login. In MockMvc tests use `.with(TenantTestSupport.asTenant(tenantId))` (test sources, package `tenant`) and, for POST/PUT/PATCH/DELETE, `.with(TenantTestSupport.xsrf())` (never Spring Security's `csrf()`: it swaps the CSRF token repository of the shared test context and breaks the login tests that run after it). The tenant guard still checks ownership, so create the tenant (`TenantRepository`) and the import with its id (`new ImportBatch(tenantId, name, fileName)`) in the test. Example: `TenantIsolationTest`.
 
 ### Frontend conventions
 
