@@ -3,6 +3,7 @@
 Each member owns one feature **end to end** (API + pages) and works in parallel with the others.
 Task IDs go in branch names (`feat/PUC-2-import-preview`) and commits (`Refs: PUC-2, US-03`).
 Status: `TODO` / `DOING` / `REVIEW` / `DONE` - update it in your PR.
+What is actually merged in `develop`, task by task: `TASK_STATUS.md` (dated log, newest check on top).
 
 | Member | Slice |
 |---|---|
