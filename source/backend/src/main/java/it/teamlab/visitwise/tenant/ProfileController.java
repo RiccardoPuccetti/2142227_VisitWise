@@ -19,10 +19,13 @@ public class ProfileController {
 
     private final TenantProfileService profile;
     private final SessionRegistry sessionRegistry;
+    private final TenantRememberMeServices rememberMe;
 
-    public ProfileController(TenantProfileService profile, SessionRegistry sessionRegistry) {
+    public ProfileController(TenantProfileService profile, SessionRegistry sessionRegistry,
+            TenantRememberMeServices rememberMe) {
         this.profile = profile;
         this.sessionRegistry = sessionRegistry;
+        this.rememberMe = rememberMe;
     }
 
     /** Endpoint 24: rename the tenant. */
@@ -33,8 +36,8 @@ public class ProfileController {
     }
 
     /**
-     * Endpoint 25 (AUTHENTICATION.md A10): after the change every other session of the tenant is logged out and the
-     * current session gets a new id.
+     * Endpoint 25 (AUTHENTICATION.md A10, A13): after the change every other session of the tenant is logged out, every
+     * remembered device forgotten and the current session gets a new id.
      */
     @PutMapping("/password")
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal TenantPrincipal principal,
@@ -44,6 +47,7 @@ public class ProfileController {
         sessionRegistry.getAllSessions(principal, false).stream()
                 .filter(session -> !session.getSessionId().equals(currentSessionId))
                 .forEach(SessionInformation::expireNow);
+        rememberMe.forgetTenant(principal.getUsername());
         httpRequest.changeSessionId();
         return ResponseEntity.noContent().build();
     }

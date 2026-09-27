@@ -31,6 +31,7 @@ services:
       GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT:-VisitWise-hackathon/0.1}
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
+      REMEMBER_ME_DAYS: ${REMEMBER_ME_DAYS:-14}
       # dev = also the demo tenant (see README). Use LIQUIBASE_CONTEXTS=default on the demo laptop with real data.
       LIQUIBASE_CONTEXTS: ${LIQUIBASE_CONTEXTS:-dev}
       # true when the app is served over HTTPS (the session cookie is then never sent over plain HTTP).

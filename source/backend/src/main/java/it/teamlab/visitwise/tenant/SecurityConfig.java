@@ -1,6 +1,8 @@
 package it.teamlab.visitwise.tenant;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,14 +25,18 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
  * form login at {@code POST /api/auth/login} with JSON answers; logout at {@code POST /api/auth/logout}; CSRF token in
  * the {@code XSRF-TOKEN} cookie, echoed by the SPA in {@code X-XSRF-TOKEN}; errors as problem+json; login and
  * registration rate-limited per IP; another tenant's imports and plans answer 404 ({@link TenantGuardFilter}).
+ * "Keep me logged in" with persistent remember-me tokens ({@link TenantRememberMeServices}, A13).
  * Session cookie attributes are in application.yml ({@code server.servlet.session}).
  */
 @Configuration
 public class SecurityConfig {
 
+    /** Only checks that remember-me authentications were made by this application: a new one at every start is fine. */
+    private static final String REMEMBER_ME_KEY = UUID.randomUUID().toString();
+
     @Bean
     SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailsSecurityHandler problems, LoginHandlers loginHandlers,
-            SessionRegistry sessionRegistry, TenantOwnership ownership,
+            SessionRegistry sessionRegistry, TenantOwnership ownership, TenantRememberMeServices rememberMe,
             @Value("${visitwise.auth.rate-limit.per-minute:20}") int attemptsPerMinute) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
@@ -45,6 +51,8 @@ public class SecurityConfig {
                         .loginProcessingUrl("/api/auth/login")
                         .successHandler(loginHandlers)
                         .failureHandler(loginHandlers))
+                // Form parameter "remember-me=true"; also registers the service as a logout handler.
+                .rememberMe(remember -> remember.rememberMeServices(rememberMe).key(REMEMBER_ME_KEY))
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
                         .addLogoutHandler(loginHandlers)
@@ -65,6 +73,18 @@ public class SecurityConfig {
                 // After authorization: only logged-in requests reach it; it hides other tenants' data (D-09).
                 .addFilterAfter(new TenantGuardFilter(ownership, problems), AuthorizationFilter.class);
         return http.build();
+    }
+
+    /** A13: cookie {@code remember-me}, HttpOnly, SameSite=Lax, Secure like the session cookie. */
+    @Bean
+    TenantRememberMeServices rememberMeServices(TenantUserDetailsService userDetailsService,
+            RememberMeTokenRepository tokens, @Value("${visitwise.auth.remember-me.days:14}") int days,
+            @Value("${server.servlet.session.cookie.secure:false}") boolean secureCookie) {
+        TenantRememberMeServices services = new TenantRememberMeServices(REMEMBER_ME_KEY, userDetailsService, tokens);
+        services.setTokenValiditySeconds((int) Duration.ofDays(days).toSeconds());
+        services.setUseSecureCookie(secureCookie);
+        services.setCookieCustomizer(cookie -> cookie.setAttribute("SameSite", "Lax"));
+        return services;
     }
 
     /** In memory, like the sessions themselves (AUTHENTICATION.md A4). */
