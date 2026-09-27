@@ -58,6 +58,10 @@ visitwise:
     # AUTHENTICATION.md A9: login + register requests per client IP per minute.
     rate-limit:
       per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
+  imports:
+    # US-02 asks for 5,000 rows; files are capped (also at 20 MB above) so one upload cannot fill the memory.
+    max-rows: 20000
+    max-columns: 200
   geocoding:
     # Public Nominatim: max 1 request/second and a real User-Agent are REQUIRED by its usage policy.
     base-url: ${GEOCODING_BASE_URL:https://nominatim.openstreetmap.org}
