@@ -208,8 +208,8 @@ One account per tenant. See `AUTHENTICATION.md` for the security design.
 |---|---|---|---|---|
 | 19 | GET | `/api/auth/csrf` | *Public.* `204`, sets the `XSRF-TOKEN` cookie. Called once at startup | 31, 32 |
 | 20 | POST | `/api/auth/register` | *Public.* body `RegisterRequest` -> `201` `CurrentTenant` (not logged in: the SPA calls 21 next). `400` password rules, `409` email in use | 31 |
-| 21 | POST | `/api/auth/login` | *Public.* form-encoded `username` (email), `password` -> `200` `CurrentTenant` and a new session. `401` "Invalid email or password" for any failure | 32 |
-| 22 | POST | `/api/auth/logout` | `204`, session invalidated, cookies cleared | 32 |
+| 21 | POST | `/api/auth/login` | *Public.* form-encoded `username` (email), `password`, optional `remember-me=true` (US-37: also sets the 14-day `remember-me` cookie) -> `200` `CurrentTenant` and a new session. `401` "Invalid email or password" for any failure | 32 |
+| 22 | POST | `/api/auth/logout` | `204`, session invalidated, cookies cleared, this device's remember-me token deleted | 32, 37 |
 | 23 | GET | `/api/auth/me` | `200` `CurrentTenant`, `401` when not logged in | 32 |
 | 24 | PATCH | `/api/profile` | body `{ "name": "Demo federation" }` -> `200` `CurrentTenant` | 34 |
 | 25 | PUT | `/api/profile/password` | body `ChangePasswordRequest` -> `204`; the tenant's other sessions are logged out. `400` wrong current password or password rules | 34 |

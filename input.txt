@@ -48,3 +48,4 @@ The target users are the tenant admin who registers the federation, the sales an
 34) As a Tenant admin, I want a profile page to change the tenant name and the password, so that our information stays up to date
 35) As an Analyst, I want to set the starting base of my tenant once by typing its address in the planner, so that every plan starts from our real base without entering it again
 36) As a User, I want to switch the interface between light and dark mode, so that I can work comfortably in any light
+37) As a User, I want to stay logged in on my own device, so that I do not have to type my credentials every day

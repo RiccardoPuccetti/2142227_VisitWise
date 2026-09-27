@@ -46,6 +46,7 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 34) As a Tenant admin, I want a profile page to change the tenant name and the password, so that our information stays up to date
 35) As an Analyst, I want to set the starting base of my tenant once by typing its address in the planner, so that every plan starts from our real base without entering it again
 36) As a User, I want to switch the interface between light and dark mode, so that I can work comfortably in any light
+37) As a User, I want to stay logged in on my own device, so that I do not have to type my credentials every day
 
 
 # CONTAINERS:
@@ -151,11 +152,11 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| GET | /api/plans/{planId}/export | Download a plan (optionally one agent) as Excel | 29 |
 	| GET | /api/auth/csrf | Public. Issue the CSRF token cookie used by the web app on every state-changing request | 31, 32 |
 	| POST | /api/auth/register | Public. Register a tenant with its name, email and password (hashed with Argon2id) | 31 |
-	| POST | /api/auth/login | Public. Log in with email and password (form-encoded); starts the session | 32 |
-	| POST | /api/auth/logout | End the session | 32 |
+	| POST | /api/auth/login | Public. Log in with email and password (form-encoded); starts the session; optional `remember-me=true` keeps the device logged in | 32, 37 |
+	| POST | /api/auth/logout | End the session and forget this device | 32, 37 |
 	| GET | /api/auth/me | The logged-in tenant | 32 |
 	| PATCH | /api/profile | Rename the tenant | 34 |
-	| PUT | /api/profile/password | Change the password (current password required); logs out the other sessions | 34 |
+	| PUT | /api/profile/password | Change the password (current password required); logs out the other sessions and every remembered device | 34, 37 |
 
 ## CONTAINER_NAME: visitwise-db
 
@@ -191,6 +192,8 @@ Single database `visitwise`, schema `public`.
 - DB STRUCTURE: 
 
 	**_tenant_** :	| **_id_** | name | email | password_hash | failed_login_count | locked_until | password_changed_at | last_login_at | created_at |
+
+	**_persistent_logins_** :	| **_series_** | username | token | last_used |
 
 	**_import_batch_** :	| **_id_** | tenant_id | name | source_file_name | created_at | status | total_rows | imported_rows | skipped_rows | geocoded_rows | column_mapping | error_message |
 

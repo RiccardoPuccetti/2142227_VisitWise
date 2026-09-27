@@ -23,7 +23,7 @@ Priority (MoSCoW): **Must** = demo blocker, **Should** = expected, **Could** = i
 | S9 | What-if analysis | US-26 |
 | S10 | Scenarios compare | US-27 |
 | S11 | Agent plan (calendar, export, directions) | US-28, US-29, US-30 |
-| S12 | Register / Log in | US-31, US-32 |
+| S12 | Register / Log in | US-31, US-32, US-37 |
 | S13 | Tenant profile | US-34 |
 
 ## Stories
@@ -66,6 +66,7 @@ Priority (MoSCoW): **Must** = demo blocker, **Should** = expected, **Could** = i
 | US-34 | Tenant admin | a profile page to change the tenant name and the password | our information stays up to date | Should | S13 | Puccetti | Password change requires the current password and logs out the other sessions | DONE |
 | US-35 | Analyst | to set the starting base of my tenant once by typing its address in the planner | every plan starts from our real base without entering it again | Should | S7 | Puccetti | One base per tenant, stored in the database; address + city geocoded with the Nominatim cache and rate limit; address not found -> clear message and the saved base unchanged; until a base is set the planner uses the configured default (Rome centre) | TODO |
 | US-36 | User | to switch the interface between light and dark mode | I can work comfortably in any light | Could | All (header) | Puccetti | Follows the operating system setting until the user chooses; the choice is remembered in the browser; no flash of the wrong theme on load; toggle reachable by keyboard with its state announced to screen readers; text contrast WCAG AA in both themes; also available before login | REVIEW |
+| US-37 | User | to stay logged in on my own device | I do not have to type my credentials every day | Could | S12 | Puccetti | Opt-in checkbox at login, off by default; 14 days (configurable); HttpOnly, SameSite=Lax, Secure over HTTPS cookie; random token stored server-side and replaced at every use, reuse of an old token logs out every remembered device; logout forgets this device only, password change forgets every device; the password is never stored by the application | REVIEW |
 
 ## Cross-cutting non-functional requirements
 
