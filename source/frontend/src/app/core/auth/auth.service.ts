@@ -38,10 +38,14 @@ export class AuthService {
   }
 
   /** Spring Security form login: form-encoded `username` (the email) and `password`. */
-  async login(email: string, password: string): Promise<CurrentTenant> {
-    const body = new HttpParams({ encoder: STRICT_FORM_ENCODING })
+  /** `rememberMe` (US-37): the backend keeps this device logged in for 14 days with an HttpOnly cookie. */
+  async login(email: string, password: string, rememberMe = false): Promise<CurrentTenant> {
+    let body = new HttpParams({ encoder: STRICT_FORM_ENCODING })
       .set('username', email)
       .set('password', password);
+    if (rememberMe) {
+      body = body.set('remember-me', 'true');
+    }
     const headers = new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' });
     const tenant = await firstValueFrom(this.http.post<CurrentTenant>('/api/auth/login', body, { headers }));
     this.tenant.set(tenant);

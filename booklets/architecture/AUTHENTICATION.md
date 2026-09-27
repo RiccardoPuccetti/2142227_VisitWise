@@ -14,7 +14,7 @@
 | Log in, log out, "who am I" | Multi-factor authentication, passkeys |
 | Profile: tenant name, change password | Change email, delete account (not needed for the demo) |
 | Tenant isolation of imports and plans | Password reset by email, email verification (no mail server in the stack) |
-| | Several users per tenant, roles, "remember me" |
+| "Keep me logged in" (A13, US-37) | Several users per tenant, roles |
 
 A forgotten password is reset by a developer (procedure in the README), because there is no email channel.
 
@@ -41,6 +41,7 @@ Deliberate deviations for the demo: minimum password length 8 instead of the rec
 | A9 | Brute force | Per account: after 5 consecutive failures, lock for 1 min, doubling up to 15 min; reset on success. Per client IP: max 20 login / register attempts per minute. The lock is silent (same 401) | NIST: limit failed attempts (<= 100 consecutive); ASVS V6.3 |
 | A10 | Password change | Needs the current password; on success the session id changes and the tenant's other sessions are expired | ASVS V6 / V7 |
 | A11 | Audit | Log login success, failure, lock, logout, registration, password change with email and IP; never passwords or hashes | ASVS V16 (security logging) |
+| A13 | Keep me logged in | Opt-in checkbox at login (form parameter `remember-me=true`). Spring Security persistent-token remember-me: table `persistent_logins` (changeset 005), one random series per device and a random token replaced at every automatic login; cookie `remember-me` HttpOnly, SameSite=Lax, Secure like the session cookie, 14 days (`REMEMBER_ME_DAYS`). Reuse of a replaced token removes every remembered device of the tenant and answers 401. Logout forgets this device only (the account is shared by the team); a password change forgets every device. Tokens are stored as issued (Spring's scheme): whoever reads the table can already read all the data | OWASP Session Management: persistent login must be opt-in, random, server-side, rotated and revocable; survives backend restarts, unlike the in-memory session (A4) |
 | A12 | Tenant isolation | `import_batch.tenant_id`; one guard on `/api/imports/{id}/**` and `/api/plans/{planId}/**`; another tenant's id answers `404` | D-09 |
 
 ## 4. API

@@ -67,6 +67,9 @@ visitwise:
     # AUTHENTICATION.md A9: login + register requests per client IP per minute.
     rate-limit:
       per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
+    # AUTHENTICATION.md A13: "Keep me logged in" lasts this many days on a device (US-37).
+    remember-me:
+      days: ${REMEMBER_ME_DAYS:14}
   imports:
     # US-02 asks for 5,000 rows; files are capped (also at 20 MB above) so one upload cannot fill the memory.
     max-rows: 20000
