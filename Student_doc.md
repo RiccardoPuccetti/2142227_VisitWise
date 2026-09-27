@@ -147,6 +147,7 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| GET | /api/plans/{planId} | Saved plan with days and visits | 27, 28 |
 	| DELETE | /api/plans/{planId} | Delete a saved plan | 27 |
 	| GET | /api/plans/{planId}/export | Download a plan (optionally one agent) as Excel | 29 |
+	| GET | /api/auth/csrf | Public. Issue the CSRF token cookie used by the web app on every state-changing request | 31, 32 |
 
 ## CONTAINER_NAME: visitwise-db
 

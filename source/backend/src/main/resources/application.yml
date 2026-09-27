@@ -22,6 +22,14 @@ spring:
 
 server:
   port: 8080
+  servlet:
+    session:
+      # In-memory session (AUTHENTICATION.md A4): JavaScript cannot read the cookie; set SESSION_COOKIE_SECURE=true behind HTTPS.
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 management:
   endpoints:
@@ -34,6 +42,9 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+    # "Try it out" sends the XSRF-TOKEN cookie back in the X-XSRF-TOKEN header.
+    csrf:
+      enabled: true
 
 visitwise:
   geocoding:
