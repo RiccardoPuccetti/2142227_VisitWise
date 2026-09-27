@@ -76,6 +76,12 @@ The engine sits behind a `VisitPlanner` interface (Strategy pattern): a Timefold
 | Travel penalty | 2 EUR/km | Trade-off knob: how much revenue a km of driving must be worth |
 | Min revenue | 0 | Ignore tiny customers |
 
+The maximum distance is the **one-way estimated road distance from the base**
+(`great-circle km x roadFactor`), with the limit included. It is not a limit on the
+total daily route. This interpretation was confirmed by Marzella for MAR-1.
+Daily feasibility separately includes every travel leg, the return to the supplied
+base, and all visit durations; fractional travel minutes are not rounded away.
+
 ## 6. Seasonality: campaign windows (computed for any year)
 
 | Campaign | Window | Note |
@@ -88,6 +94,27 @@ The engine sits behind a `VisitPlanner` interface (Strategy pattern): a Timefold
 Public holidays excluded: Jan 1, Jan 6, Easter Monday, Apr 25, May 1, Jun 2, Jun 29 (Rome patron saints), Aug 15, Nov 1, Dec 8, Dec 25, Dec 26.
 
 **Scheduling rule inside the window: front-loading.** The most valuable days are placed first. If the campaign slips, the top accounts are already done, and early visits turn into orders before the peak.
+
+### MAR-1 engine foundations
+
+The pure Java types in `planning.engine` provide:
+
+- `WorkingCalendar`: Gregorian Easter, the holiday calendar above, inclusive
+  window counts, and the first 1..260 working dates on or after a start date.
+- `CampaignWindows`: the three annual presets and custom inclusive date windows,
+  with their working-day counts. Window endpoints remain as entered or specified,
+  even when they are not working days; a holiday-only window has a count of zero.
+- `GeoPoint` and `TravelModel`: validated coordinates and local Haversine estimates
+  using a mean Earth radius of 6371.0088 km, configurable road factor and speed,
+  and route totals in the supplied stop order, starting and ending at the base.
+- `VisitConstraints`: visit duration, workday and distance validation, with range
+  and daily feasibility checks. Defaults are 210 minutes, 480 minutes and 80 km;
+  the default travel model uses 25 km/h and a road factor of 1.3.
+
+The working-day horizon is independent of the campaign deadline: dates beyond
+the deadline remain available for the later planner to flag as specified above.
+These foundations do not select targets, optimize routes or expose HTTP endpoints
+(MAR-2 and MAR-3).
 
 ## 7. Algorithm (reference for implementation - task MAR-2)
 
