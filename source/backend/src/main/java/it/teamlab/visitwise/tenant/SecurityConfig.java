@@ -9,10 +9,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 /**
  * Security configuration (AUTHENTICATION.md A4-A9): every request needs a session except the public list below;
@@ -25,6 +28,7 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailsSecurityHandler problems, LoginHandlers loginHandlers,
+            SessionRegistry sessionRegistry,
             @Value("${visitwise.auth.rate-limit.per-minute:20}") int attemptsPerMinute) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
@@ -44,6 +48,12 @@ public class SecurityConfig {
                         .addLogoutHandler(loginHandlers)
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT))
                         .deleteCookies("JSESSIONID"))
+                // Track the sessions of each tenant (no limit) so a password change can log out the other ones.
+                .sessionManagement(sessions -> sessions
+                        .maximumSessions(-1)
+                        .sessionRegistry(sessionRegistry)
+                        .expiredSessionStrategy(event -> problems.write(event.getRequest(), event.getResponse(),
+                                HttpStatus.UNAUTHORIZED, "Session expired, please log in again")))
                 .csrf(csrf -> csrf.spa())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(problems)
@@ -51,6 +61,18 @@ public class SecurityConfig {
                 .addFilterBefore(new AuthRateLimitFilter(attemptsPerMinute, problems, Clock.systemUTC()),
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /** In memory, like the sessions themselves (AUTHENTICATION.md A4). */
+    @Bean
+    SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    /** Tells the session registry when sessions are destroyed or change id. */
+    @Bean
+    HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
     }
 
     /**

@@ -150,6 +150,8 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| POST | /api/auth/login | Public. Log in with email and password (form-encoded); starts the session | 32 |
 	| POST | /api/auth/logout | End the session | 32 |
 	| GET | /api/auth/me | The logged-in tenant | 32 |
+	| PATCH | /api/profile | Rename the tenant | 34 |
+	| PUT | /api/profile/password | Change the password (current password required); logs out the other sessions | 34 |
 
 ## CONTAINER_NAME: visitwise-db
 

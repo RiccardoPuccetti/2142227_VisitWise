@@ -50,4 +50,15 @@ public final class TenantPrincipal implements UserDetails, CredentialsContainer 
     public void eraseCredentials() {
         passwordHash = null;
     }
+
+    /** Same tenant = same principal: the session registry groups the sessions of a tenant by it. */
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof TenantPrincipal that && tenantId.equals(that.tenantId);
+    }
+
+    @Override
+    public int hashCode() {
+        return tenantId.hashCode();
+    }
 }

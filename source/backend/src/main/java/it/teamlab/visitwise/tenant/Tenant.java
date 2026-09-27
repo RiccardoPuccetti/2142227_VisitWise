@@ -88,6 +88,16 @@ public class Tenant {
         }
     }
 
+    public void rename(String name) {
+        this.name = name;
+    }
+
+    /** @param passwordHash already encoded by the {@code PasswordEncoder} */
+    public void changePassword(String passwordHash, OffsetDateTime now) {
+        this.passwordHash = passwordHash;
+        this.passwordChangedAt = now;
+    }
+
     public void recordSuccessfulLogin(OffsetDateTime now) {
         failedLoginCount = 0;
         lockedUntil = null;

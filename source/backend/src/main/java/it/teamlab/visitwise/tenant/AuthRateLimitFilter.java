@@ -16,14 +16,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Limits login and registration attempts per client IP (AUTHENTICATION.md A9): at most {@code perMinute} requests in
- * a fixed one-minute window, then 429 with Retry-After. In memory, like the sessions (single backend instance).
- * Created by {@link SecurityConfig}, not a bean, so it runs only inside the security filter chain.
+ * Limits login, registration and password-change attempts per client IP (AUTHENTICATION.md A9): at most
+ * {@code perMinute} requests in a fixed one-minute window shared by the three endpoints, then 429 with Retry-After.
+ * In memory, like the sessions (single backend instance). Created by {@link SecurityConfig}, not a bean, so it runs
+ * only inside the security filter chain.
  */
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(AuthRateLimitFilter.class);
-    private static final Set<String> LIMITED_PATHS = Set.of("/api/auth/login", "/api/auth/register");
+    private static final Set<String> LIMITED = Set.of(
+            "POST /api/auth/login", "POST /api/auth/register", "PUT /api/profile/password");
     private static final long WINDOW_MILLIS = 60_000;
     private static final int MAX_TRACKED_IPS = 10_000;
 
@@ -40,7 +42,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !("POST".equals(request.getMethod()) && LIMITED_PATHS.contains(request.getRequestURI()));
+        return !LIMITED.contains(request.getMethod() + " " + request.getRequestURI());
     }
 
     @Override

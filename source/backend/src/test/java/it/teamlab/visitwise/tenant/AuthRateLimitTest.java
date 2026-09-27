@@ -5,6 +5,7 @@ import static it.teamlab.visitwise.tenant.AuthTestSupport.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -78,6 +79,23 @@ class AuthRateLimitTest {
                 .andReturn().getResponse().getStatus();
 
         assertThat(status).isEqualTo(429);
+    }
+
+    @Test
+    void passwordChangeIsLimitedTooAgainstGuessingTheCurrentPassword() throws Exception {
+        Cookie csrf = csrfCookie(mvc);
+        MockHttpServletRequestBuilder change = withCsrf(put("/api/profile/password"), csrf)
+                .with(request -> {
+                    request.setRemoteAddr("203.0.113.50");
+                    return request;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}");
+        for (int i = 0; i < 3; i++) {
+            mvc.perform(change);
+        }
+
+        mvc.perform(change).andExpect(status().isTooManyRequests());
     }
 
     @Test
