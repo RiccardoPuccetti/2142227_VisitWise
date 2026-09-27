@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: visitwise-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/visitwise}
+    username: ${DB_USER:visitwise}
+    password: ${DB_PASSWORD:visitwise}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Schema is owned by Liquibase. Hibernate only validates that entities match it.
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+visitwise:
+  geocoding:
+    # Public Nominatim: max 1 request/second and a real User-Agent are REQUIRED by its usage policy.
+    base-url: ${GEOCODING_BASE_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${GEOCODING_USER_AGENT:VisitWise-hackathon/0.1 (set GEOCODING_USER_AGENT in .env)}
+    delay-ms: ${GEOCODING_DELAY_MS:1100}
+    country-codes: it
+  planning:
+    # Default starting point of every working day (Rome, Piazza Venezia). Overridable per plan.
+    default-base-latitude: 41.8960
+    default-base-longitude: 12.4823

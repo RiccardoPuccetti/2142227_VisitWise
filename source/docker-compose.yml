@@ -1,0 +1,48 @@
+# VisitWise - full stack. From the source/ folder:
+#   cp .env.example .env        (Windows: copy .env.example .env)
+#   docker compose up --build
+# App: http://localhost:4200   API: http://localhost:8080/swagger-ui.html   DB: localhost:5432
+name: visitwise
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-visitwise}
+      POSTGRES_USER: ${POSTGRES_USER:-visitwise}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-visitwise}
+    ports:
+      - "5432:5432"
+    volumes:
+      - visitwise-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-visitwise} -d ${POSTGRES_DB:-visitwise}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-visitwise}
+      DB_USER: ${POSTGRES_USER:-visitwise}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-visitwise}
+      GEOCODING_BASE_URL: ${GEOCODING_BASE_URL:-https://nominatim.openstreetmap.org}
+      GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT:-VisitWise-hackathon/0.1}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  visitwise-db-data:

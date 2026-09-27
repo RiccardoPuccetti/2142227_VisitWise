@@ -1,0 +1,30 @@
+# ---- NDA: the real dataset must NEVER be committed ----
+# Keep real ERP exports in source/data-private/ (ignored) or outside the repo.
+data-private/
+*.xlsx
+*.xls
+*.csv
+# ...except the synthetic samples and the import template, which contain no real data
+!source/sample-data/*.xlsx
+!source/backend/src/main/resources/import-template/*.xlsx
+# Slides and booklets exports are allowed
+!booklets/**/*.xlsx
+!booklets/**/*.csv
+
+# Environment / secrets
+.env
+*.local.env
+
+# Claude Code personal settings
+.claude/settings.local.json
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Office lock files
+~$*

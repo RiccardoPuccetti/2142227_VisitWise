@@ -1,0 +1,7 @@
+# Liquibase master changelog.
+# RULES (see AGENTS.md):
+#  - NEVER edit a changeset that has already been merged into develop. Add a new file instead.
+#  - New file name: NNN-short-description.sql (next free number), then include it below.
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-initial-schema.sql

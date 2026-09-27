@@ -1,0 +1,195 @@
+# API Contract (v1)
+
+> **Source of truth** for frontend-backend integration. TypeScript mirror: `source/frontend/src/app/core/models/api.models.ts`.
+> Change process: open a `docs/api-...` PR that updates **this file and the TS models together**, tag the other owners, merge only after both agree.
+> Each member builds pages on **their own** endpoints. A page that consumes another member's endpoint uses a local fixture copied from these examples until that endpoint is merged (see hand-offs in `booklets/team/TASKS.md`).
+
+Conventions
+
+- Base path `/api`. JSON in camelCase. Money = number with 2 decimals (EUR). `LocalDate` = `"YYYY-MM-DD"`, timestamps = ISO-8601 with offset.
+- Errors: RFC 9457 `application/problem+json` -> `{ "type", "title", "status", "detail", "instance" }`. 400 validation, 404 not found, 409 conflict, 422 unprocessable file.
+- Swagger UI (generated from code) at `http://localhost:8080/swagger-ui.html`: it must stay consistent with this file.
+
+## 1. Imports - owner Puccetti (endpoint 7: Rivera)
+
+| # | Method | URL | Description | US |
+|---|---|---|---|---|
+| 1 | GET | `/api/imports/template` | Downloads `visitwise-import-template.xlsx` | 1 |
+| 2 | POST | `/api/imports/preview` | multipart `file` -> headers, sample rows, suggested mapping. Nothing is saved | 2, 3, 4, 5 |
+| 3 | POST | `/api/imports` | multipart `file` + part `request` (JSON `CreateImportRequest`) -> parses, saves, starts geocoding. `201` + `ImportSummary` | 2, 4, 5, 6, 7 |
+| 4 | GET | `/api/imports` | `ImportSummary[]`, newest first | 10 |
+| 5 | GET | `/api/imports/{id}` | `ImportDetail` (poll it every 3 s while `status = GEOCODING`) | 7, 8, 11 |
+| 6 | DELETE | `/api/imports/{id}` | Deletes import, points, plans. `204` | 12 |
+| 7 | GET | `/api/imports/{id}/points?geocodeStatus=NOT_FOUND` | `DeliveryPoint[]` (filter optional). Used by map, detail table, planner. **Owner: Rivera** (`analytics` package) | 9, 11, 13 |
+| 8 | PATCH | `/api/imports/{id}/points/{pointId}/location` | body `{ "latitude": 41.9, "longitude": 12.5 }` -> status `MANUAL`. Returns `DeliveryPoint` | 9 |
+| 9 | POST | `/api/imports/{id}/geocoding/retry` | Re-queues `NOT_FOUND`/`PENDING` points. `202` | 9 |
+
+**POST /api/imports/preview** -> 200
+
+```json
+{
+  "fileName": "sample-erp-layout.xlsx",
+  "sheetName": "Sheet1",
+  "headers": ["Ragione Sociale", "Punto Vendita", "Indirizzo", "Comune", "Agente", "Totale", "ENTERPRISE A", "ENTERPRISE B", "ENTERPRISE C"],
+  "sampleRows": [["ACME SRL (10001)", "RISTORANTE ACME", "VIA DEL CORSO 300", "ROMA", "AGENT NORTH", "2080.5", "1250.5", "-", "830"]],
+  "totalRows": 129,
+  "suggestedMapping": {
+    "customer": "Ragione Sociale",
+    "deliveryPoint": "Punto Vendita",
+    "address": "Indirizzo",
+    "city": "Comune",
+    "agent": "Agente",
+    "latitude": null,
+    "longitude": null,
+    "enterprises": [
+      { "sourceColumn": "ENTERPRISE A", "name": "ENTERPRISE A", "color": "#2563eb" },
+      { "sourceColumn": "ENTERPRISE B", "name": "ENTERPRISE B", "color": "#16a34a" },
+      { "sourceColumn": "ENTERPRISE C", "name": "ENTERPRISE C", "color": "#dc2626" }
+    ]
+  }
+}
+```
+
+Parsing rules (both preview and import):
+
+- First sheet, first non-empty row = headers. Duplicate headers are made unique by appending ` (2)`, ` (3)`.
+- Mapping is **by header name**, so column order does not matter.
+- Suggested mapping: case/accent-insensitive synonyms (IT + EN), e.g. customer = `cliente|rag. soc|ragione sociale|customer`, address = `indirizzo|address`, city = `città|citta|comune|city`, agent = `agente|agent`, deliveryPoint = `cliente di consegna|punto|delivery point|point of sale`. Numeric columns not mapped to anything else are suggested as enterprises, **except** columns named like `total|totale|totali`.
+- A row is **skipped** (and counted in `skippedRows`) when a required field (customer, deliveryPoint, address, city) is empty: this removes the `... Totale` subtotal rows and the grand total automatically.
+- Revenue cells: empty or `-` = 0; numbers or numeric strings with `,` or `.` decimals; negative allowed. Only non-zero amounts are stored.
+- If latitude/longitude are mapped and valid, the point is `FROM_FILE` and is not geocoded.
+
+**POST /api/imports** request part `request`:
+
+```json
+{ "name": "Sample 2025 - full year", "mapping": { "...": "same shape as suggestedMapping" } }
+```
+
+**ImportSummary** (response of 3 and items of 4)
+
+```json
+{
+  "id": 7, "name": "Sample 2025 - full year", "sourceFileName": "sample-erp-layout.xlsx",
+  "createdAt": "2026-09-28T10:15:00+02:00", "status": "GEOCODING",
+  "totalRows": 129, "importedRows": 73, "skippedRows": 56, "geocodedRows": 40,
+  "enterprises": [{ "id": 21, "name": "ENTERPRISE A", "color": "#2563eb", "sourceColumn": "ENTERPRISE A" }]
+}
+```
+
+**ImportDetail** = ImportSummary + `{ "mapping": ColumnMapping, "agents": ["..."], "cities": ["ROMA", "..."], "notFoundCount": 2, "errorMessage": null }`
+
+**DeliveryPoint**
+
+```json
+{
+  "id": 1001, "sourceRow": 2, "customerName": "ACME SRL (10001)", "pointName": "RISTORANTE ACME",
+  "address": "VIA DEL CORSO 300", "city": "ROMA", "agent": "AGENT NORTH",
+  "latitude": 41.9031, "longitude": 12.4794, "geocodeStatus": "OK",
+  "totalRevenue": 2080.5,
+  "revenues": [{ "enterpriseId": 21, "amount": 1250.5 }, { "enterpriseId": 23, "amount": 830.0 }]
+}
+```
+
+## 2. Analytics - owner Rivera
+
+| # | Method | URL | Description | US |
+|---|---|---|---|---|
+| 10 | GET | `/api/imports/{id}/analytics/summary?enterpriseIds=21,23&agents=A,B` | KPIs of the (filtered) import | 18 |
+
+```json
+{
+  "totalRevenue": 571053.35, "pointCount": 73, "customerCount": 55,
+  "byEnterprise": [{ "enterpriseId": 21, "name": "ENTERPRISE A", "color": "#2563eb", "revenue": 104141.02, "pointCount": 46 }],
+  "byAgent": [{ "key": "AGENT NORTH", "revenue": 112621.24, "pointCount": 20 }],
+  "byCity": [{ "key": "ROMA", "revenue": 531815.92, "pointCount": 69 }],
+  "topPoints": ["DeliveryPoint (top 10 by revenue)"],
+  "pareto": [{ "points": 10, "revenueShare": 0.51 }, { "points": 20, "revenueShare": 0.74 }]
+}
+```
+
+## 3. Planning - owner Marzella (endpoint 18: Rivera)
+
+| # | Method | URL | Description | US |
+|---|---|---|---|---|
+| 11 | GET | `/api/planning/campaigns?year=2026` | `CampaignPreset[]` with computed windows | 19 |
+| 12 | POST | `/api/imports/{id}/plans/simulate` | body `PlanParameters` -> `PlanResult` (not saved, `id: null`) | 20-25 |
+| 13 | POST | `/api/imports/{id}/plans/what-if` | body `WhatIfRequest` -> `WhatIfResult` | 26 |
+| 14 | POST | `/api/imports/{id}/plans` | body `CreatePlanRequest` -> computes + saves, `201` `PlanSummary` | 27 |
+| 15 | GET | `/api/imports/{id}/plans` | `PlanSummary[]` newest first | 27 |
+| 16 | GET | `/api/plans/{planId}` | `PlanResult` of a saved plan | 27, 28 |
+| 17 | DELETE | `/api/plans/{planId}` | `204` | 27 |
+| 18 | GET | `/api/plans/{planId}/export?agent=AGENT%20NORTH` | `.xlsx` of the plan (optional agent filter). **Owner: Rivera** (`planning.export` package) | 29 |
+
+**CampaignPreset**
+
+```json
+{ "code": "CHRISTMAS", "label": "Before Christmas", "startDate": "2026-11-01", "endDate": "2026-12-19", "workingDays": 34 }
+```
+
+**PlanParameters** (defaults shown; the frontend sends every field)
+
+```json
+{
+  "campaign": "CHRISTMAS",
+  "startDate": "2026-11-02",
+  "deadline": "2026-12-19",
+  "workingDays": 20,
+  "enterpriseWeights": [{ "enterpriseId": 21, "weight": 1.0 }, { "enterpriseId": 23, "weight": 1.5 }],
+  "agents": [],
+  "planningMode": "PER_AGENT",
+  "visitDurationMinutes": 210,
+  "workdayMinutes": 480,
+  "averageSpeedKmh": 25,
+  "roadFactor": 1.3,
+  "maxDistanceKm": 80,
+  "base": { "latitude": 41.8960, "longitude": 12.4823 },
+  "travelCostPerKm": 2.0,
+  "minRevenue": 0
+}
+```
+
+Validation: `workingDays` 1..260, `visitDurationMinutes` 30..480, `workdayMinutes` >= `visitDurationMinutes`, weights >= 0, speed > 0, roadFactor >= 1.
+
+**PlanResult**
+
+```json
+{
+  "id": null, "name": null,
+  "parameters": { "...": "PlanParameters" },
+  "kpis": {
+    "plannedVisits": 40, "uniqueCustomers": 36,
+    "coveredRevenue": 395000.0, "eligibleRevenue": 560000.0, "coverage": 0.71,
+    "upperBoundRevenue": 402000.0,
+    "totalKm": 420.5, "travelHours": 21.9, "workingDaysUsed": 20,
+    "lastVisitDate": "2026-11-27", "visitsAfterDeadline": 0, "excludedOutOfRange": 1
+  },
+  "days": [
+    {
+      "date": "2026-11-02", "agent": "AGENT NORTH", "km": 18.2,
+      "visits": [
+        {
+          "deliveryPointId": 1001, "customerName": "ACME SRL (10001)", "pointName": "RISTORANTE ACME",
+          "address": "VIA DEL CORSO 300", "city": "ROMA", "agent": "AGENT NORTH",
+          "latitude": 41.9031, "longitude": 12.4794,
+          "date": "2026-11-02", "dayIndex": 0, "slot": 1, "expectedRevenue": 2080.5, "travelKm": 2.1
+        }
+      ]
+    }
+  ],
+  "notPlanned": ["DeliveryPoint (top 20 eligible not planned)"],
+  "warnings": ["1 delivery point is farther than 80 km from the base and was excluded"]
+}
+```
+
+**WhatIfRequest** `{ "base": PlanParameters, "horizons": [10, 20, 30, 40, 60] }`
+
+**WhatIfResult**
+
+```json
+{ "rows": [
+  { "workingDays": 10, "kpis": { "...": "PlanKpis" }, "marginalRevenue": 250000.0 },
+  { "workingDays": 20, "kpis": { "...": "PlanKpis" }, "marginalRevenue": 145000.0 }
+] }
+```
+
+**PlanSummary** `{ "id": 3, "name": "Xmas 20d enterprise A x1.5", "createdAt": "...", "parameters": {}, "kpis": {} }`

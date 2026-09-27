@@ -1,0 +1,15 @@
+# Normalize line endings: the team works on Windows, containers run Linux.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files
+*.xlsx binary
+*.pptx binary
+*.docx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.bmpr binary
+*.ico binary
