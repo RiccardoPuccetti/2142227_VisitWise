@@ -80,6 +80,20 @@ The root contains **exactly** these four visible items. **Never create any other
 - Map: OpenLayers (`ol`) with OSM tiles. No Leaflet, no Google Maps.
 - Charts: keep it light (plain SVG or one small library agreed in `booklets/architecture/DECISIONS.md`).
 
+### Test-driven development (mandatory, backend and frontend)
+
+Every change of behavior starts from a failing test (red -> green -> refactor):
+
+1. **Red**: write the smallest test for the next behavior (from the task's acceptance criteria and the story's non-functional requirements). Run it and see it fail for the expected reason.
+2. **Green**: write the minimum code that makes it pass.
+3. **Refactor**: clean up with all tests green. Repeat for the next behavior.
+
+- Backend (JUnit 5 + AssertJ): plain unit tests for pure logic (`planning.engine`, validators, policies); MockMvc for controllers (status codes, problem+json, security rules); tests against the `db` container for repositories and Liquibase changesets.
+- Frontend (Vitest via `ng test`): services, guards, interceptors, pipes and component logic are tested first (`HttpTestingController` for HTTP). Pure layout and styling are checked visually, not test-first.
+- A bug fix starts with a test that reproduces the bug.
+- The test and the code that makes it pass go in the same commit: never commit failing tests.
+- Agents: in the final report, list the tests written first, the failure seen before the implementation, and the passing run after.
+
 ## 4. Git workflow (mandatory)
 
 - **Nobody works on `main`. Nobody commits directly on `develop`.**
@@ -115,7 +129,7 @@ Refs: <TASK-ID>[, US-xx]
 2. **Stay in your area.** Only modify files owned by your task (see `booklets/team/TASKS.md` -> "Owned paths"). Shared files (`api.models.ts`, `API_CONTRACT.md`, `docker-compose.yml`, `pom.xml`, `package.json`, `db.changelog-master.yaml`, `source/AGENTS.md`) change **only if the task says so**, in a dedicated commit. Never add visible files at the repository root.
 3. **Ask before**: adding a dependency; changing the API contract; changing the DB schema outside your task; deleting files; changing Docker/CI config; touching another member's feature.
 4. **Never**: commit to `main`/`develop`; `git push` unless the human says so; `--force` push; amend/rebase pushed commits; skip hooks (`--no-verify`); commit secrets or `.env`; **commit or paste the real dataset** (NDA - see section 8).
-5. **Verify, then report.** Before saying "done": build + tests of the touched part. Report exactly what you ran and the result. If something fails or you skipped it, say so.
+5. **Test first, verify, then report.** Work test-first (section 3, "Test-driven development"). Before saying "done": build + tests of the touched part. Report exactly what you ran and the result. If something fails or you skipped it, say so.
 6. **Do not invent.** Unknown requirement -> read the booklets; still unclear -> ask the human. Do not fabricate API fields, data, or test results.
 7. **Small commits** following section 5. Stage explicit paths (`git add <paths>`), never blindly `git add -A`.
 8. **Keep docs in sync in the same PR**: new endpoint -> `API_CONTRACT.md` (if agreed) + `Student_doc.md` endpoints table; new page -> `Student_doc.md` pages table; new table -> `Student_doc.md` DB structure.
@@ -138,7 +152,7 @@ Before every `git push`, add **one new file** in `booklets/devlog/` (one file pe
 
 ## 9. Definition of Done (for every task)
 
-- [ ] Code builds; tests of the touched area pass; `docker compose up --build` still works.
+- [ ] Written test-first (section 3); code builds; tests of the touched area pass; `docker compose up --build` still works.
 - [ ] Acceptance criteria of the task in `TASKS.md` are met; related US ids are in the commits.
 - [ ] Docs updated (contract / Student_doc / architecture) where relevant.
 - [ ] Devlog file added; screenshots for UI work.
