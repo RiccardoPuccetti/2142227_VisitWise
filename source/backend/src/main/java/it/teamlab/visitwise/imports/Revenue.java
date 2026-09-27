@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 
@@ -16,8 +17,10 @@ import java.math.BigDecimal;
 @Table(name = "revenue")
 public class Revenue {
 
+    /** Pooled sequence (changeset 004): lets the import batch its inserts. */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "revenue_seq")
+    @SequenceGenerator(name = "revenue_seq", sequenceName = "revenue_id_seq", allocationSize = 50)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

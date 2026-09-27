@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -25,8 +26,10 @@ import java.util.List;
 @Table(name = "delivery_point")
 public class DeliveryPoint {
 
+    /** Pooled sequence (changeset 004): lets the import batch its inserts. */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "delivery_point_seq")
+    @SequenceGenerator(name = "delivery_point_seq", sequenceName = "delivery_point_id_seq", allocationSize = 50)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
