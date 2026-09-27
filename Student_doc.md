@@ -84,6 +84,9 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 
 	| Name | Description | Related Microservice | User Stories |
 	| ---- | ----------- | -------------------- | ------------ |
+	| Log in | Email and password login; brings the user back to the page they asked for | visitwise-backend | 32 |
+	| Register | Registration of a federation (tenant) with name, email and password; logs in right after | visitwise-backend | 31 |
+	| Profile | Rename the federation, change the password (logs out the other devices) | visitwise-backend | 34 |
 	| Imports list | Imports as cards or table with name, creation date and status | visitwise-backend | 10, 12 |
 	| Import wizard | Upload, preview, column mapping, enterprise columns, name, report; template download | visitwise-backend | 1, 2, 3, 4, 5, 6, 7 |
 	| Import detail | Summary, geocoding progress, delivery points table, manual position fix, delete | visitwise-backend | 8, 9, 11, 12 |
