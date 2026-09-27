@@ -71,6 +71,14 @@ describe('AuthService', () => {
       expect(service.currentTenant()).toEqual(TENANT);
     });
 
+    it('asks the server to keep the device logged in only when requested (US-37)', async () => {
+      const done = service.login('demo@visitwise.test', 'secret', true);
+      const request = http.expectOne('/api/auth/login');
+      expect(request.request.body.toString()).toBe('username=demo%40visitwise.test&password=secret&remember-me=true');
+      request.flush(TENANT);
+      await done;
+    });
+
     it('stays logged out and rejects when the credentials are wrong', async () => {
       const done = service.login('demo@visitwise.test', 'wrong');
       http.expectOne('/api/auth/login').flush(

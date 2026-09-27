@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { AuthService } from '../../core/auth/auth.service';
@@ -20,6 +21,7 @@ import { safeReturnUrl } from '../../core/auth/return-url';
     HlmAlertImports,
     HlmButtonImports,
     HlmCardImports,
+    HlmCheckboxImports,
     HlmFieldImports,
     HlmInputImports,
   ],
@@ -68,6 +70,11 @@ import { safeReturnUrl } from '../../core/auth/return-url';
           <hlm-field-error>{{ loginForm.password().errors()[0]?.message }}</hlm-field-error>
         </div>
 
+        <div class="flex items-center gap-2">
+          <hlm-checkbox inputId="login-remember-me" [formField]="loginForm.rememberMe" />
+          <label for="login-remember-me" class="text-sm">Keep me logged in on this device</label>
+        </div>
+
         <button hlmBtn type="submit" [disabled]="loginForm().submitting()">
           {{ loginForm().submitting() ? 'Logging in...' : 'Log in' }}
         </button>
@@ -89,7 +96,7 @@ export class LoginPage {
   protected readonly showPassword = signal(false);
   protected readonly serverError = signal<string | null>(null);
 
-  private readonly credentials = signal({ email: '', password: '' });
+  private readonly credentials = signal({ email: '', password: '', rememberMe: false });
 
   protected readonly loginForm = form(
     this.credentials,
@@ -101,9 +108,9 @@ export class LoginPage {
       submission: {
         action: async () => {
           this.serverError.set(null);
-          const { email, password } = this.credentials();
+          const { email, password, rememberMe } = this.credentials();
           try {
-            await this.auth.login(email, password);
+            await this.auth.login(email, password, rememberMe);
           } catch (error) {
             this.serverError.set(problemDetail(error));
             return undefined;

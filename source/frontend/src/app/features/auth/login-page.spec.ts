@@ -95,6 +95,44 @@ describe('LoginPage', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  describe('keep me logged in (US-37)', () => {
+    const checkbox = (fixture: Awaited<ReturnType<typeof render>>) =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('#login-remember-me [role="checkbox"], [role="checkbox"]#login-remember-me');
+
+    it('is offered unticked, with a label', async () => {
+      const fixture = await render();
+
+      expect(checkbox(fixture)?.getAttribute('aria-checked')).toBe('false');
+      expect(text((fixture.nativeElement as HTMLElement).querySelector('label[for="login-remember-me"]'))).toBe(
+        'Keep me logged in on this device',
+      );
+    });
+
+    it('is not sent unless ticked', async () => {
+      const fixture = await render();
+
+      await fillAndSubmit(fixture);
+
+      const request = http.expectOne('/api/auth/login');
+      expect(request.request.body.toString()).not.toContain('remember-me');
+      request.flush(TENANT);
+      await settle(fixture);
+    });
+
+    it('asks to stay logged in when ticked', async () => {
+      const fixture = await render();
+      checkbox(fixture)?.click();
+      await settle(fixture);
+
+      await fillAndSubmit(fixture);
+
+      const request = http.expectOne('/api/auth/login');
+      expect(request.request.body.toString()).toContain('remember-me=true');
+      request.flush(TENANT);
+      await settle(fixture);
+    });
+  });
+
   it('can show and hide the password', async () => {
     const fixture = await render();
     const toggle = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
