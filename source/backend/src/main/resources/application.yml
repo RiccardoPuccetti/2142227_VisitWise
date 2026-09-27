@@ -22,6 +22,8 @@ spring:
 
 server:
   port: 8080
+  # Trust X-Forwarded-For from the nginx container, so the rate limit and the audit log see the real client IP.
+  forward-headers-strategy: native
   servlet:
     session:
       # In-memory session (AUTHENTICATION.md A4): JavaScript cannot read the cookie; set SESSION_COOKIE_SECURE=true behind HTTPS.
@@ -51,6 +53,9 @@ visitwise:
     password:
       # AUTHENTICATION.md A2: 8 for the demo; NIST SP 800-63B-4 recommends 15 for password-only login. Max is 64.
       min-length: ${PASSWORD_MIN_LENGTH:8}
+    # AUTHENTICATION.md A9: login + register requests per client IP per minute.
+    rate-limit:
+      per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
   geocoding:
     # Public Nominatim: max 1 request/second and a real User-Agent are REQUIRED by its usage policy.
     base-url: ${GEOCODING_BASE_URL:https://nominatim.openstreetmap.org}

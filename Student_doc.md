@@ -147,6 +147,9 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| GET | /api/plans/{planId}/export | Download a plan (optionally one agent) as Excel | 29 |
 	| GET | /api/auth/csrf | Public. Issue the CSRF token cookie used by the web app on every state-changing request | 31, 32 |
 	| POST | /api/auth/register | Public. Register a tenant with its name, email and password (hashed with Argon2id) | 31 |
+	| POST | /api/auth/login | Public. Log in with email and password (form-encoded); starts the session | 32 |
+	| POST | /api/auth/logout | End the session | 32 |
+	| GET | /api/auth/me | The logged-in tenant | 32 |
 
 ## CONTAINER_NAME: visitwise-db
 

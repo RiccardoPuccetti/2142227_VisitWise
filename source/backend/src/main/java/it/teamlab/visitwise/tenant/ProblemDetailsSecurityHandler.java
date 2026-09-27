@@ -41,7 +41,8 @@ public class ProblemDetailsSecurityHandler implements AuthenticationEntryPoint, 
         write(request, response, HttpStatus.FORBIDDEN, detail);
     }
 
-    private void write(HttpServletRequest request, HttpServletResponse response, HttpStatus status, String detail)
+    /** Also used by the login handlers and the rate limit filter, so all security errors look the same. */
+    void write(HttpServletRequest request, HttpServletResponse response, HttpStatus status, String detail)
             throws IOException {
         Map<String, Object> problem = new LinkedHashMap<>();
         problem.put("type", "about:blank");
