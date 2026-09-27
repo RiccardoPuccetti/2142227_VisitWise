@@ -61,6 +61,9 @@ Parsing rules (both preview and import):
 - A row is **skipped** (and counted in `skippedRows`) when a required field (customer, deliveryPoint, address, city) is empty: this removes the `... Totale` subtotal rows and the grand total automatically.
 - Revenue cells: empty or `-` = 0; numbers or numeric strings with `,` or `.` decimals; negative allowed. Only non-zero amounts are stored.
 - If latitude/longitude are mapped and valid, the point is `FROM_FILE` and is not geocoded.
+- A row is also skipped when a revenue cell is not a number or a value is longer than its column (255 characters, 120 for city and agent).
+- Limits: `.xlsx` only, 20 MB, 20,000 data rows, 200 columns; beyond them, or for an unreadable file, `422` with the reason in `detail`. A file with no importable row is `422` too and saves nothing.
+- Import request checks (`400`, `detail` = `field: message`, e.g. `mapping.city: column 'Città' is not in the file`): name 1-150 characters; customer, delivery point, address, city mapped; at least one enterprise; every mapped column exists in the file and is used once; enterprise names unique ignoring case, 1-100 characters; latitude and longitude mapped together; colors `#RRGGBB` with at least 3:1 contrast on white.
 
 **POST /api/imports** request part `request`:
 

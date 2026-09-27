@@ -45,6 +45,7 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 33) As a Tenant admin, I want the imports, maps and plans of my tenant to be invisible to any other tenant, so that our confidential revenue data stays private (NDA)
 34) As a Tenant admin, I want a profile page to change the tenant name and the password, so that our information stays up to date
 35) As an Analyst, I want to set the starting base of my tenant once by typing its address in the planner, so that every plan starts from our real base without entering it again
+36) As a User, I want to switch the interface between light and dark mode, so that I can work comfortably in any light
 
 
 # CONTAINERS:
@@ -73,7 +74,7 @@ The browser downloads map tiles from the OpenStreetMap tile servers (attribution
 
 #### MICROSERVICE: visitwise-frontend
 - TYPE: frontend
-- DESCRIPTION: Angular single page application: import wizard, imports list and detail, map dashboard, visit planner, what-if analysis and scenarios.
+- DESCRIPTION: Angular single page application: import wizard, imports list and detail, map dashboard, visit planner, what-if analysis and scenarios, with a light and a dark theme (toggle in the header, US-36).
 - PORTS: 80
 - TECHNOLOGICAL SPECIFICATION:
 Angular 22 (standalone components, signals, lazy routes), TypeScript in strict mode, spartan-ng (brain/helm) UI components, Tailwind CSS 4, OpenLayers with OpenStreetMap tiles for maps, Vitest for unit tests, nginx for serving.
@@ -110,7 +111,7 @@ REST API that registers and logs in the tenants (federations), imports the Excel
 A Spring Boot application organized by feature (imports, geocoding, analytics, planning). The database schema is created and versioned by Liquibase at startup. The planning engine is plain Java code with no framework dependency, so it is fast and fully unit tested.
 
 ### PERSISTENCE EVALUATION
-Every tenant, import, delivery point, revenue, geocoding result and saved plan is stored in the visitwise-db container. Only the login sessions are kept in the backend memory: restarting the backend logs everybody out. Uploaded Excel files are parsed in memory and not kept.
+Every tenant, import, delivery point, revenue, geocoding result and saved plan is stored in the visitwise-db container. Only the login sessions are kept in the backend memory: restarting the backend logs everybody out. Uploaded Excel files (.xlsx, at most 20 MB, 20,000 rows and 200 columns) are streamed through a temporary file that is deleted as soon as the sheet is read: they are not kept.
 
 ### EXTERNAL SERVICES CONNECTIONS
 Nominatim (OpenStreetMap geocoding, https://nominatim.openstreetmap.org) to turn addresses into coordinates: at most 1 request per second with an identifying User-Agent, as required by its usage policy. Every result is cached in the database, so an address is geocoded only once. Only address and city are sent: customer names and revenues never leave the system.
