@@ -51,6 +51,8 @@ Conventions
 }
 ```
 
+In `suggestedMapping` a field is `null` when no header of the file matched it (TS type `SuggestedMapping`); the import request needs the four required fields.
+
 Parsing rules (both preview and import):
 
 - First sheet, first non-empty row = headers. Duplicate headers are made unique by appending ` (2)`, ` (3)`.

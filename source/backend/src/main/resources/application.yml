@@ -5,8 +5,17 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/visitwise}
     username: ${DB_USER:visitwise}
     password: ${DB_PASSWORD:visitwise}
+    hikari:
+      data-source-properties:
+        # The PostgreSQL driver turns a batch into multi-row INSERTs.
+        reWriteBatchedInserts: true
   jpa:
     open-in-view: false
+    properties:
+      hibernate:
+        # The import saves thousands of rows: send inserts in batches (US-02; ids come from pooled sequences).
+        jdbc.batch_size: 100
+        order_inserts: true
     hibernate:
       # Schema is owned by Liquibase. Hibernate only validates that entities match it.
       ddl-auto: validate

@@ -1,5 +1,6 @@
 package it.teamlab.visitwise.common;
 
+import it.teamlab.visitwise.imports.InvalidImportFileException;
 import java.util.Comparator;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -31,6 +32,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     ProblemDetail handleConflict(ConflictException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    /** An uploaded file that cannot be imported: the message tells the analyst why (API_CONTRACT.md: 422). */
+    @ExceptionHandler(InvalidImportFileException.class)
+    ProblemDetail handleInvalidFile(InvalidImportFileException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
     }
 
     /** Bean Validation errors on a request body: the first invalid field (alphabetical) as "field: message". */

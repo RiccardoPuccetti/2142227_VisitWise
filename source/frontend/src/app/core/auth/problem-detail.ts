@@ -9,6 +9,10 @@ export function problemDetail(error: unknown): string {
     if (error.status === 0) {
       return 'Cannot reach the server. Check your connection and try again.';
     }
+    if (error.status === 413) {
+      // Refused by nginx before the backend, with an HTML page: uploads are limited to 20 MB.
+      return 'The file is too large: the limit is 20 MB.';
+    }
     const detail: unknown = (error.error as { detail?: unknown } | null)?.detail;
     if (typeof detail === 'string' && detail.length > 0) {
       return detail;
