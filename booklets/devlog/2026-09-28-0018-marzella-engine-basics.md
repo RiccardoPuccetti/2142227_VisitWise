@@ -45,5 +45,5 @@
   database. The distance model uses local Haversine estimates and includes the
   return to base in the workday budget.
 - **Screenshot path:** Not applicable (pure Java engine; no UI changes).
-- **Publication:** Local work only; no push or pull request. Publication awaits
-  the human's explicit request.
+- **Publication:** Marzella authorized the first push of
+  `feat/MAR-1-engine-basics` to GitHub. No pull request has been opened.
