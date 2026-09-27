@@ -19,6 +19,7 @@ How each tool loads this file (it lives in `source/` because the course allows o
 **VisitWise - smart visit planning for sales territories.** Hackathon project of team TeamLab (3 people, a few days).
 A web dashboard for a federation of companies that supply customers at delivery points.
 The analyst uploads the yearly ERP Excel export through a wizard (any column order, any number of enterprise columns), the data is saved in PostgreSQL and geocoded, customers are shown on an OpenStreetMap map per enterprise, and a planner proposes **which customers to visit, in which order and on which working day (Mon-Fri)** to maximize revenue within a maximum number of days, with **what-if analysis** over different horizons.
+Each federation is a **tenant** with its own login: its data is invisible to other tenants, and its enterprises registered in the profile pre-fill the import wizard.
 Read these before working on the related area:
 
 - `booklets/architecture/OPTIMIZATION_STRATEGY.md` - how the planner works and why (ACCEPTED decision).
@@ -59,12 +60,13 @@ The root contains **exactly** these four visible items. **Never create any other
 
 ### Backend conventions
 
-- Package per feature under `it.teamlab.visitwise`: `imports`, `geocoding`, `planning` (+ `planning.engine`), `analytics`, `common`. Do not create `controller/`, `service/` layer packages at the top level.
+- Package per feature under `it.teamlab.visitwise`: `imports`, `geocoding`, `planning` (+ `planning.engine`), `analytics`, `tenant`, `common`. Do not create `controller/`, `service/` layer packages at the top level.
 - DTOs are Java `record`s. Never return JPA entities from controllers.
 - Errors: throw `NotFoundException` / `IllegalArgumentException`; `GlobalExceptionHandler` turns them into problem+json. Add handlers there, do not catch-and-wrap in controllers.
 - **Database schema changes only through Liquibase**: add `NNN-description.sql` in `src/main/resources/db/changelog/changes/` and include it in `db.changelog-master.yaml`. **Never edit a changeset already merged in `develop`.** Hibernate runs with `ddl-auto: validate`: entity and schema must match.
 - JSON columns are stored as `text` (e.g. `column_mapping`, `parameters`, `kpis`): serialize with the Jackson `ObjectMapper` bean.
 - **Spring Boot 4 gotchas** (your training data may be older): Jackson 3 -> `tools.jackson.databind.*` (annotations stay `com.fasterxml.jackson.annotation.*`); starters are modular (`spring-boot-starter-webmvc`, `*-test`); test slices moved packages (`org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest`, `org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest`); prefer `RestClient` for HTTP calls. If an import does not compile, check the Boot 4 package before inventing workarounds.
+- **Tenant isolation** (D-09): endpoints on tenant data live under `/api/imports/{id}/...` or `/api/plans/{planId}/...`, where the tenant guard checks ownership centrally. Never add an endpoint that lists or reads data across imports without filtering by the current tenant.
 - `planning.engine` is **pure Java** (no Spring, no JPA): unit-test it with plain JUnit.
 - Tests: JUnit 5 + AssertJ. Every engine rule has a unit test. Controllers: at least one happy-path test.
 
@@ -132,7 +134,7 @@ Before every `git push`, add **one new file** in `booklets/devlog/` (one file pe
 - The real ERP file is under NDA. Keep it **outside the repo** or in `source/data-private/` (gitignored). `*.xlsx` is gitignored except the synthetic samples and the import template.
 - Never put real customer names, addresses or revenue in code, tests, fixtures, docs, screenshots committed to the repo, or prompts to external services beyond what the task strictly needs. Use `source/sample-data/` for tests and screenshots.
 - Nothing derived from the real file is committed either: no counts, totals, percentages or column layout. Figures in docs, screenshots and slides come from `source/sample-data/`.
-- The only external service that receives data is the geocoder (Nominatim), and it receives **only address + city**.
+- The only external service that receives data is the geocoder (Nominatim), and it receives **only address fields** (street, postal code, city, province) of delivery points and enterprise headquarters.
 
 ## 9. Definition of Done (for every task)
 

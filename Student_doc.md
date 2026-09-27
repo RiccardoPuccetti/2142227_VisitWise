@@ -4,6 +4,8 @@ VisitWise is a web dashboard for a federation of companies that supply bars, res
 
 The analyst uploads the yearly revenue file exported from the company ERP through an import wizard: the file can change every year, its columns can have any name and any order, and the analyst chooses which columns contain the revenue of each company of the federation. A template can be downloaded. Each import is named by the analyst, stored in the database with its creation date, and listed as cards or as a table. Delivery addresses are geolocated automatically.
 
+Each federation registers as a tenant with its own login, and its imports and plans are invisible to other tenants. A tenant can register its enterprises once (name, column header in the ERP export, headquarters address): the import wizard then pre-fills them, and the analyst can still change them for a single import to try alternatives.
+
 On an OpenStreetMap map the analyst sees the customers of each company, filters them by company, agent, city and revenue, and reads the main indicators. The planner proposes which customers to visit, in which order and on which working day (Monday to Friday, public holidays excluded) in order to maximize the revenue covered within a maximum number of days chosen by the analyst, inside a commercial campaign window. The analyst can run what-if analyses, save plans as scenarios and compare them; agents can consult and export their own visit calendar.
 
 # USER STORIES:
@@ -38,6 +40,13 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 28) As a Sales Agent, I want to see my visit calendar day by day, so that I know which customers to visit and when
 29) As a Sales Agent, I want to export my plan to Excel, so that I can use it offline and share it
 30) As a Sales Agent, I want to open a planned visit in OpenStreetMap directions, so that I can reach the customer easily
+31) As a Tenant admin, I want to register my tenant with its name, my email and a password, so that my team gets its own private workspace
+32) As a User, I want to log in and log out, so that only my team can see our data
+33) As a Tenant admin, I want the imports, maps and plans of my tenant to be invisible to any other tenant, so that our confidential revenue data stays private (NDA)
+34) As a Tenant admin, I want to register the enterprises of my tenant (name, column header in our ERP export, color and optionally VAT number and headquarters address), at registration or later, so that I enter them once instead of at every import
+35) As an Analyst, I want the import wizard to match the file columns to my registered enterprises and pre-fill their names, colors and addresses, so that importing a new yearly file takes fewer steps
+36) As an Analyst, I want to change the enterprise data (including the headquarters address) for a single import in the wizard, so that I can try alternatives and see how they change the results
+37) As a Tenant admin, I want a profile page to change the tenant name, my password and the enterprises, so that our information stays up to date
 
 
 # CONTAINERS:
@@ -48,7 +57,7 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 Single page web application used by analysts, sales managers and sales agents. It is served by nginx, which also forwards every `/api` request to the backend container.
 
 ### USER STORIES:
-1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37
 
 ### PORTS: 
 4200:80
@@ -91,7 +100,7 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 REST API that imports the Excel files, stores and geolocates the data, computes the analytics and the visit plans.
 
 ### USER STORIES:
-1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 31, 32, 33, 34, 35, 36, 37
 
 ### PORTS: 
 8080:8080
@@ -145,7 +154,7 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 Relational database of the system.
 
 ### USER STORIES:
-2, 6, 7, 8, 9, 10, 11, 12, 27, 28
+2, 6, 7, 8, 9, 10, 11, 12, 27, 28, 31, 33, 34, 36, 37
 
 ### PORTS: 
 5432:5432

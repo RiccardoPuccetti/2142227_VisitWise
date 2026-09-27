@@ -6,7 +6,7 @@ Status: `TODO` / `DOING` / `REVIEW` / `DONE` - update it in your PR.
 
 | Member | Slice |
 |---|---|
-| **Puccetti** (`PUC`) | Import: Excel -> database -> geocoding, wizard and imports pages |
+| **Puccetti** (`PUC`) | Import: Excel -> database -> geocoding, wizard and imports pages; tenants, login and tenant profile |
 | **Marzella** (`MAR`) | Planning: engine, planning API, planner / what-if / scenarios pages |
 | **Rivera** (`RIV`) | Platform & map: app shell, UI kit, map dashboard, agent plan, booklets & slides |
 
@@ -24,10 +24,12 @@ Status: `TODO` / `DOING` / `REVIEW` / `DONE` - update it in your PR.
 | UI kit + shared components, incl. `MapView` (RIV-1) | Rivera | Everyone's pages |
 | Points list endpoint (RIV-2) | Rivera | Puccetti's import detail page |
 | Plans API (MAR-3) | Marzella | Rivera's agent plan page (uses the contract example JSON until then) |
+| Login + tenant guard + demo tenant in the dev seed (PUC-8) | Puccetti | Nobody is blocked: until it merges nothing changes. After it merges every `/api` call needs a session: log in with the dev demo account and use the PUC-8 test helper in controller tests |
+| Enterprise headquarters in `ImportDetail` (PUC-11) | Puccetti | *Proposal, to agree with Marzella:* "Start from headquarters" option in the planner form, which fills the existing `base` parameter |
 
 ## Puccetti - Import
 
-Owns: backend `imports/`, `geocoding/`, `db/changelog/dev/`; frontend `features/imports/`; `docker-compose.yml`; `sample-data/`; `Student_doc.md`.
+Owns: backend `imports/`, `geocoding/`, `tenant/` (accounts, security config, tenant guard), `db/changelog/dev/`; frontend `features/imports/`, `features/auth/`, `features/profile/`, `core/auth/`; `docker-compose.yml`; `sample-data/`; `Student_doc.md`. Login route and user menu in `app.routes.ts` / shell header: dedicated commit, reviewed by Rivera.
 
 | ID | Task | Stories | Needs |
 |---|---|---|---|
@@ -37,7 +39,11 @@ Owns: backend `imports/`, `geocoding/`, `db/changelog/dev/`; frontend `features/
 | PUC-4 | Background geocoding (Nominatim 1 req/s + cache), retry, manual location | 8, 9 | PUC-3 |
 | PUC-5 | Import wizard page: upload -> column mapping -> enterprises -> name -> report | 1-7 | PUC-3, RIV-1 |
 | PUC-6 | Imports list (cards/table) + import detail (progress, points table, fix location, delete) | 8-12 | PUC-4, RIV-1, RIV-2 |
-| PUC-7 | `Student_doc.md`, mockups S1-S5, real file imported on the demo laptop | - | - |
+| PUC-7 | `Student_doc.md`, mockups S1-S5, S12, S13, real file imported on the demo laptop | - | - |
+| PUC-8 | Tenants and login (backend): `tenant` + `app_user` tables, `import_batch.tenant_id`; register / login / logout / me endpoints; Spring Security session cookie + CSRF; one guard for `/api/imports/{id}/**` and `/api/plans/{planId}/**` (404 for other tenants); demo tenant in the dev seed; isolation test; test helper for authenticated controller tests | 31, 32, 33 | PUC-1, PUC-3 |
+| PUC-9 | Login and register pages, `core/auth/` (session state, route guard, redirect to login on 401), user menu with logout | 31, 32 | PUC-8, RIV-1 |
+| PUC-10 | Tenant enterprises: `tenant_enterprise` table + CRUD API, headquarters geocoding, optional enterprises step at registration, profile page (tenant name, password, enterprises) | 34, 37 | PUC-8, PUC-4 |
+| PUC-11 | Wizard pre-fill: preview matches columns to tenant enterprises; enterprise step pre-filled and editable, values copied into the import; "Also save to profile" | 35, 36 | PUC-5, PUC-10 |
 
 ## Marzella - Planning
 
