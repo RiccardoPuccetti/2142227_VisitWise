@@ -134,6 +134,7 @@ Refs: <TASK-ID>[, US-xx]
 6. **Do not invent.** Unknown requirement -> read the booklets; still unclear -> ask the human. Do not fabricate API fields, data, or test results.
 7. **Small commits** following section 5. Stage explicit paths (`git add <paths>`), never blindly `git add -A`.
 8. **Keep docs in sync in the same PR**: new endpoint -> `API_CONTRACT.md` (if agreed) + `Student_doc.md` endpoints table; new page -> `Student_doc.md` pages table; new table -> `Student_doc.md` DB structure.
+9. **Update the task status log when a task is completed** (or only partly done, when its work is merged): in the same PR, add a new dated section on top of `booklets/team/TASK_STATUS.md`: copy the previous section, change the rows of the tasks you worked on (status + evidence: commits, endpoints, pages, or what is still missing), update the summary and the blockers. Never edit older sections. Set the story status in `booklets/user-stories/USER_STORIES.md` and the spreadsheet too.
 
 ## 7. Every push is documented (booklets feed the slides)
 
@@ -156,5 +157,6 @@ Before every `git push`, add **one new file** in `booklets/devlog/` (one file pe
 - [ ] Written test-first (section 3); code builds; tests of the touched area pass; `docker compose up --build` still works.
 - [ ] Acceptance criteria of the task in `TASKS.md` are met; related US ids are in the commits.
 - [ ] Docs updated (contract / Student_doc / architecture) where relevant.
+- [ ] `booklets/team/TASK_STATUS.md` has a new dated section with the task's new status (section 6, rule 9).
 - [ ] Devlog file added; screenshots for UI work.
 - [ ] PR opened into `develop` with the template filled.

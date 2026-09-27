@@ -3,6 +3,8 @@
 Status of every task in `TASKS.md`, checked against what is merged in `develop` (commits, endpoints, pages), not
 against what is planned. Newest check first: add a new dated section on top, do not edit the old ones.
 
+**Every time a task is completed** (or partly done when its work is merged), whoever did it - person or AI agent - adds a new section in the same PR (`source/AGENTS.md`, section 6 rule 9, and the Definition of Done): copy the latest section, update the rows of that task, the summary and the blockers, and put the `develop` commit in the title.
+
 Legend: ✅ done (merged in `develop`) · 🟡 partly done · ❌ not started · ⏭️ skipped by decision · ❓ not visible in the repo
 
 ## 2026-09-28 - `develop` at `6ce1573`
