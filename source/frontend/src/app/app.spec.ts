@@ -44,11 +44,42 @@ describe('App', () => {
     expect(header.textContent).toContain('VisitWise');
   });
 
+  describe('theme toggle (US-36)', () => {
+    const toggle = (header: HTMLElement) =>
+      [...header.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.getAttribute('aria-label') === 'Dark mode');
+
+    beforeEach(() => {
+      localStorage.clear();
+      document.documentElement.classList.remove('dark');
+      window.matchMedia ??= (() => ({ matches: false, addEventListener() {}, removeEventListener() {} })) as never;
+    });
+
+    it('is in the header even before login, and says whether dark mode is on', async () => {
+      const { header } = await render();
+
+      expect(toggle(header)?.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('switches the whole interface to dark and back', async () => {
+      const { fixture, header } = await render();
+
+      toggle(header)?.click();
+      await fixture.whenStable();
+      expect(document.documentElement.classList.contains('dark')).toBe(true);
+      expect(toggle(header)?.getAttribute('aria-pressed')).toBe('true');
+
+      toggle(header)?.click();
+      await fixture.whenStable();
+      expect(document.documentElement.classList.contains('dark')).toBe(false);
+    });
+  });
+
   it('hides the navigation and the tenant menu when logged out', async () => {
     const { header } = await render();
 
     expect(header.querySelector('nav')).toBeNull();
-    expect(header.querySelector('button')).toBeNull();
+    const buttons = [...header.querySelectorAll('button')].map((b) => b.textContent?.trim());
+    expect(buttons).not.toContain('Log out');
   });
 
   it('shows the tenant name, a profile link and a logout button when logged in', async () => {

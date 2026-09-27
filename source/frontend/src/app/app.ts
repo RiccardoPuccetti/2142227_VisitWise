@@ -2,10 +2,13 @@ import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideMoon, lucideSun } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmToasterImports } from '@spartan-ng/helm/sonner';
 import { filter, map } from 'rxjs';
 import { AuthService } from './core/auth/auth.service';
+import { ThemeService } from './core/theme/theme.service';
 
 /** Pages of one import, shown in the header when the URL is `/imports/:importId/...`. */
 const IMPORT_SECTIONS = [
@@ -22,7 +25,8 @@ export function importIdFromUrl(url: string): number | null {
 }
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, HlmButtonImports, HlmToasterImports],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgIcon, HlmButtonImports, HlmToasterImports],
+  providers: [provideIcons({ lucideMoon, lucideSun })],
   selector: 'app-root',
   styleUrl: './app.css',
   templateUrl: './app.html',
@@ -31,6 +35,8 @@ export class App {
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   protected readonly auth = inject(AuthService);
+  /** US-36 (Puccetti, PUC-11): dark mode toggle, also before login. */
+  protected readonly theme = inject(ThemeService);
 
   private readonly url = toSignal(
     this.router.events.pipe(

@@ -1,5 +1,5 @@
 <!-- App shell (owner: Rivera, task RIV-1): header with navigation + routed page + toaster.
-     Navigation and tenant menu (profile link, logout; Puccetti, PUC-9) only when logged in. -->
+     Navigation and tenant menu (profile link, logout; Puccetti, PUC-9) only when logged in; dark mode toggle always. -->
 <a
   href="#main"
   (click)="skipToMain($event)"
@@ -68,6 +68,20 @@
         <button hlmBtn variant="ghost" size="sm" type="button" (click)="logout()">Log out</button>
       </div>
     }
+
+    <!-- Dark mode (US-36, Puccetti PUC-11): on every page, logged in or not. -->
+    <button
+      hlmBtn
+      variant="ghost"
+      size="icon-sm"
+      type="button"
+      aria-label="Dark mode"
+      [attr.aria-pressed]="theme.theme() === 'dark'"
+      [class.ml-auto]="!auth.currentTenant()"
+      (click)="theme.toggle()"
+    >
+      <ng-icon [name]="theme.theme() === 'dark' ? 'lucideSun' : 'lucideMoon'" aria-hidden="true" />
+    </button>
   </div>
 </header>
 
