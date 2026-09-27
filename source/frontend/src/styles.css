@@ -4,6 +4,8 @@
 @import 'tailwindcss/utilities.css';
 
 @import '@spartan-ng/brain/hlm-tailwind-preset.css';
+/* OpenLayers controls (zoom, attribution) used by the shared MapView. Not layered, so preflight cannot override it. */
+@import 'ol/ol.css';
 /* You can add global styles to this file, and also import other style files */
 
 :root {
