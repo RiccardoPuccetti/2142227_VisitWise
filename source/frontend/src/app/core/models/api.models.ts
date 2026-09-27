@@ -30,6 +30,14 @@ export interface ColumnMapping {
   enterprises: EnterpriseMapping[];
 }
 
+/** The preview's guess: a required field is null when no header of the file matched it. */
+export interface SuggestedMapping extends Omit<ColumnMapping, 'customer' | 'deliveryPoint' | 'address' | 'city'> {
+  customer: string | null;
+  deliveryPoint: string | null;
+  address: string | null;
+  city: string | null;
+}
+
 export interface ImportPreview {
   fileName: string;
   sheetName: string;
@@ -37,7 +45,7 @@ export interface ImportPreview {
   /** First rows of the sheet, cells rendered as strings. */
   sampleRows: string[][];
   totalRows: number;
-  suggestedMapping: ColumnMapping;
+  suggestedMapping: SuggestedMapping;
 }
 
 export interface CreateImportRequest {
