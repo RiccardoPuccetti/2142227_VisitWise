@@ -45,6 +45,7 @@ PUC-8 and PUC-9 follow the steps in `booklets/architecture/AUTHENTICATION.md`.
 | PUC-8 | Tenants and login (backend): `tenant` table (one account per tenant), `import_batch.tenant_id`; register / login / logout / me endpoints; Spring Security session cookie + CSRF; one guard for `/api/imports/{id}/**` and `/api/plans/{planId}/**` (404 for other tenants); demo tenant in the dev seed; isolation test; test helper for authenticated controller tests | 31, 32, 33 | PUC-1, PUC-3 |
 | PUC-9 | Login, register and profile pages, `core/auth/` (session state, route guard, redirect to login on 401), user menu with logout | 31, 32, 34 | PUC-8, RIV-1 |
 | PUC-10 | Tenant starting base: columns on `tenant`, get / save API geocoding address + city, `StartingBaseField` component for the planner form | 35 | PUC-8, PUC-4 |
+| PUC-11 | Dark mode: `ThemeService` (system preference until the user chooses, choice kept in the browser), theme applied before first paint (`theme-init.js`, allowed by the CSP), toggle in the header | 36 | RIV-1 |
 
 ## Marzella - Planning
 
