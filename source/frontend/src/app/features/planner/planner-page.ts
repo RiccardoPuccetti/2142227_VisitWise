@@ -179,6 +179,8 @@ export class PlannerPage {
     const day = this.selectedDay();
     return day ? (this.roadRoutes()[dayKey(day.date, day.agent)] ?? null) : null;
   });
+  /** The starting point alone, for the map of step 1. */
+  protected readonly baseMarkers = computed(() => baseMarker(this.base()));
   protected readonly markers = computed(() =>
     this.result() ? planMarkers(this.result(), this.selectedDayIndex()) : baseMarker(this.base()),
   );
