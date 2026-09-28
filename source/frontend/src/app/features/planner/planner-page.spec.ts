@@ -346,7 +346,7 @@ describe('PlannerPage', () => {
     expect(tab('Plan').disabled).toBe(false);
   });
 
-  it('describes each day of the plan: number, weekday, agent, stops, distance and revenue', async () => {
+  it('lists the routes by day: the day with its total, then each agent with stops, distance and revenue', async () => {
     button('Generate plan').click();
     TestBed.tick();
     http.expectOne('/api/imports/42/plans/simulate').flush(RESULT);
@@ -355,14 +355,17 @@ describe('PlannerPage', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
 
-    const day = page().querySelector('[aria-labelledby="planner-days-title"] li button')!;
-    const words = day.textContent?.replace(/\s+/g, ' ') ?? '';
-    expect(words).toContain('Day 1');
-    expect(words).toContain('Mon 2 Nov');
+    const rail = page().querySelector('[aria-labelledby="planner-days-title"]')!;
+    const heading = rail.querySelector('h4')?.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(heading).toContain('Mon 2 Nov');
+    expect(heading).toContain('1 route');
+    const route = rail.querySelector('li li button')!;
+    const words = route.textContent?.replace(/\s+/g, ' ') ?? '';
     expect(words).toContain('AGENT NORTH');
     expect(words).toContain('1 stop');
     expect(words).toContain('42,5 km');
     expect(words).toContain('8500');
+    expect(route.getAttribute('aria-pressed')).toBe('true');
   });
 });
 

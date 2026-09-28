@@ -135,3 +135,55 @@ export function dayRevenue(day: PlanDay): number {
 export function revealDelay(startedAt: number, now: number, minimum: number): number {
   return Math.max(0, minimum - (now - startedAt));
 }
+
+/** Agent colors of the day list: the chart series of the theme, in the order the agents first appear. */
+const AGENT_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+
+export interface DayRoute {
+  /** Position of the route (day) in the plan, used to select it. */
+  index: number;
+  agent: string;
+  color: string;
+  stops: number;
+  km: number;
+  revenue: number;
+  /** Revenue compared with the most valuable route of the plan, 0..1. */
+  share: number;
+}
+
+export interface DayGroup {
+  date: string;
+  title: string;
+  revenue: number;
+  routes: DayRoute[];
+}
+
+/** The routes of a plan grouped by working day, each agent with its own color on every day. */
+export function groupDays(days: readonly PlanDay[]): DayGroup[] {
+  const agents: string[] = [];
+  const best = Math.max(0, ...days.map(dayRevenue));
+  const groups: DayGroup[] = [];
+  days.forEach((day, index) => {
+    const agent = day.agent ?? 'One visitor';
+    if (!agents.includes(agent)) {
+      agents.push(agent);
+    }
+    const revenue = dayRevenue(day);
+    let group = groups.at(-1);
+    if (!group || group.date !== day.date) {
+      group = { date: day.date, title: dayTitle(day.date), revenue: 0, routes: [] };
+      groups.push(group);
+    }
+    group.revenue += revenue;
+    group.routes.push({
+      index,
+      agent,
+      color: AGENT_COLORS[agents.indexOf(agent) % AGENT_COLORS.length],
+      stops: day.visits.length,
+      km: day.km,
+      revenue,
+      share: best > 0 ? revenue / best : 0,
+    });
+  });
+  return groups;
+}

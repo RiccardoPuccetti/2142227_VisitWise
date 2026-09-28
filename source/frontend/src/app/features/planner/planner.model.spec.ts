@@ -1,5 +1,13 @@
 import type { PlanDay, PlanParameters, PlanResult, PlannedVisit } from '../../core/models/api.models';
-import { dayRevenue, dayTitle, planRoutes, revealDelay, travelBasis, validateParameters } from './planner.model';
+import {
+  dayRevenue,
+  dayTitle,
+  groupDays,
+  planRoutes,
+  revealDelay,
+  travelBasis,
+  validateParameters,
+} from './planner.model';
 
 const PARAMETERS: PlanParameters = {
   campaign: 'CHRISTMAS',
@@ -88,5 +96,50 @@ describe('revealDelay', () => {
     expect(revealDelay(1000, 1300, 900)).toBe(600);
     expect(revealDelay(1000, 2500, 900)).toBe(0);
     expect(revealDelay(1000, 1000, 0)).toBe(0);
+  });
+});
+
+describe('groupDays', () => {
+  const visit = (expectedRevenue: number) => ({ expectedRevenue }) as PlannedVisit;
+  const day = (date: string, agent: string | null, revenues: number[], km = 10): PlanDay => ({
+    date,
+    agent,
+    km,
+    visits: revenues.map(visit),
+  });
+
+  it('groups the routes by date, with the total of each day', () => {
+    const groups = groupDays([
+      day('2026-11-02', 'AGENT EAST', [300]),
+      day('2026-11-02', 'AGENT NORTH', [100, 100]),
+      day('2026-11-03', 'AGENT EAST', [150]),
+    ]);
+
+    expect(groups.map((group) => [group.title, group.routes.length, group.revenue])).toEqual([
+      ['Mon 2 Nov', 2, 500],
+      ['Tue 3 Nov', 1, 150],
+    ]);
+    // Each route keeps the position of its day in the plan, to select it.
+    expect(groups[1].routes[0].index).toBe(2);
+    expect(groups[0].routes[1]).toMatchObject({ agent: 'AGENT NORTH', stops: 2, km: 10, revenue: 200 });
+  });
+
+  it('gives every agent its own color, the same on every day, and one visitor a single color', () => {
+    const groups = groupDays([
+      day('2026-11-02', 'AGENT EAST', [1]),
+      day('2026-11-02', 'AGENT NORTH', [1]),
+      day('2026-11-03', 'AGENT EAST', [1]),
+    ]);
+    const [east, north] = groups[0].routes;
+    expect(east.color).not.toBe(north.color);
+    expect(groups[1].routes[0].color).toBe(east.color);
+
+    const alone = groupDays([day('2026-11-02', null, [1])])[0].routes[0];
+    expect(alone.agent).toBe('One visitor');
+  });
+
+  it('measures each route against the most valuable route of the plan', () => {
+    const [group] = groupDays([day('2026-11-02', 'A', [400]), day('2026-11-02', 'B', [100])]);
+    expect(group.routes.map((route) => route.share)).toEqual([1, 0.25]);
   });
 });

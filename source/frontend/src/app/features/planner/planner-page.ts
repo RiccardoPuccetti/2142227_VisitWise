@@ -51,8 +51,7 @@ import { EurPipe, KpiCard, MapView, PageHeader } from '../../shared';
 import {
   DEFAULT_BASE,
   baseMarker,
-  dayRevenue,
-  dayTitle,
+  groupDays,
   planMarkers,
   planRoutes,
   revealDelay,
@@ -272,16 +271,8 @@ export class PlannerPage {
     const day = this.selectedDay();
     return day ? (this.roadRoutes()[dayKey(day.date, day.agent)] ?? null) : null;
   });
-  /** The days of the plan as the rail lists them. */
-  protected readonly dayItems = computed(() =>
-    (this.result()?.days ?? []).map((day) => ({
-      title: dayTitle(day.date),
-      agent: day.agent ?? 'One visitor',
-      stops: day.visits.length,
-      km: day.km,
-      revenue: dayRevenue(day),
-    })),
-  );
+  /** The routes of the plan grouped by working day, as the rail lists them. */
+  protected readonly dayGroups = computed(() => groupDays(this.result()?.days ?? []));
   /** The starting point alone, for the map of step 1. */
   protected readonly baseMarkers = computed(() => baseMarker(this.base()));
   protected readonly markers = computed(() =>

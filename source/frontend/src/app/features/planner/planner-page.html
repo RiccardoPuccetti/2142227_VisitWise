@@ -498,36 +498,74 @@
               <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
                 <!-- From xl the rail takes the day card's height (contain: size) and its list scrolls inside. -->
                 <section hlmCard size="sm" aria-labelledby="planner-days-title" class="gap-3 xl:[contain:size]">
-                  <div hlmCardHeader>
+                  <!-- Title, dates and agent names start on one line (35 px in); totals and amounts end on one edge. -->
+                  <div hlmCardHeader class="pl-[calc(var(--card-spacing)+2.1875rem)]">
                     <h3 hlmCardTitle id="planner-days-title">Days</h3>
-                    <p hlmCardDescription>{{ plan.days.length }} routes, one per agent and working day</p>
+                    <p hlmCardDescription>
+                      {{ plan.days.length }} {{ plan.days.length === 1 ? 'route' : 'routes' }} over
+                      {{ dayGroups().length }} working {{ dayGroups().length === 1 ? 'day' : 'days' }}
+                    </p>
                   </div>
-                  <div hlmCardContent class="flex min-h-0 flex-1 flex-col px-2">
-                    <ol class="flex max-h-80 flex-col gap-1 overflow-auto xl:max-h-none xl:min-h-0 xl:flex-1">
-                      @for (item of dayItems(); track $index; let i = $index) {
-                        <li>
-                          <button
-                            type="button"
-                            class="hover:bg-muted flex w-full flex-col gap-1 rounded-xl border-l-2 border-transparent px-3 py-2.5 text-left text-sm transition-colors"
-                            [class.bg-brand-soft]="selectedDayIndex() === i"
-                            [class.border-brand]="selectedDayIndex() === i"
-                            [attr.aria-pressed]="selectedDayIndex() === i"
-                            (click)="selectDay(i)"
-                          >
-                            <span class="flex items-baseline justify-between gap-2">
-                              <strong>{{ item.title }}</strong>
-                              <span class="text-muted-foreground text-xs tabular-nums">Day {{ i + 1 }}</span>
+                  <div hlmCardContent class="flex min-h-0 flex-1 flex-col">
+                    <!-- A timeline: one point per working day, then its routes, each in its agent's color. -->
+                    <ol class="flex max-h-80 flex-col overflow-auto pr-1 xl:max-h-none xl:min-h-0 xl:flex-1">
+                      @for (group of dayGroups(); track group.date; let last = $last) {
+                        <li class="relative pb-4 pl-[22px]">
+                          @if (!last) {
+                            <span class="bg-border absolute top-[15px] -bottom-[5px] left-[5px] w-px" aria-hidden="true"></span>
+                          }
+                          <span
+                            class="absolute top-[5px] left-0 size-[11px] rounded-full border-2"
+                            [class]="group.routes[0].index <= selectedDayIndex() && selectedDayIndex() <= group.routes.at(-1)!.index
+                              ? 'bg-foreground border-foreground'
+                              : 'bg-card border-muted-foreground/60'"
+                            aria-hidden="true"
+                          ></span>
+                          <h4 class="mb-2 flex items-baseline justify-between gap-2 pr-2.5 pl-[13px] leading-5">
+                            <span class="text-sm font-semibold">{{ group.title }}</span>
+                            <span class="text-muted-foreground text-xs tabular-nums">
+                              {{ group.routes.length }} {{ group.routes.length === 1 ? 'route' : 'routes' }} ·
+                              {{ group.revenue | eur: 'rounded' }}
                             </span>
-                            <span class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
-                              <ng-icon name="lucideUser" class="shrink-0" aria-hidden="true" />
-                              <span class="truncate">{{ item.agent }}</span>
-                            </span>
-                            <span class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums">
-                              <span>{{ item.stops }} {{ item.stops === 1 ? 'stop' : 'stops' }}</span>
-                              <span>{{ decimal(item.km) }} km</span>
-                              <span>{{ item.revenue | eur: 'rounded' }}</span>
-                            </span>
-                          </button>
+                          </h4>
+                          <ul class="flex flex-col gap-1.5">
+                            @for (route of group.routes; track route.index) {
+                              <li>
+                                <button
+                                  type="button"
+                                  class="hover:bg-muted/60 block w-full rounded-r-lg border-l-[3px] px-2.5 py-2 text-left transition-colors"
+                                  [class.bg-muted]="selectedDayIndex() === route.index"
+                                  [class.ring-1]="selectedDayIndex() === route.index"
+                                  [class.ring-border]="selectedDayIndex() === route.index"
+                                  [class.ring-inset]="selectedDayIndex() === route.index"
+                                  [style.border-left-color]="route.color"
+                                  [attr.aria-pressed]="selectedDayIndex() === route.index"
+                                  (click)="selectDay(route.index)"
+                                >
+                                  <span class="flex items-baseline justify-between gap-2 text-xs leading-[18px] font-semibold">
+                                    <span class="truncate">{{ route.agent }}</span>
+                                    <span class="shrink-0 tabular-nums">{{ route.revenue | eur: 'rounded' }}</span>
+                                  </span>
+                                  <span class="bg-muted my-1.5 block h-1 overflow-hidden rounded-full" aria-hidden="true">
+                                    <span
+                                      class="block h-full rounded-full"
+                                      [style.width.%]="route.share * 100"
+                                      [style.background-color]="route.color"
+                                    ></span>
+                                  </span>
+                                  <span class="text-muted-foreground flex gap-3.5 text-[11px] leading-4 tabular-nums">
+                                    <span class="inline-flex items-center gap-1">
+                                      <ng-icon name="lucideMapPin" aria-hidden="true" />
+                                      {{ route.stops }} {{ route.stops === 1 ? 'stop' : 'stops' }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1">
+                                      <ng-icon name="lucideRoute" aria-hidden="true" /> {{ decimal(route.km) }} km
+                                    </span>
+                                  </span>
+                                </button>
+                              </li>
+                            }
+                          </ul>
                         </li>
                       }
                     </ol>
