@@ -1,14 +1,94 @@
-import { Component } from '@angular/core';
+import { Component, computed, ElementRef, inject, linkedSignal, resource, signal, viewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { HlmAlertImports } from '@spartan-ng/helm/alert';
+import { HlmAlertDialogImports } from '@spartan-ng/helm/alert-dialog';
+import { HlmBadgeImports } from '@spartan-ng/helm/badge';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmEmptyImports } from '@spartan-ng/helm/empty';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
+import { HlmTableImports } from '@spartan-ng/helm/table';
+import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
+import type { ImportSummary } from '../../core/models/api.models';
+import { problemDetail } from '../../core/auth/problem-detail';
+import { formatCreatedAt, importStatusLabel } from './import-status';
+import { ImportsView, ImportsViewPreference } from './imports-view';
+import { ImportsService } from './imports.service';
 
 /**
- * US-10, US-12 - owner: Puccetti (task PUC-6 in booklets/team/TASKS.md).
- * PLACEHOLDER created by the scaffolding: replace the whole component with the real page.
+ * US-10, US-12: the tenant's imports as cards or as a table (the choice is remembered in the browser), each linking
+ * to its detail, with delete after a confirmation.
  */
 @Component({
   selector: 'app-imports-list-page',
-  template: `
-    <h1 class="text-2xl font-semibold">Imports</h1>
-    <p class="text-muted-foreground">Placeholder - task PUC-6</p>
-  `,
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    HlmAlertImports,
+    HlmAlertDialogImports,
+    HlmBadgeImports,
+    HlmButtonImports,
+    HlmCardImports,
+    HlmEmptyImports,
+    HlmSpinnerImports,
+    HlmTableImports,
+    HlmToggleGroupImports,
+  ],
+  templateUrl: './imports-list-page.html',
 })
-export class ImportsListPage {}
+export class ImportsListPage {
+  private readonly api = inject(ImportsService);
+  private readonly preference = inject(ImportsViewPreference);
+  private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+
+  protected readonly view = this.preference.view;
+
+  private readonly importsResource = resource({ loader: () => this.api.list() });
+
+  /** The loaded list, without the imports deleted since. */
+  private readonly imports = linkedSignal(() =>
+    this.importsResource.hasValue() ? this.importsResource.value() : [],
+  );
+
+  protected readonly loading = this.importsResource.isLoading;
+  protected readonly loadError = computed(() => {
+    const error = this.importsResource.error();
+    return error ? problemDetail(error) : null;
+  });
+
+  protected readonly items = computed(() =>
+    this.imports().map((item) => ({
+      ...item,
+      created: formatCreatedAt(item.createdAt),
+      statusLabel: importStatusLabel(item.status),
+    })),
+  );
+
+  protected readonly deleting = signal<number | null>(null);
+  protected readonly deleteError = signal<string | null>(null);
+  protected readonly message = signal('');
+
+  protected setView(value: unknown): void {
+    if (value === 'cards' || value === 'table') {
+      this.preference.set(value satisfies ImportsView);
+    }
+  }
+
+  protected async remove(item: ImportSummary): Promise<void> {
+    this.deleting.set(item.id);
+    this.deleteError.set(null);
+    this.message.set('');
+    try {
+      await this.api.remove(item.id);
+      this.imports.update((imports) => imports.filter((candidate) => candidate.id !== item.id));
+      this.message.set(`${item.name} was deleted.`);
+      // The button that opened the dialog is gone: keep the keyboard focus on the page.
+      this.heading().nativeElement.focus();
+    } catch (error) {
+      this.deleteError.set(problemDetail(error));
+    } finally {
+      this.deleting.set(null);
+    }
+  }
+}

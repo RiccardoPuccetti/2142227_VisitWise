@@ -1,7 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ColumnMapping, CreateImportRequest, ImportPreview, ImportSummary } from '../../core/models/api.models';
+import {
+  ColumnMapping,
+  CreateImportRequest,
+  ImportDetail,
+  ImportPreview,
+  ImportSummary,
+} from '../../core/models/api.models';
 import { IMPORT_TEMPLATE_URL, ImportsService } from './imports.service';
 
 const MAPPING: ColumnMapping = {
@@ -105,5 +111,36 @@ describe('ImportsService', () => {
     await nextTick();
 
     await failure;
+  });
+  it('lists the imports of the tenant (endpoint 4)', async () => {
+    const result = service.list();
+
+    http.expectOne({ method: 'GET', url: '/api/imports' }).flush([SUMMARY]);
+
+    expect(await result).toEqual([SUMMARY]);
+  });
+
+  it('reads the detail of one import (endpoint 5)', async () => {
+    const detail: ImportDetail = {
+      ...SUMMARY,
+      mapping: MAPPING,
+      agents: ['AGENT NORTH'],
+      cities: ['ROMA'],
+      notFoundCount: 0,
+      errorMessage: null,
+    };
+    const result = service.detail(7);
+
+    http.expectOne({ method: 'GET', url: '/api/imports/7' }).flush(detail);
+
+    expect(await result).toEqual(detail);
+  });
+
+  it('deletes an import (endpoint 6)', async () => {
+    const result = service.remove(7);
+
+    http.expectOne({ method: 'DELETE', url: '/api/imports/7' }).flush(null, { status: 204, statusText: 'No Content' });
+
+    await expect(result).resolves.toBeNull();
   });
 });
