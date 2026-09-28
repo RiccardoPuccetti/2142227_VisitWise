@@ -53,7 +53,7 @@ We cannot predict the *incremental* revenue of a visit (no history). We use the 
 | Risk in a few-day hackathon | None | High: native libs (OR-Tools) or a new framework (Timefold), non-determinism, tuning | Low: plain Java, unit-testable from minute zero |
 | Deterministic | Yes | Not by default | **Yes** (same input -> same plan, essential for what-if comparisons) |
 
-**Why C wins.** With visits of 3-4 hours a working day holds at most 2 (rarely 3) stops, so the routing part is tiny (at most 3 stops: we can try every order). All the value is in **selection** and **pairing nearby visits on the same day**, which a domain heuristic handles well. It is fast enough to recompute a plan on every slider change and to run the what-if sweep in one request, it is deterministic, and we can explain it. We also report an **upper bound** (sum of the best `days x slots` values ignoring travel) so the quality of the heuristic is measurable: the gap between plan and upper bound is shown in the KPIs.
+**Why C wins.** With visits of 3-4 hours a working day usually holds 2 (rarely 3) stops, so we can try every order. With shorter visits, routes can grow to the time budget using cheapest insertion (Marzella's MAR-2 decision, 2026-09-28). All the value is in **selection** and **pairing nearby visits on the same day**, which a domain heuristic handles well. It is fast enough to recompute a plan on every slider change and to run the what-if sweep in one request, it is deterministic, and we can explain it. We also report an **upper bound** (sum of the best unweighted selected revenues in `days x slots`, separately for each visitor, ignoring travel) so the revenue coverage gap is measurable. Weights affect the selection objective, so this bound measures unweighted revenue capacity rather than optimality of the weighted objective.
 
 The engine sits behind a `VisitPlanner` interface (Strategy pattern): a Timefold implementation can be added later without touching API or UI. This is **out of scope** unless everything else is done.
 
@@ -129,7 +129,8 @@ INPUT: delivery points (geocoded), parameters
      if none: stop
      route := [seed]
      repeat:
-        for every unassigned j that can be inserted feasibly (cheapest insertion, <= 3 stops: try all orders):
+        for every unassigned j that can be inserted feasibly (try all orders up to 3 stops,
+            cheapest insertion in the existing order above 3, no fixed stop cap):
             gain(j) := value(j) - travelCostPerKm * extraKm(j)
         take j with max gain; if gain <= 0 or none feasible: break; insert j
 5. Local search (bounded iterations, deterministic tie-break by id):
@@ -141,7 +142,56 @@ INPUT: delivery points (geocoded), parameters
    excludedOutOfRange; plus the list of the most valuable targets NOT planned.
 ```
 
-Complexity is O(days x targets x stops) per group: milliseconds for ~1000 targets.
+The greedy insertion scan is O(targets x stops) for each added visit. Local search
+is bounded to 20 accepted replacements per visitor. Routes of more than three
+stops use insertion into the remaining order when replacing a stop too.
+
+### MAR-2 engine semantics and hand-off
+
+`VisitPlanner` is the pure Java strategy interface; `GreedyVisitPlanner` implements
+it using `PlannerPoint` and `PlannerParameters`, returning an immutable
+`PlannerResult`. These are engine types, not HTTP DTOs. MAR-3 will map persisted
+points and the existing API contract to/from them.
+
+- Agent filters apply first (empty means all). An absent or zero enterprise weight
+  excludes that enterprise. An empty weight map therefore produces no visits.
+- Geocoded points are grouped by normalized address **and city**, plus the exact
+  agent identifier, in both modes. Normalization uses Unicode NFKC, case folding
+  with `Locale.ROOT`, trimming and collapsed whitespace; it does not guess street
+  abbreviations. Null agents map to the empty string. Points without coordinates
+  are counted separately and excluded before grouping. The smallest remaining
+  point id supplies the target id and coordinates when geocodes differ; all source
+  points remain available on the target for API mapping and unique-customer counts.
+- Each revenue row is clipped at zero before aggregation. Weighted value drives
+  selection and the strict `value > minRevenue` filter. Covered, eligible and upper
+  bound revenue sum positive revenues of enterprises with weight > 0, without
+  multiplying by weights (confirmed by Marzella, 2026-09-28).
+- Eligible revenue includes in-range targets that cannot fit even alone. These
+  remain candidates for the top-20 unplanned list. Range exclusions count grouped
+  targets after the value filter; missing-geocode exclusions count source points.
+- Capacity has no three-stop cap. All visit minutes and every travel leg, including
+  return to the supplied base, count without rounding. Insertions require positive
+  weighted gain after the distance penalty. A seed only needs to fit the day.
+- All comparisons use stable target ids for ties. Local search takes the first
+  strict improvement in day / assigned-id / unassigned-id order, then restarts,
+  up to 20 accepted swaps. Days are subsequently ordered by weighted value per
+  visitor. The engine is stateless and input-order independent.
+- The upper bound sorts eligible **unweighted** target revenues within each
+  visitor, taking at most `workingDays * floor(workdayMinutes / visitDurationMinutes)`.
+  PER_AGENT calendars run in parallel; `workingDaysUsed` counts distinct dates.
+  SINGLE_VISITOR day entries use an empty agent string; targets retain their agents.
+- Unique customers are distinct source customer names across planned targets.
+  Empty plans have zero coverage and no last visit date. Deadline is a soft limit:
+  visits after it remain scheduled and are counted. The unplanned list contains
+  the 20 highest weighted-value eligible targets, with id ties.
+- Distance caching is bounded to 2,000 targets (about 32 MB at that limit); larger
+  inputs calculate distances directly. No network calls, Spring or JPA are used.
+
+Verification: 26 planner/parameter test cases plus 64 relevant MAR-1 cases pass.
+The 1,000-point synthetic test (30-minute visits, 20 working days) verifies the
+2-second computation limit, feasibility, uniqueness and equality after reversing
+the input. Its full test case, including both runs, took 0.54 s locally on Java 21.
+This is a local synthetic check, not a guarantee for every dataset or machine.
 
 ## 8. What-if analysis
 
