@@ -1,7 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ColumnMapping, CreateImportRequest, ImportPreview, ImportSummary } from '../../core/models/api.models';
+import {
+  ColumnMapping,
+  CreateImportRequest,
+  DeliveryPoint,
+  GeocodingProgress,
+  ImportDetail,
+  ImportPreview,
+  ImportSummary,
+} from '../../core/models/api.models';
 import { IMPORT_TEMPLATE_URL, ImportsService } from './imports.service';
 
 const MAPPING: ColumnMapping = {
@@ -105,5 +113,93 @@ describe('ImportsService', () => {
     await nextTick();
 
     await failure;
+  });
+  it('lists the imports of the tenant (endpoint 4)', async () => {
+    const result = service.list();
+
+    http.expectOne({ method: 'GET', url: '/api/imports' }).flush([SUMMARY]);
+
+    expect(await result).toEqual([SUMMARY]);
+  });
+
+  it('reads the detail of one import (endpoint 5)', async () => {
+    const detail: ImportDetail = {
+      ...SUMMARY,
+      mapping: MAPPING,
+      agents: ['AGENT NORTH'],
+      cities: ['ROMA'],
+      notFoundCount: 0,
+      errorMessage: null,
+    };
+    const result = service.detail(7);
+
+    http.expectOne({ method: 'GET', url: '/api/imports/7' }).flush(detail);
+
+    expect(await result).toEqual(detail);
+  });
+
+  it('deletes an import (endpoint 6)', async () => {
+    const result = service.remove(7);
+
+    http.expectOne({ method: 'DELETE', url: '/api/imports/7' }).flush(null, { status: 204, statusText: 'No Content' });
+
+    await expect(result).resolves.toBeNull();
+  });
+  it('reads the points of an import (endpoint 7)', async () => {
+    const result = service.points(7);
+
+    http.expectOne({ method: 'GET', url: '/api/imports/7/points' }).flush([]);
+
+    expect(await result).toEqual([]);
+  });
+
+  it('reads the geocoding progress (endpoint 9b)', async () => {
+    const progress: GeocodingProgress = {
+      status: 'GEOCODING',
+      total: 73,
+      located: 40,
+      pending: 31,
+      notFound: 2,
+      errorMessage: null,
+    };
+    const result = service.geocodingProgress(7);
+
+    http.expectOne({ method: 'GET', url: '/api/imports/7/geocoding' }).flush(progress);
+
+    expect(await result).toEqual(progress);
+  });
+
+  it('asks to geocode the missing addresses again (endpoint 9)', async () => {
+    const result = service.retryGeocoding(7);
+
+    http
+      .expectOne({ method: 'POST', url: '/api/imports/7/geocoding/retry' })
+      .flush(null, { status: 202, statusText: 'Accepted' });
+
+    await expect(result).resolves.toBeNull();
+  });
+
+  it('sets the location of a point by hand (endpoint 8)', async () => {
+    const point: DeliveryPoint = {
+      id: 1001,
+      sourceRow: 2,
+      customerName: 'ACME SRL',
+      pointName: 'BAR ACME',
+      address: 'VIA DEL CORSO 300',
+      city: 'ROMA',
+      agent: null,
+      latitude: 41.9,
+      longitude: 12.5,
+      geocodeStatus: 'MANUAL',
+      totalRevenue: 0,
+      revenues: [],
+    };
+    const result = service.setLocation(7, 1001, { latitude: 41.9, longitude: 12.5 });
+
+    const call = http.expectOne({ method: 'PATCH', url: '/api/imports/7/points/1001/location' });
+    expect(call.request.body).toEqual({ latitude: 41.9, longitude: 12.5 });
+    call.flush(point);
+
+    expect(await result).toEqual(point);
   });
 });

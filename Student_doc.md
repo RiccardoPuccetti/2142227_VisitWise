@@ -89,9 +89,9 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 	| Log in | Email and password login; brings the user back to the page they asked for | visitwise-backend | 32 |
 	| Register | Registration of a federation (tenant) with name, email and password; logs in right after | visitwise-backend | 31 |
 	| Profile | Rename the federation, change the password (logs out the other devices) | visitwise-backend | 34 |
-	| Imports list | Imports as cards or table with name, creation date and status | visitwise-backend | 10, 12 |
+	| Imports list | Imports as cards or table (choice kept in the browser) with name, creation date, file, points, status and enterprises; delete after confirmation | visitwise-backend | 10, 12 |
 	| Import wizard | Upload, preview, column mapping, enterprise columns, name, report; template download | visitwise-backend | 1, 2, 3, 4, 5, 6, 7 |
-	| Import detail | Summary, geocoding progress, delivery points table, manual position fix, delete | visitwise-backend | 8, 9, 11, 12 |
+	| Import detail | Import report and column mapping, geocoding progress refreshed every 3 s while running, retry of the missing addresses, delivery points table (filter on points not located, 50 per page), manual position fix, delete after confirmation | visitwise-backend | 7, 8, 9, 11, 12 |
 	| Map dashboard | OpenStreetMap map of delivery points with filters and summary indicators | visitwise-backend | 13, 14, 15, 16, 17, 18 |
 	| Visit planner | Starting base by address, campaign and parameters, geocoding progress, proposed plan (calendar, real road itinerary of the selected day on the map, indicators), scenario save | visitwise-backend | 8, 9, 19, 20, 21, 22, 23, 24, 25, 27, 35 |
 	| What-if and scenarios | Coverage over different horizons, saved scenarios compared side by side | visitwise-backend | 26, 27 |

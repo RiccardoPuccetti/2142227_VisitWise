@@ -1,0 +1,260 @@
+@if (loading()) {
+  <p role="status" class="flex items-center gap-2 text-sm"><hlm-spinner /> Loading the import…</p>
+} @else if (loadError(); as error) {
+  <div hlmAlert variant="destructive" role="alert">
+    <p hlmAlertTitle>The import could not be loaded</p>
+    <p hlmAlertDescription>{{ error }}</p>
+  </div>
+  <a hlmBtn variant="outline" class="mt-4" routerLink="/imports">Back to the imports</a>
+} @else if (detail(); as import) {
+  <div class="flex flex-col gap-6">
+    <header class="flex flex-wrap items-start justify-between gap-4">
+      <div class="flex flex-col gap-1">
+        <h1 class="text-2xl font-semibold">{{ import.name }}</h1>
+        <p class="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+          <time [attr.datetime]="import.createdAt">{{ created() }}</time>
+          <span aria-hidden="true">·</span>
+          <span>{{ import.sourceFileName }}</span>
+          <span hlmBadge [variant]="import.status === 'FAILED' ? 'destructive' : import.status === 'READY' ? 'outline' : 'secondary'">
+            {{ statusLabel() }}
+          </span>
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a hlmBtn [routerLink]="['/imports', import.id, 'map']">Open the map</a>
+        <a hlmBtn variant="outline" [routerLink]="['/imports', import.id, 'planner']">Plan visits</a>
+        <hlm-alert-dialog>
+          <button hlmAlertDialogTrigger hlmBtn variant="outline" [disabled]="deleting()">Delete import</button>
+          <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+            <hlm-alert-dialog-header>
+              <h2 hlmAlertDialogTitle>Delete {{ import.name }}?</h2>
+              <p hlmAlertDialogDescription>
+                Its {{ import.importedRows }} delivery points, revenues and saved plans are deleted too. This cannot be
+                undone.
+              </p>
+            </hlm-alert-dialog-header>
+            <hlm-alert-dialog-footer>
+              <button hlmAlertDialogCancel>Cancel</button>
+              <button hlmAlertDialogAction variant="destructive" (click)="ctx.close(); remove()">Delete</button>
+            </hlm-alert-dialog-footer>
+          </hlm-alert-dialog-content>
+        </hlm-alert-dialog>
+      </div>
+    </header>
+
+    @if (deleteError(); as error) {
+      <div hlmAlert variant="destructive" role="alert">
+        <p hlmAlertTitle>The import was not deleted</p>
+        <p hlmAlertDescription>{{ error }}</p>
+      </div>
+    }
+
+    <div class="grid gap-6 lg:grid-cols-3">
+      <section hlmCard data-testid="report" aria-labelledby="report-title">
+        <div hlmCardHeader>
+          <h2 hlmCardTitle id="report-title">Import report</h2>
+          <p hlmCardDescription>
+            Skipped rows are subtotals, totals and rows with a missing customer, delivery point, address or city, or
+            with a revenue that is not a number.
+          </p>
+        </div>
+        <div hlmCardContent class="flex flex-col gap-4">
+          <dl class="grid grid-cols-3 gap-3">
+            <div class="rounded-xl border p-3">
+              <dt class="text-muted-foreground text-sm">Rows in the file</dt>
+              <dd class="text-2xl font-semibold tabular-nums">{{ import.totalRows }}</dd>
+            </div>
+            <div class="rounded-xl border p-3">
+              <dt class="text-muted-foreground text-sm">Imported</dt>
+              <dd class="text-2xl font-semibold tabular-nums">{{ import.importedRows }}</dd>
+            </div>
+            <div class="rounded-xl border p-3">
+              <dt class="text-muted-foreground text-sm">Skipped</dt>
+              <dd class="text-2xl font-semibold tabular-nums">{{ import.skippedRows }}</dd>
+            </div>
+          </dl>
+          <ul class="flex flex-wrap gap-3 text-sm" aria-label="Enterprises">
+            @for (enterprise of import.enterprises; track enterprise.id) {
+              <li class="flex items-center gap-2">
+                <span class="size-3 rounded-full" [style.background-color]="enterprise.color" aria-hidden="true"></span>
+                {{ enterprise.name }}
+              </li>
+            }
+          </ul>
+          <p class="text-muted-foreground text-sm">
+            {{ import.agents.length }} {{ import.agents.length === 1 ? 'agent' : 'agents' }} ·
+            {{ import.cities.length }} {{ import.cities.length === 1 ? 'city' : 'cities' }}
+          </p>
+        </div>
+      </section>
+
+      <section hlmCard data-testid="mapping" aria-labelledby="mapping-title">
+        <div hlmCardHeader>
+          <h2 hlmCardTitle id="mapping-title">Columns of the file</h2>
+          <p hlmCardDescription>Where each field was read from.</p>
+        </div>
+        <dl hlmCardContent class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          @for (row of mapping(); track row.field) {
+            <dt class="text-muted-foreground">{{ row.field }}</dt>
+            <dd class="font-medium break-words">{{ row.column }}</dd>
+          }
+        </dl>
+      </section>
+
+      <section hlmCard data-testid="geocoding" aria-labelledby="geocoding-title">
+        <div hlmCardHeader>
+          <h2 hlmCardTitle id="geocoding-title">Addresses on the map</h2>
+          <p hlmCardDescription>Addresses are located one per second in the background.</p>
+        </div>
+        <div hlmCardContent class="flex flex-col gap-4">
+          @if (progress(); as progress) {
+            @if (running()) {
+              <hlm-progress [value]="percent()" aria-label="Addresses located">
+                <hlm-progress-indicator />
+              </hlm-progress>
+            }
+            <p class="text-sm">
+              <span class="font-medium">{{ progress.located }} of {{ progress.total }} addresses located</span>
+              @if (running()) {
+                · {{ progress.pending }} still to locate
+              }
+            </p>
+            @if (progress.notFound > 0) {
+              <p class="text-sm">
+                {{ progress.notFound }} {{ progress.notFound === 1 ? 'address' : 'addresses' }} not found: retry them,
+                or set their location in the table below.
+              </p>
+            }
+            @if (!running() && progress.pending > 0) {
+              <p class="text-sm">
+                {{ progress.pending }} {{ progress.pending === 1 ? 'address' : 'addresses' }} not located yet: the
+                geocoding stopped before reaching them.
+              </p>
+            }
+            @if (!running() && missing() > 0) {
+              <button hlmBtn variant="outline" size="sm" class="self-start" [disabled]="retrying()" (click)="retry()">
+                Retry the missing addresses
+              </button>
+            }
+            @if (progress.errorMessage; as error) {
+              <div hlmAlert variant="destructive" role="alert">
+                <p hlmAlertDescription>{{ error }}</p>
+              </div>
+            }
+            @if (retryError(); as error) {
+              <div hlmAlert variant="destructive" role="alert">
+                <p hlmAlertDescription>{{ error }}</p>
+              </div>
+            }
+          } @else {
+            <p class="text-muted-foreground text-sm">The geocoding progress is not available.</p>
+          }
+        </div>
+      </section>
+    </div>
+
+    <p role="status" class="empty:hidden text-sm">{{ message() }}</p>
+
+    <section data-testid="points" aria-labelledby="points-title" class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <h2 id="points-title" #pointsTitle tabindex="-1" class="text-xl font-semibold outline-none">Delivery points</h2>
+        <div
+          hlmToggleGroup
+          type="single"
+          variant="outline"
+          [nullable]="false"
+          [value]="filter()"
+          (valueChange)="setFilter($event)"
+          aria-label="Points shown"
+        >
+          <button hlmToggleGroupItem value="all">All points</button>
+          <button hlmToggleGroupItem value="missing">Not located ({{ missingCount() }})</button>
+        </div>
+      </div>
+
+      @if (pointsError(); as error) {
+        <div hlmAlert variant="destructive" role="alert">
+          <p hlmAlertDescription>{{ error }}</p>
+        </div>
+      } @else {
+        <div hlmTableContainer>
+          <table hlmTable>
+            <caption class="sr-only">Delivery points of the import</caption>
+            <thead hlmTHead>
+              <tr hlmTr>
+                <th hlmTh scope="col">Delivery point</th>
+                <th hlmTh scope="col">Address</th>
+                <th hlmTh scope="col">Agent</th>
+                <th hlmTh scope="col" class="text-right">Revenue</th>
+                <th hlmTh scope="col">Location</th>
+                <th hlmTh scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (row of rows(); track row.point.id) {
+                <tr hlmTr>
+                  <td hlmTd>
+                    <span class="font-medium">{{ row.point.pointName }}</span>
+                    <span class="text-muted-foreground block text-xs">{{ row.point.customerName }}</span>
+                  </td>
+                  <td hlmTd>{{ row.point.address }}, {{ row.point.city }}</td>
+                  <td hlmTd>{{ row.point.agent ?? '–' }}</td>
+                  <td hlmTd class="text-right tabular-nums">{{ row.point.totalRevenue | eur }}</td>
+                  <td hlmTd>
+                    <span hlmBadge [variant]="row.canLocate ? 'destructive' : 'outline'">{{ row.location }}</span>
+                  </td>
+                  <td hlmTd>
+                    @if (row.canLocate) {
+                      <button
+                        hlmBtn
+                        size="sm"
+                        variant="outline"
+                        [attr.aria-label]="'Set the location of ' + row.point.pointName"
+                        (click)="edit(row.point, $event.currentTarget)"
+                      >
+                        Set location
+                      </button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr hlmTr>
+                  <td hlmTd colspan="6" class="text-muted-foreground text-center">No points to show.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <nav data-testid="pages" aria-label="Pages of points" class="flex items-center justify-end gap-3 text-sm">
+          <button hlmBtn size="sm" variant="outline" [disabled]="page() === 1" (click)="previousPage()">
+            Previous page
+          </button>
+          <span>Page {{ page() }} of {{ pages() }}</span>
+          <button hlmBtn size="sm" variant="outline" [disabled]="page() === pages()" (click)="nextPage()">
+            Next page
+          </button>
+        </nav>
+      }
+    </section>
+
+    @if (editing(); as point) {
+      <section
+        #locationPanel
+        tabindex="-1"
+        data-testid="location-form"
+        hlmCard
+        class="outline-none"
+        aria-label="Set a location by hand"
+      >
+        <div hlmCardContent>
+          <app-point-location-form
+            [importId]="import.id"
+            [point]="point"
+            (saved)="located($event)"
+            (cancelled)="closeLocation()"
+          />
+        </div>
+      </section>
+    }
+  </div>
+}
