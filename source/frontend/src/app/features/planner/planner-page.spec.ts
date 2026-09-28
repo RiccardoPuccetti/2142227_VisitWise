@@ -10,7 +10,7 @@ import type {
   RouteResponse,
   StartingBase,
 } from '../../core/models/api.models';
-import { PlannerPage } from './planner-page';
+import { PLAN_REVEAL_MS, PlannerPage } from './planner-page';
 
 const BASE: StartingBase = {
   address: 'Via del Corso 300',
@@ -132,6 +132,8 @@ describe('PlannerPage', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [
+        // No minimum loading time: the tests answer the requests themselves.
+        { provide: PLAN_REVEAL_MS, useValue: 0 },
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter(
@@ -292,8 +294,17 @@ describe('PlannerPage', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
 
-    type('#planner-scenario-name', 'Christmas priority');
-    button('Save scenario').click();
+    button('Save as scenario').click();
+    await harness.fixture.whenStable();
+
+    // The dialog is rendered in an overlay on the document body.
+    const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
+    const name = dialog()!.querySelector<HTMLInputElement>('#planner-scenario-name')!;
+    name.value = 'Christmas priority';
+    name.dispatchEvent(new Event('input'));
+    Array.from(dialog()!.querySelectorAll('button'))
+      .find((item) => item.textContent?.trim() === 'Save scenario')!
+      .click();
     TestBed.tick();
 
     const request = http.expectOne('/api/imports/42/plans');
@@ -302,6 +313,56 @@ describe('PlannerPage', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
     expect(text()).toContain('Scenario saved');
+    await vi.waitFor(() => expect(dialog()).toBeNull());
+  });
+
+  const tab = (label: string) =>
+    Array.from(page().querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((item) =>
+      item.textContent?.includes(label),
+    )!;
+
+  it('opens the plan tab with a loading view while the plan is generated, and goes back to the setup', async () => {
+    expect(tab('Setup').getAttribute('aria-selected')).toBe('true');
+    expect(tab('Plan').disabled).toBe(true);
+
+    button('Generate plan').click();
+    TestBed.tick();
+
+    expect(tab('Plan').getAttribute('aria-selected')).toBe('true');
+    expect(page().querySelector('[data-testid="plan-loading"]')).not.toBeNull();
+
+    http.expectOne('/api/imports/42/plans/simulate').flush(RESULT);
+    await harness.fixture.whenStable();
+    http.expectOne('/api/imports/42/plans/route').flush(ROAD);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(page().querySelector('[data-testid="plan-loading"]')).toBeNull();
+    expect(text()).toContain('Covered revenue');
+
+    tab('Setup').click();
+    await harness.fixture.whenStable();
+    expect(tab('Setup').getAttribute('aria-selected')).toBe('true');
+    expect(tab('Plan').disabled).toBe(false);
+  });
+
+  it('describes each day of the plan: number, weekday, agent, stops, distance and revenue', async () => {
+    button('Generate plan').click();
+    TestBed.tick();
+    http.expectOne('/api/imports/42/plans/simulate').flush(RESULT);
+    await harness.fixture.whenStable();
+    http.expectOne('/api/imports/42/plans/route').flush(ROAD);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    const day = page().querySelector('[aria-labelledby="planner-days-title"] li button')!;
+    const words = day.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(words).toContain('Day 1');
+    expect(words).toContain('Mon 2 Nov');
+    expect(words).toContain('AGENT NORTH');
+    expect(words).toContain('1 stop');
+    expect(words).toContain('42,5 km');
+    expect(words).toContain('8500');
   });
 });
 

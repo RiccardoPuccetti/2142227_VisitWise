@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  InjectionToken,
   input,
   resource,
   signal,
@@ -18,18 +19,23 @@ import {
   lucideMap,
   lucideMapPin,
   lucideRoute,
+  lucideSave,
+  lucideSlidersHorizontal,
   lucideSparkles,
+  lucideUser,
 } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
-import { HlmEmptyImports } from '@spartan-ng/helm/empty';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTableImports } from '@spartan-ng/helm/table';
+import { HlmTabsImports } from '@spartan-ng/helm/tabs';
 import type {
   CampaignCode,
   CampaignPreset,
@@ -45,8 +51,11 @@ import { EurPipe, KpiCard, MapView, PageHeader } from '../../shared';
 import {
   DEFAULT_BASE,
   baseMarker,
+  dayRevenue,
+  dayTitle,
   planMarkers,
   planRoutes,
+  revealDelay,
   travelBasis,
   validateParameters,
 } from './planner.model';
@@ -61,6 +70,11 @@ const DATE = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 });
 const GEOCODING_POLL_MS = 3000;
+
+/** Minimum time the "planning" view stays up, so the switch to the plan reads as a transition (0 in tests). */
+export const PLAN_REVEAL_MS = new InjectionToken<number>('PLAN_REVEAL_MS', { providedIn: 'root', factory: () => 1100 });
+
+type PlannerTab = 'setup' | 'plan';
 
 function dateLabel(value: string | null): string {
   return value ? DATE.format(new Date(`${value}T00:00:00Z`)) : '–';
@@ -80,27 +94,104 @@ function dateLabel(value: string | null): string {
     HlmButtonImports,
     HlmCardImports,
     HlmCheckboxImports,
-    HlmEmptyImports,
+    HlmDialogImports,
     HlmFieldImports,
     HlmInputImports,
     HlmNativeSelectImports,
+    HlmSkeletonImports,
     HlmSpinnerImports,
     HlmTableImports,
+    HlmTabsImports,
     EurPipe,
     KpiCard,
     MapView,
     PageHeader,
   ],
   providers: [
-    provideIcons({ lucideCalendarRange, lucideEuro, lucideGitCompare, lucideMap, lucideMapPin, lucideRoute, lucideSparkles }),
+    provideIcons({
+      lucideCalendarRange,
+      lucideEuro,
+      lucideGitCompare,
+      lucideMap,
+      lucideMapPin,
+      lucideRoute,
+      lucideSave,
+      lucideSlidersHorizontal,
+      lucideSparkles,
+      lucideUser,
+    }),
   ],
   templateUrl: './planner-page.html',
+  styles: `
+    /* Generating: the route draws itself and the stops appear along it. */
+    .planning-route path {
+      fill: none;
+      stroke: var(--brand);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 220;
+      animation: route-draw 1.6s ease-in-out infinite;
+    }
+    .planning-base {
+      fill: var(--brand);
+    }
+    .planning-stop {
+      fill: var(--foreground);
+      opacity: 0;
+      animation: stop-appear 1.6s ease-in-out infinite;
+    }
+    @keyframes route-draw {
+      from {
+        stroke-dashoffset: 220;
+      }
+      60%,
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+    @keyframes stop-appear {
+      0%,
+      15% {
+        opacity: 0;
+      }
+      40%,
+      100% {
+        opacity: 1;
+      }
+    }
+    /* The plan fades in, one block after the other. */
+    .plan-reveal > * {
+      animation: plan-in 0.45s ease-out both;
+    }
+    .plan-reveal > :nth-child(2) {
+      animation-delay: 0.08s;
+    }
+    .plan-reveal > :nth-child(3) {
+      animation-delay: 0.16s;
+    }
+    @keyframes plan-in {
+      from {
+        opacity: 0;
+        transform: translateY(0.75rem);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .planning-route path,
+      .planning-stop,
+      .plan-reveal > * {
+        animation: none;
+        opacity: 1;
+        stroke-dashoffset: 0;
+      }
+    }
+  `,
 })
 export class PlannerPage {
   readonly importId = input.required<string>();
 
   private readonly api = inject(PlannerService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly revealMs = inject(PLAN_REVEAL_MS);
   protected readonly id = computed(() => Number(this.importId()));
   protected readonly campaignYear = signal(new Date().getFullYear());
 
@@ -141,6 +232,8 @@ export class PlannerPage {
   protected readonly result = signal<PlanResult | null>(null);
   protected readonly selectedDayIndex = signal(0);
   protected readonly submitting = signal(false);
+  /** Setup (the two steps) or the generated plan. */
+  protected readonly tab = signal<PlannerTab>('setup');
   protected readonly saving = signal(false);
   protected readonly validationErrors = signal<string[]>([]);
   protected readonly actionError = signal<string | null>(null);
@@ -179,6 +272,16 @@ export class PlannerPage {
     const day = this.selectedDay();
     return day ? (this.roadRoutes()[dayKey(day.date, day.agent)] ?? null) : null;
   });
+  /** The days of the plan as the rail lists them. */
+  protected readonly dayItems = computed(() =>
+    (this.result()?.days ?? []).map((day) => ({
+      title: dayTitle(day.date),
+      agent: day.agent ?? 'One visitor',
+      stops: day.visits.length,
+      km: day.km,
+      revenue: dayRevenue(day),
+    })),
+  );
   /** The starting point alone, for the map of step 1. */
   protected readonly baseMarkers = computed(() => baseMarker(this.base()));
   protected readonly markers = computed(() =>
@@ -307,19 +410,36 @@ export class PlannerPage {
       return;
     }
     this.submitting.set(true);
+    this.tab.set('plan');
+    const startedAt = Date.now();
     try {
-      this.result.set(await this.api.simulate(this.id(), parameters));
+      const result = await this.api.simulate(this.id(), parameters);
+      const wait = revealDelay(startedAt, Date.now(), this.revealMs);
+      if (wait > 0) {
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      }
+      this.result.set(result);
       this.roadRoutes.set({});
       this.selectedDayIndex.set(0);
       await this.loadRoad();
     } catch (error) {
       this.actionError.set(problemDetail(error));
+      if (!this.result()) {
+        this.tab.set('setup');
+      }
     } finally {
       this.submitting.set(false);
     }
   }
 
-  protected async saveScenario(): Promise<void> {
+  protected setTab(value: string): void {
+    if (value === 'setup' || (value === 'plan' && (this.result() || this.submitting()))) {
+      this.tab.set(value);
+    }
+  }
+
+  /** Saves the plan as a scenario and closes the dialog it was saved from. */
+  protected async saveScenario(dialog?: { close(): void }): Promise<void> {
     const result = this.result();
     const name = this.scenarioName().trim();
     this.savedMessage.set(null);
@@ -332,6 +452,7 @@ export class PlannerPage {
     try {
       const saved = await this.api.save(this.id(), name, result.parameters);
       this.savedMessage.set(`Scenario saved: ${saved.name}.`);
+      dialog?.close();
     } catch (error) {
       this.actionError.set(problemDetail(error));
     } finally {

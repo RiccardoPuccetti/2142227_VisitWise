@@ -1,5 +1,5 @@
-import type { PlanParameters, PlanResult } from '../../core/models/api.models';
-import { planRoutes, travelBasis, validateParameters } from './planner.model';
+import type { PlanDay, PlanParameters, PlanResult, PlannedVisit } from '../../core/models/api.models';
+import { dayRevenue, dayTitle, planRoutes, revealDelay, travelBasis, validateParameters } from './planner.model';
 
 const PARAMETERS: PlanParameters = {
   campaign: 'CHRISTMAS',
@@ -66,5 +66,27 @@ describe('travelBasis', () => {
     expect(travelBasis('ESTIMATE')).toBe('estimate');
     expect(travelBasis(null)).toBe('estimate');
     expect(travelBasis(undefined)).toBe('estimate');
+  });
+});
+
+describe('days of the plan', () => {
+  it('titles a day with the weekday, the day and the month', () => {
+    expect(dayTitle('2026-11-02')).toBe('Mon 2 Nov');
+    expect(dayTitle('2026-12-18')).toBe('Fri 18 Dec');
+  });
+
+  it('adds up the revenue expected from the visits of a day', () => {
+    const visit = (expectedRevenue: number) => ({ expectedRevenue }) as PlannedVisit;
+    const day: PlanDay = { date: '2026-11-02', agent: null, km: 12, visits: [visit(1200.5), visit(300)] };
+    expect(dayRevenue(day)).toBe(1500.5);
+    expect(dayRevenue({ ...day, visits: [] })).toBe(0);
+  });
+});
+
+describe('revealDelay', () => {
+  it('waits for what is left of the minimum loading time, never less than zero', () => {
+    expect(revealDelay(1000, 1300, 900)).toBe(600);
+    expect(revealDelay(1000, 2500, 900)).toBe(0);
+    expect(revealDelay(1000, 1000, 0)).toBe(0);
   });
 });

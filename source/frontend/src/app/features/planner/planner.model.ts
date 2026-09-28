@@ -1,5 +1,6 @@
 import type {
   GeoPoint,
+  PlanDay,
   PlanParameters,
   PlanResult,
   RouteResponse,
@@ -111,4 +112,26 @@ export function planRoutes(
 /** How the km and hours of a plan were obtained, for the label next to them (US-39). */
 export function travelBasis(source: RouteSource | null | undefined): string {
   return source === 'OSRM' ? 'road network' : 'estimate';
+}
+
+const DAY_TITLE = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+});
+
+/** Short title of a plan day, e.g. "Mon 2 Nov" (the date is a calendar day, read as UTC). */
+export function dayTitle(date: string): string {
+  return DAY_TITLE.format(new Date(`${date}T00:00:00Z`)).replace(',', '');
+}
+
+/** Revenue expected from the visits of a day. */
+export function dayRevenue(day: PlanDay): number {
+  return day.visits.reduce((sum, visit) => sum + visit.expectedRevenue, 0);
+}
+
+/** Milliseconds still to wait so a loading view started at `startedAt` stays up at least `minimum` ms. */
+export function revealDelay(startedAt: number, now: number, minimum: number): number {
+  return Math.max(0, minimum - (now - startedAt));
 }

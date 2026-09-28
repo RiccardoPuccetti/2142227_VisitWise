@@ -53,12 +53,75 @@
     }
   }
 
+  @if (actionError()) {
+    <div hlmAlert variant="destructive" role="alert">
+      <h2 hlmAlertTitle>Action failed</h2>
+      <p hlmAlertDescription>{{ actionError() }}</p>
+    </div>
+  }
+
   @if (loading()) {
     <div class="flex items-center gap-2" aria-live="polite"><hlm-spinner /> Loading options…</div>
   } @else {
-    <!-- Same order as the other pages: the setup first (two steps side by side from lg), then the results at full
-         width: key figures, the day viewer (days rail + map, like the map dashboard), saving and what was left out. -->
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+    <!-- Two tabs: the setup (two steps side by side from lg) and the plan (key figures, the day viewer with a days rail
+         beside the map as on the map dashboard, and what was left out). Generating a plan opens the plan tab. -->
+    <div hlmTabs [tab]="tab()" (tabActivated)="setTab($event)" class="gap-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div hlmTabsList aria-label="Planner">
+          <button hlmTabsTrigger="setup"><ng-icon name="lucideSlidersHorizontal" aria-hidden="true" /> Setup</button>
+          <button hlmTabsTrigger="plan" [disabled]="!result() && !submitting()">
+            <ng-icon name="lucideRoute" aria-hidden="true" /> Plan
+            @if (result(); as plan) {
+              <span class="text-muted-foreground tabular-nums">· {{ plan.kpis.plannedVisits }} visits</span>
+            }
+          </button>
+        </div>
+        @if (tab() === 'plan' && result() && !submitting()) {
+          <div class="flex flex-wrap items-center gap-3">
+            @if (savedMessage()) {
+              <p class="text-muted-foreground text-sm" role="status">{{ savedMessage() }}</p>
+            }
+            <hlm-dialog>
+              <button hlmDialogTrigger hlmBtn variant="outline">
+                <ng-icon name="lucideSave" aria-hidden="true" /> Save as scenario
+              </button>
+              <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
+                <hlm-dialog-header>
+                  <h2 hlmDialogTitle>Save this plan as a scenario</h2>
+                  <p hlmDialogDescription>A scenario keeps the parameters of this plan, to compare it with others.</p>
+                </hlm-dialog-header>
+                <div hlmField>
+                  <label hlmFieldLabel for="planner-scenario-name">Scenario name</label
+                  ><input
+                    hlmInput
+                    id="planner-scenario-name"
+                    maxlength="150"
+                    [value]="scenarioName()"
+                    (input)="setScenarioName($event)"
+                    (keydown.enter)="saveScenario(ctx)"
+                  />
+                </div>
+                @if (actionError()) {
+                  <p class="text-destructive text-sm" role="alert">{{ actionError() }}</p>
+                }
+                <hlm-dialog-footer>
+                  <button hlmBtn variant="outline" type="button" hlmDialogClose>Cancel</button>
+                  <button hlmBtn type="button" [disabled]="saving()" (click)="saveScenario(ctx)">
+                    @if (saving()) {
+                      <hlm-spinner class="size-4" />
+                    }
+                    Save scenario
+                  </button>
+                </hlm-dialog-footer>
+              </hlm-dialog-content>
+            </hlm-dialog>
+          </div>
+        }
+      </div>
+
+    <div hlmTabsContent="setup">
+    <!-- items-start: opening the accordions of step 2 must not stretch step 1 and resize its map. -->
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
       <section hlmCard aria-labelledby="planner-base-title">
         <div hlmCardHeader>
           <h2 hlmCardTitle id="planner-base-title" class="flex items-center gap-3">
@@ -69,7 +132,7 @@
             Every day starts and ends here. Type the address: it is placed on the map for you.
           </p>
         </div>
-        <div hlmCardContent class="flex flex-1 flex-col gap-4">
+        <div hlmCardContent class="flex flex-col gap-4">
           <form class="flex flex-col gap-3" [formGroup]="baseForm" (ngSubmit)="saveBase()">
             <div hlmField>
               <label hlmFieldLabel for="planner-base-address">Address</label
@@ -117,9 +180,9 @@
               <p class="text-destructive text-sm" role="alert">{{ baseError() }}</p>
             }
           </form>
-          <!-- Where the starting point was placed; fills the height next to step 2. -->
+          <!-- Where the starting point was placed. Fixed height: step 1 matches step 2 with its accordions closed. -->
           <app-map-view
-            class="block h-48 overflow-hidden rounded-xl border lg:h-auto lg:min-h-48 lg:flex-1"
+            class="block h-52 overflow-hidden rounded-xl border"
             [markers]="baseMarkers()"
             ariaLabel="Starting point"
           />
@@ -355,260 +418,242 @@
       </section>
     </div>
 
-    <div class="flex min-w-0 flex-col gap-6">
-      @if (!result() && !actionError()) {
-        <div hlmEmpty class="border-dashed">
-          <div hlmEmptyHeader>
-            <span class="bg-brand-soft text-brand mx-auto grid size-14 place-items-center rounded-2xl" aria-hidden="true">
-              <ng-icon name="lucideRoute" class="text-2xl" />
-            </span>
-            <h2 hlmEmptyTitle>Your plan will appear here</h2>
-            <p hlmEmptyDescription>
-              Fill in the starting point and the campaign above, then generate the plan to see the routes, the days
-              and the revenue covered.
-            </p>
+    </div>
+
+    <div hlmTabsContent="plan">
+      @if (submitting()) {
+        <!-- Generating: a route being drawn and the shape of the results, until the plan is revealed. -->
+        <div data-testid="plan-loading" role="status" aria-live="polite" class="flex flex-col gap-6">
+          <div class="grid grid-cols-2 gap-4 xl:grid-cols-4" aria-hidden="true">
+            @for (card of [1, 2, 3, 4]; track card) {
+              <hlm-skeleton class="h-28 rounded-2xl" />
+            }
           </div>
-        </div>
-      }
-      @if (actionError()) {
-        <div hlmAlert variant="destructive" role="alert">
-          <h2 hlmAlertTitle>Action failed</h2>
-          <p hlmAlertDescription>{{ actionError() }}</p>
-        </div>
-      }
-
-      @if (result(); as plan) {
-        @if (plan.warnings.length) {
-          <div hlmAlert role="status">
-            <h2 hlmAlertTitle>Planning notes</h2>
-            <ul hlmAlertDescription class="list-disc pl-5">
-              @for (warning of plan.warnings; track warning) {
-                <li>{{ warning }}</li>
-              }
-            </ul>
-          </div>
-        }
-
-        <section aria-labelledby="planner-results-title" class="flex flex-col gap-6">
-          <h2 id="planner-results-title" class="sr-only">Plan result</h2>
-          <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <app-kpi-card
-              label="Covered revenue"
-              icon="lucideEuro"
-              tone="brand"
-              [value]="plan.kpis.coveredRevenue | eur: 'rounded'"
-              [hint]="percent(plan.kpis.coverage) + ' of eligible revenue'"
-            />
-            <app-kpi-card
-              label="Visits"
-              icon="lucideMapPin"
-              tone="chart-2"
-              [value]="'' + plan.kpis.plannedVisits"
-              [hint]="plan.kpis.uniqueCustomers + ' customers'"
-            />
-            <app-kpi-card
-              label="Working days"
-              icon="lucideCalendarRange"
-              tone="chart-3"
-              [value]="'' + plan.kpis.workingDaysUsed"
-              [hint]="'last visit ' + date(plan.kpis.lastVisitDate)"
-            />
-            <app-kpi-card
-              label="Distance"
-              icon="lucideRoute"
-              tone="chart-4"
-              [value]="decimal(plan.kpis.totalKm) + ' km'"
-              [hint]="decimal(plan.kpis.travelHours) + ' h on the road (' + travelBasis(plan.kpis.travelSource) + ')'"
-            />
-          </div>
-
-          @if (plan.days.length) {
-            <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
-              <!-- From xl the rail takes the day card's height (contain: size) and its list scrolls inside. -->
-              <section hlmCard size="sm" aria-labelledby="planner-days-title" class="gap-3 xl:[contain:size]">
-                <div hlmCardHeader>
-                  <h3 hlmCardTitle id="planner-days-title">Days</h3>
-                  <p hlmCardDescription>{{ plan.days.length }} days planned</p>
-                </div>
-                <div hlmCardContent class="flex min-h-0 flex-1 flex-col px-2">
-                  <ol class="flex max-h-80 flex-col gap-1 overflow-auto xl:max-h-none xl:min-h-0 xl:flex-1">
-                    @for (day of plan.days; track day.date + (day.agent ?? ''); let i = $index) {
-                      <li>
-                        <button
-                          type="button"
-                          class="hover:bg-muted flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors"
-                          [class.bg-brand-soft]="selectedDayIndex() === i"
-                          [attr.aria-pressed]="selectedDayIndex() === i"
-                          (click)="selectDay(i)"
-                        >
-                          <span
-                            class="grid size-8 shrink-0 place-items-center rounded-lg text-xs font-semibold tabular-nums"
-                            [class]="selectedDayIndex() === i ? 'bg-brand text-white' : 'bg-muted text-muted-foreground'"
-                            aria-hidden="true"
-                            >{{ i + 1 }}</span
-                          >
-                          <span class="flex min-w-0 flex-col"
-                            ><strong class="truncate">{{ date(day.date) }}</strong
-                            ><span class="text-muted-foreground truncate text-xs"
-                              >{{ day.agent ?? 'One visitor' }} · {{ day.visits.length }} visits ·
-                              {{ decimal(day.km) }} km</span
-                            ></span
-                          >
-                        </button>
-                      </li>
-                    }
-                  </ol>
-                </div>
-              </section>
-
-              @if (selectedDay(); as day) {
-                <section
-                  hlmCard
-                  size="sm"
-                  class="min-w-0 gap-4"
-                  [attr.aria-labelledby]="'planner-day-' + selectedDayIndex()"
-                >
-                  <div hlmCardHeader class="flex flex-wrap items-center justify-between gap-2">
-                    <h3 hlmCardTitle class="text-lg" [id]="'planner-day-' + selectedDayIndex()">
-                      {{ date(day.date) }}
-                      @if (day.agent) {
-                        <span class="text-muted-foreground text-base font-normal"
-                          >· {{ day.agent }}</span
-                        >
-                      }
-                    </h3>
-                    <p class="text-sm" data-testid="planner-road-summary">
-                      @if (routing()) {
-                        <span class="text-muted-foreground inline-flex items-center gap-1"
-                          ><hlm-spinner class="size-3" /> Computing road route…</span
-                        >
-                      } @else if (road(); as route) {
-                        <strong>{{ decimal(route.km) }} km</strong> · {{ minutes(route.minutes)
-                        }}{{ ' ' }}
-                        <span class="text-muted-foreground"
-                          >({{ route.source === 'OSRM' ? 'road route' : 'estimate' }})</span
-                        >
-                      } @else {
-                        <strong>{{ decimal(day.km) }} km</strong>{{ ' ' }}
-                        <span class="text-muted-foreground">(estimate)</span>
-                      }
-                    </p>
-                  </div>
-                  <div hlmCardContent class="flex flex-col gap-4">
-                  <app-map-view
-                    class="block h-[26rem] overflow-hidden rounded-xl border xl:h-[32rem]"
-                    [markers]="markers()"
-                    [routes]="routes()"
-                    [ariaLabel]="'Itinerary for ' + date(day.date)"
-                  />
-                  <ol class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-                    @for (visit of day.visits; track visit.deliveryPointId) {
-                      <li class="bg-muted/30 rounded-xl border p-4">
-                        <div class="flex gap-3">
-                          <span
-                            class="bg-brand flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                            >{{ visit.slot }}</span
-                          >
-                          <div class="min-w-0">
-                            <p class="truncate font-medium">{{ visit.pointName }}</p>
-                            <p class="text-muted-foreground text-sm">
-                              {{ visit.customerName }} · {{ visit.address }}, {{ visit.city }}
-                            </p>
-                            <p class="mt-1 text-sm">
-                              {{ visit.expectedRevenue | eur }} ·
-                              {{ decimal(road()?.legs?.[$index]?.km ?? visit.travelKm) }} km from
-                              previous stop
-                            </p>
-                          </div>
-                        </div>
-                      </li>
-                    }
-                  </ol>
-                  </div>
-                </section>
-              }
+          <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
+            <hlm-skeleton class="hidden h-[36rem] rounded-2xl xl:block" aria-hidden="true" />
+            <div hlmCard class="grid h-[26rem] place-items-center xl:h-[36rem]">
+              <div class="flex flex-col items-center gap-4 px-6 text-center">
+                <svg class="planning-route" viewBox="0 0 160 80" width="200" height="100" aria-hidden="true">
+                  <path d="M10 64 C 40 10, 70 70, 100 34 S 140 20, 150 16" />
+                  <circle cx="10" cy="64" r="5" class="planning-base" />
+                  <circle cx="58" cy="42" r="4" class="planning-stop" style="animation-delay: 0.3s" />
+                  <circle cx="100" cy="34" r="4" class="planning-stop" style="animation-delay: 0.6s" />
+                  <circle cx="150" cy="16" r="4" class="planning-stop" style="animation-delay: 0.9s" />
+                </svg>
+                <p class="font-medium">Planning the routes…</p>
+                <p class="text-muted-foreground max-w-sm text-sm">
+                  Choosing the most valuable customers, sharing them among the days and ordering the stops.
+                </p>
+              </div>
             </div>
-          } @else {
+          </div>
+        </div>
+      } @else if (result(); as plan) {
+        <div class="plan-reveal flex flex-col gap-6">
+          @if (plan.warnings.length) {
             <div hlmAlert role="status">
-              <h3 hlmAlertTitle>No visits fit these parameters</h3>
-              <p hlmAlertDescription>
-                Adjust the horizon, filters or distance and generate the plan again.
-              </p>
+              <h2 hlmAlertTitle>Planning notes</h2>
+              <ul hlmAlertDescription class="list-disc pl-5">
+                @for (warning of plan.warnings; track warning) {
+                  <li>{{ warning }}</li>
+                }
+              </ul>
             </div>
           }
 
-          <section hlmCard aria-labelledby="planner-save-title">
-            <div hlmCardHeader>
-              <h3 hlmCardTitle id="planner-save-title">Save this plan as a scenario</h3>
+          <section aria-labelledby="planner-results-title" class="flex flex-col gap-6">
+            <h2 id="planner-results-title" class="sr-only">Plan result</h2>
+            <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+              <app-kpi-card
+                label="Covered revenue"
+                icon="lucideEuro"
+                tone="brand"
+                [value]="plan.kpis.coveredRevenue | eur: 'rounded'"
+                [hint]="percent(plan.kpis.coverage) + ' of eligible revenue'"
+              />
+              <app-kpi-card
+                label="Visits"
+                icon="lucideMapPin"
+                tone="chart-2"
+                [value]="'' + plan.kpis.plannedVisits"
+                [hint]="plan.kpis.uniqueCustomers + ' customers'"
+              />
+              <app-kpi-card
+                label="Working days"
+                icon="lucideCalendarRange"
+                tone="chart-3"
+                [value]="'' + plan.kpis.workingDaysUsed"
+                [hint]="'last visit ' + date(plan.kpis.lastVisitDate)"
+              />
+              <app-kpi-card
+                label="Distance"
+                icon="lucideRoute"
+                tone="chart-4"
+                [value]="decimal(plan.kpis.totalKm) + ' km'"
+                [hint]="decimal(plan.kpis.travelHours) + ' h on the road (' + travelBasis(plan.kpis.travelSource) + ')'"
+              />
             </div>
-            <div hlmCardContent class="flex flex-wrap items-end gap-2">
-              <div hlmField class="grow">
-                <label hlmFieldLabel for="planner-scenario-name">Scenario name</label
-                ><input
-                  hlmInput
-                  id="planner-scenario-name"
-                  maxlength="150"
-                  [value]="scenarioName()"
-                  (input)="setScenarioName($event)"
-                />
-              </div>
-              <button
-                hlmBtn
-                type="button"
-                variant="outline"
-                [disabled]="saving()"
-                (click)="saveScenario()"
-              >
-                @if (saving()) {
-                  <hlm-spinner class="size-4" />
-                }
-                Save scenario
-              </button>
-              @if (savedMessage()) {
-                <p class="basis-full text-sm" role="status">{{ savedMessage() }}</p>
-              }
-            </div>
-          </section>
 
-          @if (plan.notPlanned.length) {
-            <section hlmCard aria-labelledby="planner-excluded-title">
-              <div hlmCardHeader>
-                <h3 hlmCardTitle id="planner-excluded-title">Valuable customers left out</h3>
-                <p hlmCardDescription>Eligible customers that did not fit in the horizon.</p>
+            @if (plan.days.length) {
+              <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
+                <!-- From xl the rail takes the day card's height (contain: size) and its list scrolls inside. -->
+                <section hlmCard size="sm" aria-labelledby="planner-days-title" class="gap-3 xl:[contain:size]">
+                  <div hlmCardHeader>
+                    <h3 hlmCardTitle id="planner-days-title">Days</h3>
+                    <p hlmCardDescription>{{ plan.days.length }} routes, one per agent and working day</p>
+                  </div>
+                  <div hlmCardContent class="flex min-h-0 flex-1 flex-col px-2">
+                    <ol class="flex max-h-80 flex-col gap-1 overflow-auto xl:max-h-none xl:min-h-0 xl:flex-1">
+                      @for (item of dayItems(); track $index; let i = $index) {
+                        <li>
+                          <button
+                            type="button"
+                            class="hover:bg-muted flex w-full flex-col gap-1 rounded-xl border-l-2 border-transparent px-3 py-2.5 text-left text-sm transition-colors"
+                            [class.bg-brand-soft]="selectedDayIndex() === i"
+                            [class.border-brand]="selectedDayIndex() === i"
+                            [attr.aria-pressed]="selectedDayIndex() === i"
+                            (click)="selectDay(i)"
+                          >
+                            <span class="flex items-baseline justify-between gap-2">
+                              <strong>{{ item.title }}</strong>
+                              <span class="text-muted-foreground text-xs tabular-nums">Day {{ i + 1 }}</span>
+                            </span>
+                            <span class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+                              <ng-icon name="lucideUser" class="shrink-0" aria-hidden="true" />
+                              <span class="truncate">{{ item.agent }}</span>
+                            </span>
+                            <span class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums">
+                              <span>{{ item.stops }} {{ item.stops === 1 ? 'stop' : 'stops' }}</span>
+                              <span>{{ decimal(item.km) }} km</span>
+                              <span>{{ item.revenue | eur: 'rounded' }}</span>
+                            </span>
+                          </button>
+                        </li>
+                      }
+                    </ol>
+                  </div>
+                </section>
+
+                @if (selectedDay(); as day) {
+                  <section
+                    hlmCard
+                    size="sm"
+                    class="min-w-0 gap-4"
+                    [attr.aria-labelledby]="'planner-day-' + selectedDayIndex()"
+                  >
+                    <div hlmCardHeader class="flex flex-wrap items-center justify-between gap-2">
+                      <h3 hlmCardTitle class="text-lg" [id]="'planner-day-' + selectedDayIndex()">
+                        {{ date(day.date) }}
+                        @if (day.agent) {
+                          <span class="text-muted-foreground text-base font-normal"
+                            >· {{ day.agent }}</span
+                          >
+                        }
+                      </h3>
+                      <p class="text-sm" data-testid="planner-road-summary">
+                        @if (routing()) {
+                          <span class="text-muted-foreground inline-flex items-center gap-1"
+                            ><hlm-spinner class="size-3" /> Computing road route…</span
+                          >
+                        } @else if (road(); as route) {
+                          <strong>{{ decimal(route.km) }} km</strong> · {{ minutes(route.minutes)
+                          }}{{ ' ' }}
+                          <span class="text-muted-foreground"
+                            >({{ route.source === 'OSRM' ? 'road route' : 'estimate' }})</span
+                          >
+                        } @else {
+                          <strong>{{ decimal(day.km) }} km</strong>{{ ' ' }}
+                          <span class="text-muted-foreground">(estimate)</span>
+                        }
+                      </p>
+                    </div>
+                    <div hlmCardContent class="flex flex-col gap-4">
+                    <app-map-view
+                      class="block h-[26rem] overflow-hidden rounded-xl border xl:h-[32rem]"
+                      [markers]="markers()"
+                      [routes]="routes()"
+                      [ariaLabel]="'Itinerary for ' + date(day.date)"
+                    />
+                    <ol class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                      @for (visit of day.visits; track visit.deliveryPointId) {
+                        <li class="bg-muted/30 rounded-xl border p-4">
+                          <div class="flex gap-3">
+                            <span
+                              class="bg-brand flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
+                              >{{ visit.slot }}</span
+                            >
+                            <div class="min-w-0">
+                              <p class="truncate font-medium">{{ visit.pointName }}</p>
+                              <p class="text-muted-foreground text-sm">
+                                {{ visit.customerName }} · {{ visit.address }}, {{ visit.city }}
+                              </p>
+                              <p class="mt-1 text-sm">
+                                {{ visit.expectedRevenue | eur }} ·
+                                {{ decimal(road()?.legs?.[$index]?.km ?? visit.travelKm) }} km from
+                                previous stop
+                              </p>
+                            </div>
+                          </div>
+                        </li>
+                      }
+                    </ol>
+                    </div>
+                  </section>
+                }
               </div>
-              <div hlmCardContent>
-                <div hlmTableContainer>
-                  <table hlmTable>
-                    <thead hlmTHead>
-                      <tr hlmTr>
-                        <th hlmTh>Delivery point</th>
-                        <th hlmTh>City</th>
-                        <th hlmTh>Agent</th>
-                        <th hlmTh class="text-right">Revenue</th>
+            } @else {
+              <div hlmAlert role="status">
+                <h3 hlmAlertTitle>No visits fit these parameters</h3>
+                <p hlmAlertDescription>Adjust the horizon, filters or distance and generate the plan again.</p>
+              </div>
+            }
+
+            @if (plan.notPlanned.length) {
+              <section hlmCard size="sm" aria-labelledby="planner-excluded-title">
+                <div hlmCardHeader>
+                  <h3 hlmCardTitle id="planner-excluded-title">Valuable customers left out</h3>
+                  <p hlmCardDescription>
+                    The {{ plan.notPlanned.length }} most valuable eligible customers that did not fit in the horizon.
+                  </p>
+                </div>
+                <!-- At most 20 rows: a compact list that scrolls inside the card. -->
+                <div
+                  hlmTableContainer
+                  class="max-h-72 overflow-y-auto border-t"
+                  tabindex="0"
+                  role="region"
+                  aria-labelledby="planner-excluded-title"
+                >
+                  <table hlmTable class="text-xs">
+                    <thead hlmTHead class="bg-card sticky top-0 z-10 shadow-[inset_0_-1px_0_var(--border)]">
+                      <tr hlmTr class="hover:bg-transparent">
+                        <th hlmTh class="h-9 pl-4">Delivery point</th>
+                        <th hlmTh class="h-9">City</th>
+                        <th hlmTh class="h-9">Agent</th>
+                        <th hlmTh class="h-9 pr-4 text-right">Revenue</th>
                       </tr>
                     </thead>
                     <tbody hlmTBody>
                       @for (point of plan.notPlanned; track point.id) {
                         <tr hlmTr>
-                          <td hlmTd>
-                            <strong>{{ point.pointName }}</strong
-                            ><br /><span class="text-muted-foreground text-xs">{{
-                              point.customerName
-                            }}</span>
+                          <td hlmTd class="py-1.5 pl-4 whitespace-normal">
+                            <span class="font-medium">{{ point.pointName }}</span>
+                            <span class="text-muted-foreground"> · {{ point.customerName }}</span>
                           </td>
-                          <td hlmTd>{{ point.city }}</td>
-                          <td hlmTd>{{ point.agent ?? '–' }}</td>
-                          <td hlmTd class="text-right">{{ point.totalRevenue | eur }}</td>
+                          <td hlmTd class="py-1.5">{{ point.city }}</td>
+                          <td hlmTd class="py-1.5">{{ point.agent ?? '–' }}</td>
+                          <td hlmTd class="py-1.5 pr-4 text-right tabular-nums">{{ point.totalRevenue | eur }}</td>
                         </tr>
                       }
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </section>
-          }
-        </section>
+              </section>
+            }
+          </section>
+        </div>
       }
+    </div>
     </div>
   }
 </div>
