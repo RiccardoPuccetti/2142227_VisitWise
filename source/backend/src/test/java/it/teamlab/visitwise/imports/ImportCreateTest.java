@@ -119,7 +119,7 @@ class ImportCreateTest {
                 .andExpect(jsonPath("$.name").value("Sample 2025 - full year"))
                 .andExpect(jsonPath("$.sourceFileName").value("erp-2025.xlsx"))
                 .andExpect(jsonPath("$.createdAt", notNullValue()))
-                .andExpect(jsonPath("$.status").value("READY"))
+                .andExpect(jsonPath("$.status").value("GEOCODING"))
                 .andExpect(jsonPath("$.totalRows").value(5))
                 .andExpect(jsonPath("$.importedRows").value(2))
                 .andExpect(jsonPath("$.skippedRows").value(3))

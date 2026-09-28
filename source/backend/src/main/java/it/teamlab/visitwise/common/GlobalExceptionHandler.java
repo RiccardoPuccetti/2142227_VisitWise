@@ -1,5 +1,7 @@
 package it.teamlab.visitwise.common;
 
+import it.teamlab.visitwise.geocoding.AddressNotFoundException;
+import it.teamlab.visitwise.geocoding.GeocoderUnavailableException;
 import it.teamlab.visitwise.imports.InvalidImportFileException;
 import java.util.Comparator;
 import org.springframework.core.Ordered;
@@ -38,6 +40,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidImportFileException.class)
     ProblemDetail handleInvalidFile(InvalidImportFileException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+    }
+
+    /** The geocoder knows no location for the address (API_CONTRACT.md endpoint 27: 422). */
+    @ExceptionHandler(AddressNotFoundException.class)
+    ProblemDetail handleAddressNotFound(AddressNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+    }
+
+    /** Nominatim cannot be reached: the analyst can retry later (API_CONTRACT.md endpoint 27: 503). */
+    @ExceptionHandler(GeocoderUnavailableException.class)
+    ProblemDetail handleGeocoderUnavailable(GeocoderUnavailableException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
     }
 
     /** Bean Validation errors on a request body: the first invalid field (alphabetical) as "field: message". */

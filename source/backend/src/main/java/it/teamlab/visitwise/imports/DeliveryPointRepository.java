@@ -11,4 +11,10 @@ public interface DeliveryPointRepository extends JpaRepository<DeliveryPoint, Lo
     List<DeliveryPoint> findByImportBatchId(Long importId);
 
     List<DeliveryPoint> findByImportBatchIdAndGeocodeStatus(Long importId, GeocodeStatus status);
+
+    long countByImportBatchId(Long importId);
+
+    long countByImportBatchIdAndGeocodeStatus(Long importId, GeocodeStatus status);
+
+    java.util.Optional<DeliveryPoint> findByIdAndImportBatchId(Long id, Long importId);
 }
