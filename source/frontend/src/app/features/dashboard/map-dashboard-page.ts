@@ -60,8 +60,11 @@ import {
 import { DashboardService, SummaryFilter } from './dashboard.service';
 import { PointDetails } from './point-details';
 
-/** From this width (Tailwind xl) the selected point opens in a popup on the map instead of a card below it. */
-const WIDE_QUERY = '(min-width: 80rem)';
+/**
+ * From this width (Tailwind lg, where the app shell shows its desktop sidebar) the selected point opens in a popup on
+ * the map instead of a card below it. The filters rail starts later, at xl.
+ */
+const WIDE_QUERY = '(min-width: 64rem)';
 /** Width of the popup (w-80) plus its gap to the marker and a margin to the map edge, in pixels. */
 const POPUP_SPACE = 320 + POPUP_GAP + 16;
 

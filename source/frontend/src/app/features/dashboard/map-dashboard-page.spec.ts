@@ -283,7 +283,7 @@ describe('MapDashboardPage', () => {
       expect(centerOn.mock.calls[0][0]).toBe(75);
     });
 
-    it('on wide screens shows the selected point in a popup anchored to its marker', async () => {
+    it('from the desktop layout shows the selected point in a popup anchored to its marker', async () => {
       const wide = { matches: true, addEventListener() {}, removeEventListener() {} };
       // jsdom has no matchMedia: give it one to spy on.
       window.matchMedia ??= (() => ({ ...wide, matches: false })) as never;
@@ -295,6 +295,8 @@ describe('MapDashboardPage', () => {
         map.markerClick.emit(map.markers().find((marker) => marker.id === 75)!);
         await harness.fixture.whenStable();
 
+        // Same breakpoint as the desktop sidebar of the app shell (1024 px).
+        expect(matchMedia).toHaveBeenCalledWith('(min-width: 64rem)');
         expect(map.popupId()).toBe(75);
         const popup = page().querySelector('app-map-view [data-map-popup]');
         expect(popup?.textContent).toContain('CUSTOMER 75');
