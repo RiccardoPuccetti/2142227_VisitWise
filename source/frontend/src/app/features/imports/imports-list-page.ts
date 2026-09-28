@@ -5,6 +5,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideBuilding2,
   lucideCalendar,
+  lucideFileSpreadsheet,
   lucideCircleCheck,
   lucideFolderOpen,
   lucideLayoutGrid,
@@ -56,6 +57,7 @@ import { ImportsService } from './imports.service';
     provideIcons({
       lucideBuilding2,
       lucideCalendar,
+      lucideFileSpreadsheet,
       lucideCircleCheck,
       lucideFolderOpen,
       lucideLayoutGrid,
