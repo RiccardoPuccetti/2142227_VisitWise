@@ -35,6 +35,7 @@ import {
   baseMarker,
   planMarkers,
   planRoutes,
+  travelBasis,
   validateParameters,
 } from './planner.model';
 import { PlannerService } from './planner.service';
@@ -328,6 +329,8 @@ export class PlannerPage {
   protected decimal(value: number): string {
     return DECIMAL.format(value);
   }
+
+  protected readonly travelBasis = travelBasis;
 
   protected date(value: string | null): string {
     return dateLabel(value);

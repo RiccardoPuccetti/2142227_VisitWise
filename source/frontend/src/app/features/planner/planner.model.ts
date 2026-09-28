@@ -3,6 +3,7 @@ import type {
   PlanParameters,
   PlanResult,
   RouteResponse,
+  RouteSource,
 } from '../../core/models/api.models';
 import type { MapMarker, MapRoute } from '../../shared';
 
@@ -105,4 +106,9 @@ export function planRoutes(
           result.parameters.base,
         ];
   return [{ id: `${day.date}-${day.agent ?? 'single'}`, color: ROUTE_COLOR, points }];
+}
+
+/** How the km and hours of a plan were obtained, for the label next to them (US-39). */
+export function travelBasis(source: RouteSource | null | undefined): string {
+  return source === 'OSRM' ? 'road network' : 'estimate';
 }

@@ -1,5 +1,5 @@
 import type { PlanParameters, PlanResult } from '../../core/models/api.models';
-import { planRoutes, validateParameters } from './planner.model';
+import { planRoutes, travelBasis, validateParameters } from './planner.model';
 
 const PARAMETERS: PlanParameters = {
   campaign: 'CHRISTMAS',
@@ -57,5 +57,14 @@ describe('planner model', () => {
       { latitude: 41.91, longitude: 12.52 },
       PARAMETERS.base,
     ]);
+  });
+});
+
+describe('travelBasis', () => {
+  it('names the road network only when the plan was measured on it', () => {
+    expect(travelBasis('OSRM')).toBe('road network');
+    expect(travelBasis('ESTIMATE')).toBe('estimate');
+    expect(travelBasis(null)).toBe('estimate');
+    expect(travelBasis(undefined)).toBe('estimate');
   });
 });

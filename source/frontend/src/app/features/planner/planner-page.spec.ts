@@ -268,6 +268,21 @@ describe('PlannerPage', () => {
     expect(summary.replace(/\s+/g, ' ')).toContain('42,5 km (estimate)');
   });
 
+  it('says when the distance and time were measured on the road network', async () => {
+    button('Generate plan').click();
+    TestBed.tick();
+    http
+      .expectOne('/api/imports/42/plans/simulate')
+      .flush({ ...RESULT, kpis: { ...RESULT.kpis, travelSource: 'OSRM' } });
+    await harness.fixture.whenStable();
+    http.expectOne('/api/imports/42/plans/route').flush(ROAD);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(text()).toContain('h on the road (road network)');
+    expect(text()).not.toContain('h on the road (estimate)');
+  });
+
   it('saves the simulated parameters as a named scenario', async () => {
     button('Generate plan').click();
     TestBed.tick();

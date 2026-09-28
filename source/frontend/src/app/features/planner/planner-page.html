@@ -380,7 +380,7 @@
               <app-kpi-card
                 label="Distance"
                 [value]="decimal(plan.kpis.totalKm) + ' km'"
-                [hint]="decimal(plan.kpis.travelHours) + ' h on the road (estimate)'"
+                [hint]="decimal(plan.kpis.travelHours) + ' h on the road (' + travelBasis(plan.kpis.travelSource) + ')'"
               />
             </div>
 
