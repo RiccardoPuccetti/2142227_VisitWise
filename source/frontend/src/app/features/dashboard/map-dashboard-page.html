@@ -58,83 +58,6 @@
     </div>
   </section>
 
-  <section hlmCard size="sm" aria-labelledby="filters-title">
-    <div hlmCardContent class="flex flex-col gap-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-          <ng-icon name="lucideFilter" class="text-muted-foreground" aria-hidden="true" />
-          <h2 id="filters-title" class="panel-title">Filters</h2>
-          @if (activeFilters() > 0) {
-            <span class="pill bg-brand-soft text-brand">{{ activeFilters() }} active</span>
-          }
-        </div>
-        <button hlmBtn variant="ghost" size="sm" type="button" [disabled]="activeFilters() === 0" (click)="resetFilters()">
-          Reset filters
-        </button>
-      </div>
-      <div class="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
-        <div class="flex flex-col gap-1.5">
-          <span hlmLabel id="dashboard-enterprises-label">Enterprises</span>
-          <div class="flex flex-wrap items-center gap-2" role="group" aria-labelledby="dashboard-enterprises-label">
-            @for (enterprise of enterprises(); track enterprise.enterpriseId) {
-              <button
-                hlmBtn
-                type="button"
-                size="sm"
-                class="rounded-full"
-                [variant]="isSelected(enterprise.enterpriseId) ? 'secondary' : 'outline'"
-                [attr.aria-pressed]="isSelected(enterprise.enterpriseId)"
-                (click)="toggleEnterprise(enterprise.enterpriseId)"
-              >
-                <span
-                  class="border-foreground/20 size-2.5 rounded-full border"
-                  [style.background-color]="enterprise.color"
-                  aria-hidden="true"
-                ></span>
-                {{ enterprise.name }}
-              </button>
-            }
-          </div>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="dashboard-agent">Agent</label>
-          <hlm-native-select selectId="dashboard-agent" [value]="filter().agent ?? ''" (valueChange)="setAgent($event)">
-            <option hlmNativeSelectOption value="">All agents</option>
-            @for (agent of options().agents; track agent) {
-              <option hlmNativeSelectOption [value]="agent">{{ agent }}</option>
-            }
-          </hlm-native-select>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="dashboard-city">City</label>
-          <hlm-native-select selectId="dashboard-city" [value]="filter().city ?? ''" (valueChange)="setCity($event)">
-            <option hlmNativeSelectOption value="">All cities</option>
-            @for (city of options().cities; track city) {
-              <option hlmNativeSelectOption [value]="city">{{ city }}</option>
-            }
-          </hlm-native-select>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="dashboard-min-revenue">Minimum revenue (€)</label>
-          <input
-            hlmInput
-            id="dashboard-min-revenue"
-            type="number"
-            min="0"
-            step="100"
-            inputmode="numeric"
-            [value]="filter().minRevenue || ''"
-            (change)="setMinRevenue($event)"
-          />
-        </div>
-      </div>
-      <p class="text-muted-foreground text-xs">
-        Enterprises and agent also recompute the indicators and charts; city and minimum revenue filter only the map and
-        the list.
-      </p>
-    </div>
-  </section>
-
   <section aria-labelledby="charts-title" class="flex flex-col gap-4">
     <h2 id="charts-title" class="sr-only">Revenue breakdown</h2>
     <div class="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4">
@@ -189,8 +112,91 @@
     </div>
   </section>
 
-  <div class="grid gap-6 xl:grid-cols-3">
-    <section hlmCard size="sm" class="xl:col-span-2" aria-label="Map of the delivery points">
+  <!-- Small screens: filters, map, selected point, one below the other. From xl: filters and selected point in a
+       left column, the map on the right at full height. -->
+  <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)] xl:grid-rows-[auto_1fr]">
+    <!-- Filters: a wrapping toolbar above the map on small screens, a rail beside the map from xl. -->
+    <section hlmCard size="sm" class="xl:col-start-1 xl:row-start-1" aria-labelledby="filters-title">
+      <div hlmCardContent class="flex flex-col gap-3 xl:gap-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <ng-icon name="lucideFilter" class="text-muted-foreground" aria-hidden="true" />
+            <h2 id="filters-title" class="panel-title">Filters</h2>
+            @if (activeFilters() > 0) {
+              <span class="pill bg-brand-soft text-brand">{{ activeFilters() }} active</span>
+            }
+          </div>
+          <button hlmBtn variant="ghost" size="sm" type="button" [disabled]="activeFilters() === 0" (click)="resetFilters()">
+            Reset<span class="max-xl:sr-only"> filters</span>
+          </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-3 xl:flex-col xl:items-stretch xl:gap-4">
+          <div class="flex flex-col gap-1.5">
+            <span hlmLabel id="dashboard-enterprises-label" class="max-xl:sr-only">Enterprises</span>
+            <div class="flex flex-wrap items-center gap-2 xl:flex-col xl:items-stretch" role="group" aria-labelledby="dashboard-enterprises-label">
+              @for (enterprise of enterprises(); track enterprise.enterpriseId) {
+                <button
+                  hlmBtn
+                  type="button"
+                  size="sm"
+                  class="rounded-full xl:justify-start"
+                  [variant]="isSelected(enterprise.enterpriseId) ? 'secondary' : 'outline'"
+                  [attr.aria-pressed]="isSelected(enterprise.enterpriseId)"
+                  (click)="toggleEnterprise(enterprise.enterpriseId)"
+                >
+                  <span
+                    class="border-foreground/20 size-2.5 shrink-0 rounded-full border"
+                    [style.background-color]="enterprise.color"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="truncate">{{ enterprise.name }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <div class="flex items-center gap-2 max-sm:w-full xl:flex-col xl:items-stretch xl:gap-1.5">
+            <label hlmLabel for="dashboard-agent" class="text-muted-foreground shrink-0 font-normal max-sm:w-28 xl:text-foreground xl:font-medium">Agent</label>
+            <hlm-native-select selectId="dashboard-agent" size="sm" class="max-sm:flex-1 xl:w-full" [value]="filter().agent ?? ''" (valueChange)="setAgent($event)">
+              <option hlmNativeSelectOption value="">All agents</option>
+              @for (agent of options().agents; track agent) {
+                <option hlmNativeSelectOption [value]="agent">{{ agent }}</option>
+              }
+            </hlm-native-select>
+          </div>
+          <div class="flex items-center gap-2 max-sm:w-full xl:flex-col xl:items-stretch xl:gap-1.5">
+            <label hlmLabel for="dashboard-city" class="text-muted-foreground shrink-0 font-normal max-sm:w-28 xl:text-foreground xl:font-medium">City</label>
+            <hlm-native-select selectId="dashboard-city" size="sm" class="max-sm:flex-1 xl:w-full" [value]="filter().city ?? ''" (valueChange)="setCity($event)">
+              <option hlmNativeSelectOption value="">All cities</option>
+              @for (city of options().cities; track city) {
+                <option hlmNativeSelectOption [value]="city">{{ city }}</option>
+              }
+            </hlm-native-select>
+          </div>
+          <div class="flex items-center gap-2 max-sm:w-full xl:flex-col xl:items-stretch xl:gap-1.5">
+            <label hlmLabel for="dashboard-min-revenue" class="text-muted-foreground shrink-0 font-normal max-sm:w-28 xl:text-foreground xl:font-medium">
+              Min. revenue (€)
+            </label>
+            <input
+              hlmInput
+              id="dashboard-min-revenue"
+              class="h-8 w-28 max-sm:flex-1 xl:w-full"
+              type="number"
+              min="0"
+              step="100"
+              inputmode="numeric"
+              placeholder="0"
+              [value]="filter().minRevenue || ''"
+              (change)="setMinRevenue($event)"
+            />
+          </div>
+        </div>
+        <p class="text-muted-foreground text-xs">
+          Enterprise and agent also update the indicators and charts; city and minimum revenue only the map and the list.
+        </p>
+      </div>
+    </section>
+
+    <section hlmCard size="sm" class="xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:self-start" aria-label="Map of the delivery points">
       <div hlmCardContent class="flex flex-col gap-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
@@ -203,7 +209,7 @@
           </p>
         </div>
         <app-map-view
-          class="h-[30rem] overflow-hidden rounded-xl border xl:h-[36rem]"
+          class="h-[30rem] overflow-hidden rounded-xl border xl:h-[44rem]"
           ariaLabel="Map of the delivery points"
           [markers]="markers()"
           [highlightedId]="selectedId()"
@@ -212,7 +218,7 @@
       </div>
     </section>
 
-    <aside class="flex flex-col gap-4" aria-label="Selected point">
+    <aside class="flex flex-col gap-4 xl:col-start-1 xl:row-start-2" aria-label="Selected point">
       @if (selected(); as point) {
         <app-point-details [point]="point" [enterprises]="enterprises()" (closed)="selectedId.set(null)" />
       } @else {
