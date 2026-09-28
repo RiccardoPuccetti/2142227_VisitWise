@@ -21,12 +21,14 @@ import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
+import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
 import { KpiCard, PageHeader } from '../../shared';
+import { locatedPercent } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
 import { ImportsService } from './imports.service';
@@ -46,6 +48,7 @@ import { ImportsService } from './imports.service';
     HlmButtonImports,
     HlmCardImports,
     HlmEmptyImports,
+    HlmProgressImports,
     HlmSpinnerImports,
     HlmTableImports,
     HlmToggleGroupImports,
@@ -95,6 +98,7 @@ export class ImportsListPage {
       ...item,
       created: formatCreatedAt(item.createdAt),
       statusLabel: importStatusLabel(item.status),
+      locatedPercent: locatedPercent({ total: item.importedRows, located: item.geocodedRows }),
     })),
   );
 

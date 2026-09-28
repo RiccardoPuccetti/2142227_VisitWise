@@ -66,6 +66,10 @@ describe('import detail model', () => {
       expect(locatedPercent(PROGRESS)).toBe(55);
       expect(locatedPercent({ ...PROGRESS, total: 0, located: 0 })).toBe(100);
     });
+
+    it('needs only the two counts, so the import list can use it with the summary figures', () => {
+      expect(locatedPercent({ total: 73, located: 40 })).toBe(55);
+    });
   });
 
   it('names every geocode status for people', () => {

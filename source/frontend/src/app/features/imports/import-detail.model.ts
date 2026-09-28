@@ -44,7 +44,8 @@ export function missingAddresses(progress: GeocodingProgress): number {
   return progress.pending + progress.notFound;
 }
 
-export function locatedPercent(progress: GeocodingProgress): number {
+/** Share of the points that have coordinates, as a whole percent (100 when there is nothing to locate). */
+export function locatedPercent(progress: Pick<GeocodingProgress, 'total' | 'located'>): number {
   return progress.total === 0 ? 100 : Math.round((progress.located / progress.total) * 100);
 }
 
