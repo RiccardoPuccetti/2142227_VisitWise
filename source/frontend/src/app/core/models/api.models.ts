@@ -201,6 +201,9 @@ export interface PlanKpis {
   lastVisitDate: string | null;
   visitsAfterDeadline: number;
   excludedOutOfRange: number;
+  /** Where km and hours come from: OSRM = measured on the road network (US-39), ESTIMATE = straight line x road
+   *  factor at the average speed. Missing or null in plans saved before it existed. */
+  travelSource?: RouteSource | null;
 }
 
 export interface PlannedVisit {
