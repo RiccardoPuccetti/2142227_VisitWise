@@ -135,48 +135,6 @@
     </div>
   </section>
 
-  <div class="grid gap-6 xl:grid-cols-3">
-    <section hlmCard size="sm" class="xl:col-span-2" aria-label="Map of the delivery points">
-      <div hlmCardContent class="flex flex-col gap-3">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
-          <p class="text-muted-foreground text-sm" aria-live="polite">
-            {{ markers().length }} of {{ filteredPoints().length }} points on the map
-            @if (withoutPosition() > 0) {
-              · {{ withoutPosition() }} {{ withoutPosition() === 1 ? 'point' : 'points' }} without position ·
-              <a [routerLink]="['/imports', id()]" class="text-foreground underline underline-offset-4">Fix positions</a>
-            }
-          </p>
-        </div>
-        <app-map-view
-          class="h-[30rem] overflow-hidden rounded-xl border xl:h-[36rem]"
-          ariaLabel="Map of the delivery points"
-          [markers]="markers()"
-          [highlightedId]="selectedId()"
-          (markerClick)="select($event.id)"
-        />
-      </div>
-    </section>
-
-    <aside class="flex flex-col gap-4" aria-label="Selected point">
-      @if (selected(); as point) {
-        <app-point-details [point]="point" [enterprises]="enterprises()" (closed)="selectedId.set(null)" />
-      } @else {
-        <section hlmCard size="sm" class="h-full">
-          <div hlmCardContent class="flex h-full flex-col items-center justify-center gap-3 py-10 text-center">
-            <span class="bg-muted text-muted-foreground grid size-12 place-items-center rounded-2xl" aria-hidden="true">
-              <ng-icon name="lucideMousePointerClick" class="text-xl" />
-            </span>
-            <p class="font-medium">No point selected</p>
-            <p class="text-muted-foreground max-w-xs text-sm">
-              Select a marker, or a point in the list below, to see its customer, address and revenue per enterprise.
-            </p>
-          </div>
-        </section>
-      }
-    </aside>
-  </div>
-
   <section aria-labelledby="charts-title" class="flex flex-col gap-4">
     <h2 id="charts-title" class="sr-only">Revenue breakdown</h2>
     <div class="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4">
@@ -230,6 +188,48 @@
       </section>
     </div>
   </section>
+
+  <div class="grid gap-6 xl:grid-cols-3">
+    <section hlmCard size="sm" class="xl:col-span-2" aria-label="Map of the delivery points">
+      <div hlmCardContent class="flex flex-col gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
+          <p class="text-muted-foreground text-sm" aria-live="polite">
+            {{ markers().length }} of {{ filteredPoints().length }} points on the map
+            @if (withoutPosition() > 0) {
+              · {{ withoutPosition() }} {{ withoutPosition() === 1 ? 'point' : 'points' }} without position ·
+              <a [routerLink]="['/imports', id()]" class="text-foreground underline underline-offset-4">Fix positions</a>
+            }
+          </p>
+        </div>
+        <app-map-view
+          class="h-[30rem] overflow-hidden rounded-xl border xl:h-[36rem]"
+          ariaLabel="Map of the delivery points"
+          [markers]="markers()"
+          [highlightedId]="selectedId()"
+          (markerClick)="select($event.id)"
+        />
+      </div>
+    </section>
+
+    <aside class="flex flex-col gap-4" aria-label="Selected point">
+      @if (selected(); as point) {
+        <app-point-details [point]="point" [enterprises]="enterprises()" (closed)="selectedId.set(null)" />
+      } @else {
+        <section hlmCard size="sm" class="h-full">
+          <div hlmCardContent class="flex h-full flex-col items-center justify-center gap-3 py-10 text-center">
+            <span class="bg-muted text-muted-foreground grid size-12 place-items-center rounded-2xl" aria-hidden="true">
+              <ng-icon name="lucideMousePointerClick" class="text-xl" />
+            </span>
+            <p class="font-medium">No point selected</p>
+            <p class="text-muted-foreground max-w-xs text-sm">
+              Select a marker, or a point in the list below, to see its customer, address and revenue per enterprise.
+            </p>
+          </div>
+        </section>
+      }
+    </aside>
+  </div>
 
   <section hlmCard size="sm" aria-labelledby="points-title">
     <div hlmCardHeader class="flex flex-wrap items-end justify-between gap-3">
