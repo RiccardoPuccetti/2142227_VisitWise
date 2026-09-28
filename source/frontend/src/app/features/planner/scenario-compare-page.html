@@ -1,0 +1,332 @@
+<div class="flex flex-col gap-6">
+  <header>
+    <h1 class="text-2xl font-semibold">What-if and scenarios</h1>
+    <p class="text-muted-foreground mt-1">
+      See how much more revenue extra working days bring, and compare the scenarios you saved from
+      the planner.
+    </p>
+  </header>
+
+  @if (loadError()) {
+    <div hlmAlert variant="destructive" role="alert">
+      <h2 hlmAlertTitle>Scenario data could not be loaded</h2>
+      <p hlmAlertDescription>{{ loadError() }}</p>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex items-center gap-2" aria-live="polite"><hlm-spinner /> Loading scenarios…</div>
+  } @else {
+    <section hlmCard aria-labelledby="whatif-title">
+      <div hlmCardHeader>
+        <h2 hlmCardTitle id="whatif-title">1. How many days are worth it?</h2>
+        <p hlmCardDescription>
+          The same plan is computed over each horizon. The curve flattens where extra days stop
+          paying off.
+        </p>
+      </div>
+      <div hlmCardContent class="flex flex-col gap-4">
+        <form
+          class="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]"
+          (submit)="$event.preventDefault(); compareHorizons()"
+        >
+          <div hlmField>
+            <label hlmFieldLabel for="whatif-source">Plan to analyse</label>
+            <hlm-native-select
+              selectId="whatif-source"
+              [value]="source()"
+              (valueChange)="setSource($event)"
+            >
+              @for (campaign of campaigns(); track campaign.code) {
+                <option hlmNativeSelectOption [value]="'campaign:' + campaign.code">
+                  Planner defaults · {{ campaign.label }}
+                </option>
+              }
+              @for (scenario of scenarios(); track scenario.id) {
+                <option hlmNativeSelectOption [value]="'scenario:' + scenario.id">
+                  Scenario · {{ scenario.name }}
+                </option>
+              }
+            </hlm-native-select>
+          </div>
+          <div hlmField>
+            <label hlmFieldLabel for="whatif-horizons">Horizons (working days)</label
+            ><input
+              hlmInput
+              id="whatif-horizons"
+              inputmode="numeric"
+              placeholder="20, 30, 40"
+              [value]="horizonsText()"
+              (input)="setHorizons($event)"
+            />
+            <p hlmFieldDescription>Up to 5 values, separated by commas.</p>
+          </div>
+          <button hlmBtn type="submit" [disabled]="running()">
+            @if (running()) {
+              <hlm-spinner class="size-4" />
+            }
+            Compare horizons
+          </button>
+        </form>
+
+        @if (whatIfError()) {
+          <p class="text-destructive text-sm" role="alert">{{ whatIfError() }}</p>
+        }
+
+        @if (whatIf(); as analysis) {
+          <div class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
+            <figure class="flex flex-col gap-2">
+              <svg
+                data-testid="whatif-curve"
+                class="w-full"
+                role="img"
+                aria-labelledby="whatif-curve-caption"
+                [attr.viewBox]="
+                  -chartPadding +
+                  ' ' +
+                  -chartPadding +
+                  ' ' +
+                  (chart.width + 2 * chartPadding) +
+                  ' ' +
+                  (chart.height + 2 * chartPadding)
+                "
+              >
+                <line
+                  x1="0"
+                  [attr.y1]="chart.height"
+                  [attr.x2]="chart.width"
+                  [attr.y2]="chart.height"
+                  class="stroke-border"
+                  stroke-width="1"
+                />
+                <line
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  [attr.y2]="chart.height"
+                  class="stroke-border"
+                  stroke-width="1"
+                />
+                <polyline
+                  [attr.points]="curvePath()"
+                  fill="none"
+                  class="stroke-primary"
+                  stroke-width="2.5"
+                  stroke-linejoin="round"
+                  stroke-linecap="round"
+                />
+                @for (point of curve(); track point.workingDays) {
+                  <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4" class="fill-primary" />
+                  <text
+                    [attr.x]="point.x"
+                    [attr.y]="chart.height + 10"
+                    text-anchor="middle"
+                    class="fill-muted-foreground"
+                    font-size="9"
+                  >
+                    {{ point.workingDays }} d
+                  </text>
+                  <text
+                    [attr.x]="point.x"
+                    [attr.y]="point.y - 7"
+                    text-anchor="middle"
+                    class="fill-foreground"
+                    font-size="9"
+                  >
+                    {{ percent(point.coverage) }}
+                  </text>
+                }
+              </svg>
+              <figcaption id="whatif-curve-caption" class="text-muted-foreground text-xs">
+                Share of eligible revenue covered, by working days available.
+              </figcaption>
+            </figure>
+
+            <div class="overflow-x-auto">
+              <table hlmTable data-testid="whatif-table">
+                <thead hlmTHead>
+                  <tr hlmTr>
+                    <th hlmTh>Working days</th>
+                    <th hlmTh class="text-right">Covered revenue</th>
+                    <th hlmTh class="text-right">Coverage</th>
+                    <th hlmTh class="text-right">Gain vs. previous</th>
+                    <th hlmTh class="text-right">Visits</th>
+                    <th hlmTh class="text-right">Distance</th>
+                  </tr>
+                </thead>
+                <tbody hlmTBody>
+                  @for (row of analysis.rows; track row.workingDays; let first = $first) {
+                    <tr hlmTr>
+                      <td hlmTd class="font-medium">{{ row.workingDays }}</td>
+                      <td hlmTd class="text-right">
+                        {{ row.kpis.coveredRevenue | eur: 'rounded' }}
+                      </td>
+                      <td hlmTd class="text-right">{{ percent(row.kpis.coverage) }}</td>
+                      <td hlmTd class="text-right">
+                        @if (first) {
+                          <span class="text-muted-foreground">–</span>
+                        } @else {
+                          +{{ row.marginalRevenue | eur: 'rounded' }}
+                        }
+                      </td>
+                      <td hlmTd class="text-right">{{ row.kpis.plannedVisits }}</td>
+                      <td hlmTd class="text-right">{{ decimal(row.kpis.totalKm) }} km</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section hlmCard aria-labelledby="scenarios-title">
+      <div hlmCardHeader>
+        <h2 hlmCardTitle id="scenarios-title">2. Saved scenarios</h2>
+        <p hlmCardDescription>
+          Tick up to {{ maxCompared }} scenarios to see them side by side. The best value of each
+          row is highlighted.
+        </p>
+      </div>
+      <div hlmCardContent class="flex flex-col gap-4">
+        @if (scenarioError()) {
+          <p class="text-destructive text-sm" role="alert">{{ scenarioError() }}</p>
+        }
+
+        @if (!scenarios().length) {
+          <div hlmAlert role="status">
+            <h3 hlmAlertTitle>No saved scenarios yet</h3>
+            <p hlmAlertDescription>
+              Generate a plan in the
+              <a class="underline" [routerLink]="['/imports', importId(), 'planner']">planner</a>
+              and save it with a name: it will appear here.
+            </p>
+          </div>
+        } @else {
+          <ul class="flex flex-col gap-2" aria-label="Saved scenarios">
+            @for (scenario of scenarios(); track scenario.id) {
+              <li class="flex flex-wrap items-center gap-3 rounded-md border p-3">
+                <input
+                  type="checkbox"
+                  class="accent-primary size-4"
+                  [id]="'scenario-' + scenario.id"
+                  [checked]="isSelected(scenario.id)"
+                  [disabled]="!isSelected(scenario.id) && selectionFull()"
+                  (change)="toggleScenario(scenario.id, $event)"
+                />
+                <label class="min-w-0 grow" [for]="'scenario-' + scenario.id">
+                  <span class="block truncate font-medium">{{ scenario.name }}</span>
+                  <span class="text-muted-foreground block text-xs">
+                    {{ campaignLabel(scenario.parameters) }} ·
+                    {{ scenario.parameters.workingDays }} working days · saved
+                    {{ date(scenario.createdAt) }}
+                  </span>
+                </label>
+                <span hlmBadge variant="secondary">{{
+                  scenario.kpis.coveredRevenue | eur: 'compact'
+                }}</span>
+                <a
+                  hlmBtn
+                  variant="ghost"
+                  size="sm"
+                  [routerLink]="['/imports', importId(), 'plans', scenario.id]"
+                  >Open plan</a
+                >
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="text-destructive"
+                  [attr.data-testid]="'delete-scenario-' + scenario.id"
+                  [attr.aria-label]="'Delete scenario ' + scenario.name"
+                  [disabled]="deleting() === scenario.id"
+                  (click)="deleteScenario(scenario)"
+                >
+                  @if (deleting() === scenario.id) {
+                    <hlm-spinner class="size-4" />
+                  }
+                  Delete
+                </button>
+              </li>
+            }
+          </ul>
+
+          @if (compared().length) {
+            <div class="overflow-x-auto">
+              <table hlmTable data-testid="compare-table">
+                <caption class="sr-only">
+                  Selected scenarios side by side
+                </caption>
+                <thead hlmTHead>
+                  <tr hlmTr>
+                    <th hlmTh scope="col">Indicator</th>
+                    @for (scenario of compared(); track scenario.id) {
+                      <th hlmTh scope="col" class="text-right">{{ scenario.name }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody hlmTBody>
+                  <tr hlmTr>
+                    <th hlmTd scope="row" class="text-left font-normal">Campaign</th>
+                    @for (scenario of compared(); track scenario.id) {
+                      <td hlmTd class="text-right">
+                        {{ campaignLabel(scenario.parameters) }}<br />
+                        <span class="text-muted-foreground text-xs"
+                          >{{ scenario.parameters.startDate }} →
+                          {{ scenario.parameters.deadline ?? 'no deadline' }}</span
+                        >
+                      </td>
+                    }
+                  </tr>
+                  <tr hlmTr>
+                    <th hlmTd scope="row" class="text-left font-normal">Horizon</th>
+                    @for (scenario of compared(); track scenario.id) {
+                      <td hlmTd class="text-right">
+                        {{ scenario.parameters.workingDays }} working days
+                      </td>
+                    }
+                  </tr>
+                  <tr hlmTr>
+                    <th hlmTd scope="row" class="text-left font-normal">Who visits</th>
+                    @for (scenario of compared(); track scenario.id) {
+                      <td hlmTd class="text-right">{{ agentsLabel(scenario.parameters) }}</td>
+                    }
+                  </tr>
+                  <tr hlmTr>
+                    <th hlmTd scope="row" class="text-left font-normal">Priorities</th>
+                    @for (scenario of compared(); track scenario.id) {
+                      <td hlmTd class="text-right">{{ prioritiesLabel(scenario.parameters) }}</td>
+                    }
+                  </tr>
+                  @for (row of kpiRows; track row.key) {
+                    <tr hlmTr>
+                      <th hlmTd scope="row" class="text-left font-normal">{{ row.label }}</th>
+                      @for (scenario of compared(); track scenario.id; let column = $index) {
+                        <td
+                          hlmTd
+                          class="text-right tabular-nums"
+                          [class.font-semibold]="isBest(row, column)"
+                          [class.text-primary]="isBest(row, column)"
+                          [attr.data-best]="isBest(row, column) ? 'true' : null"
+                        >
+                          {{ kpi(row, scenario.kpis) }}
+                          @if (isBest(row, column)) {
+                            <span class="sr-only">(best)</span>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="text-muted-foreground text-sm">Tick at least one scenario to compare.</p>
+          }
+        }
+      </div>
+    </section>
+  }
+</div>
