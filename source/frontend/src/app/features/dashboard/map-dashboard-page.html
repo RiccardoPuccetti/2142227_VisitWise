@@ -208,29 +208,41 @@
             }
           </p>
         </div>
-        <app-map-view
-          class="block h-[30rem] overflow-hidden rounded-xl border xl:h-[44rem]"
-          ariaLabel="Map of the delivery points"
-          [markers]="markers()"
-          [highlightedId]="selectedId()"
-          [popupId]="popupOnMap() ? selectedId() : null"
-          (markerClick)="selectOnMap($event.id)"
-        >
-          <!-- Wide screens: the selected point in a popup anchored to its marker (moves with the map). -->
-          <div data-map-popup>
-            @if (popupOnMap() && selected(); as point) {
+        <div class="relative">
+          <app-map-view
+            class="block h-[30rem] overflow-hidden rounded-xl border xl:h-[44rem]"
+            ariaLabel="Map of the delivery points"
+            [markers]="markers()"
+            [highlightedId]="selectedId()"
+            [popupId]="popupOnMap() ? selectedId() : null"
+            (markerClick)="selectOnMap($event.id)"
+          >
+            <!-- Wide screens: the selected point in a popup anchored to its marker (moves with the map). -->
+            <div data-map-popup>
+              @if (popupOnMap() && selected(); as point) {
+                <app-point-details
+                  class="block max-h-[28rem] w-80 overflow-y-auto rounded-2xl shadow-lg xl:max-h-[42rem]"
+                  [point]="point"
+                  [enterprises]="enterprises()"
+                  (closed)="selectedId.set(null)"
+                />
+              }
+            </div>
+          </app-map-view>
+          @if (wide() && !popupOnMap() && selected(); as point) {
+            <!-- Desktop, point without position: no marker to anchor to, so the details sit over the map's corner. -->
+            <div data-map-corner class="absolute top-3 right-3 z-10">
               <app-point-details
                 class="block max-h-[28rem] w-80 overflow-y-auto rounded-2xl shadow-lg xl:max-h-[42rem]"
                 [point]="point"
                 [enterprises]="enterprises()"
                 (closed)="selectedId.set(null)"
               />
-            }
-          </div>
-        </app-map-view>
-        <!-- Smaller screens, or a point without position: the selected point in a card below the map. Not rendered on
-             wide screens when there is nothing to show, so no empty gap is left under the map. -->
-        @if (!popupOnMap() && (selected() || !wide())) {
+            </div>
+          }
+        </div>
+        <!-- Smaller screens: the selected point in a card below the map (a placeholder until one is selected). -->
+        @if (!wide()) {
           <aside class="flex flex-col gap-4" aria-label="Selected point">
             @if (selected(); as point) {
               <app-point-details [point]="point" [enterprises]="enterprises()" (closed)="selectedId.set(null)" />

@@ -306,6 +306,25 @@ describe('MapDashboardPage', () => {
       }
     });
 
+    it('from the desktop layout shows a point without position over the map corner, not below the map', async () => {
+      const wide = { matches: true, addEventListener() {}, removeEventListener() {} };
+      window.matchMedia ??= (() => ({ ...wide, matches: false })) as never;
+      const matchMedia = vi.spyOn(window, 'matchMedia').mockReturnValue(wide as unknown as MediaQueryList);
+      try {
+        await open();
+
+        // POINT 3 has no coordinates: no marker to anchor a popup to.
+        button('POINT 3').click();
+        await harness.fixture.whenStable();
+
+        const corner = page().querySelector('app-map-view ~ [data-map-corner]');
+        expect(corner?.textContent).toContain('CUSTOMER 3');
+        expect(page().querySelector('[aria-label="Selected point"]')).toBeNull();
+      } finally {
+        matchMedia.mockRestore();
+      }
+    });
+
     it('starts again from the first page when a filter changes', async () => {
       await open('/imports/42/map', MANY);
       button('Next page').click();
