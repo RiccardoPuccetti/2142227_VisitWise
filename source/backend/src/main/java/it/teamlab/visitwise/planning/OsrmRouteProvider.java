@@ -61,6 +61,8 @@ public class OsrmRouteProvider implements RouteProvider {
             Response response = client.get()
                     .uri("/route/v1/driving/" + coordinates + "?overview=full&geometries=geojson&steps=false")
                     .header(HttpHeaders.USER_AGENT, properties.userAgent())
+                    // A self-hosted osrm-routed answers "deflate" in a form the JDK client cannot read: gzip only.
+                    .header(HttpHeaders.ACCEPT_ENCODING, "gzip")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(Response.class);
