@@ -14,6 +14,19 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideBuilding2,
+  lucideCalendarRange,
+  lucideCircleCheck,
+  lucideCircleSlash,
+  lucideFileSpreadsheet,
+  lucideMap,
+  lucideMapPin,
+  lucideMapPinned,
+  lucideTableProperties,
+  lucideUsers,
+} from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmAlertDialogImports } from '@spartan-ng/helm/alert-dialog';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
@@ -59,6 +72,7 @@ type PointFilter = 'all' | 'missing';
   selector: 'app-import-detail-page',
   imports: [
     RouterLink,
+    NgIcon,
     HlmAlertImports,
     HlmAlertDialogImports,
     HlmBadgeImports,
@@ -72,6 +86,20 @@ type PointFilter = 'all' | 'missing';
     MapView,
     PageHeader,
     PointLocationForm,
+  ],
+  providers: [
+    provideIcons({
+      lucideBuilding2,
+      lucideCalendarRange,
+      lucideCircleCheck,
+      lucideCircleSlash,
+      lucideFileSpreadsheet,
+      lucideMap,
+      lucideMapPin,
+      lucideMapPinned,
+      lucideTableProperties,
+      lucideUsers,
+    }),
   ],
   templateUrl: './import-detail-page.html',
 })
@@ -120,11 +148,11 @@ export class ImportDetailPage {
     const detail = this.detail();
     return detail
       ? [
-          { label: 'Rows in the file', value: detail.totalRows },
-          { label: 'Imported', value: detail.importedRows },
-          { label: 'Skipped', value: detail.skippedRows },
-          { label: 'Agents', value: detail.agents.length },
-          { label: 'Cities', value: detail.cities.length },
+          { label: 'Rows in the file', value: detail.totalRows, icon: 'lucideFileSpreadsheet', tone: 'bg-muted text-muted-foreground' },
+          { label: 'Imported', value: detail.importedRows, icon: 'lucideCircleCheck', tone: 'bg-success/15 text-success' },
+          { label: 'Skipped', value: detail.skippedRows, icon: 'lucideCircleSlash', tone: 'bg-warning/15 text-warning' },
+          { label: 'Agents', value: detail.agents.length, icon: 'lucideUsers', tone: 'bg-info/15 text-info' },
+          { label: 'Cities', value: detail.cities.length, icon: 'lucideMapPin', tone: 'bg-brand-soft text-brand' },
         ]
       : [];
   });

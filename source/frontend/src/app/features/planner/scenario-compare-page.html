@@ -1,11 +1,10 @@
 <div class="flex flex-col gap-6">
-  <header>
-    <h1 class="text-2xl font-semibold">What-if and scenarios</h1>
-    <p class="text-muted-foreground mt-1">
-      See how much more revenue extra working days bring, and compare the scenarios you saved from
-      the planner.
-    </p>
-  </header>
+  <app-page-header title="What-if and scenarios" [trail]="[{ label: 'Imports', link: '/imports' }, { label: 'Import ' + importId(), link: ['/imports', importId()] }]">
+    <p>See how much more revenue extra working days bring, and compare the scenarios you saved from the planner.</p>
+    <div actions>
+      <a hlmBtn [routerLink]="['/imports', importId(), 'planner']"><ng-icon name="lucideCalendarRange" aria-hidden="true" /> Open the planner</a>
+    </div>
+  </app-page-header>
 
   @if (loadError()) {
     <div hlmAlert variant="destructive" role="alert">
@@ -19,7 +18,10 @@
   } @else {
     <section hlmCard aria-labelledby="whatif-title">
       <div hlmCardHeader>
-        <h2 hlmCardTitle id="whatif-title">1. How many days are worth it?</h2>
+        <h2 hlmCardTitle id="whatif-title" class="flex items-center gap-3">
+          <span class="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold text-white" aria-hidden="true">1</span>
+          How many days are worth it?
+        </h2>
         <p hlmCardDescription>
           The same plan is computed over each horizon. The curve flattens where extra days stop
           paying off.
@@ -74,8 +76,8 @@
         }
 
         @if (whatIf(); as analysis) {
-          <div class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
-            <figure class="flex flex-col gap-2">
+          <div class="grid gap-6 xl:grid-cols-[minmax(0,26rem)_1fr]">
+            <figure class="bg-muted/30 flex flex-col gap-2 rounded-2xl border p-4">
               <svg
                 data-testid="whatif-curve"
                 class="w-full"
@@ -91,6 +93,23 @@
                   (chart.height + 2 * chartPadding)
                 "
               >
+                <defs>
+                  <linearGradient id="whatif-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--chart-1)" stop-opacity="0.35" />
+                    <stop offset="100%" stop-color="var(--chart-1)" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                @for (step of [0.25, 0.5, 0.75]; track step) {
+                  <line
+                    x1="0"
+                    [attr.y1]="chart.height * step"
+                    [attr.x2]="chart.width"
+                    [attr.y2]="chart.height * step"
+                    class="stroke-chart-grid"
+                    stroke-width="1"
+                    stroke-dasharray="3 3"
+                  />
+                }
                 <line
                   x1="0"
                   [attr.y1]="chart.height"
@@ -99,24 +118,17 @@
                   class="stroke-border"
                   stroke-width="1"
                 />
-                <line
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  [attr.y2]="chart.height"
-                  class="stroke-border"
-                  stroke-width="1"
-                />
+                <polygon [attr.points]="areaPath()" fill="url(#whatif-fill)" />
                 <polyline
                   [attr.points]="curvePath()"
                   fill="none"
-                  class="stroke-primary"
+                  stroke="var(--chart-1)"
                   stroke-width="2.5"
                   stroke-linejoin="round"
                   stroke-linecap="round"
                 />
                 @for (point of curve(); track point.workingDays) {
-                  <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4" class="fill-primary" />
+                  <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4.5" fill="var(--chart-1)" class="stroke-card" stroke-width="2" />
                   <text
                     [attr.x]="point.x"
                     [attr.y]="chart.height + 10"
@@ -142,7 +154,7 @@
               </figcaption>
             </figure>
 
-            <div class="overflow-x-auto">
+            <div hlmTableContainer>
               <table hlmTable data-testid="whatif-table">
                 <thead hlmTHead>
                   <tr hlmTr>
@@ -183,7 +195,10 @@
 
     <section hlmCard aria-labelledby="scenarios-title">
       <div hlmCardHeader>
-        <h2 hlmCardTitle id="scenarios-title">2. Saved scenarios</h2>
+        <h2 hlmCardTitle id="scenarios-title" class="flex items-center gap-3">
+          <span class="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold text-white" aria-hidden="true">2</span>
+          Saved scenarios
+        </h2>
         <p hlmCardDescription>
           Tick up to {{ maxCompared }} scenarios to see them side by side. The best value of each
           row is highlighted.
@@ -204,12 +219,16 @@
             </p>
           </div>
         } @else {
-          <ul class="flex flex-col gap-2" aria-label="Saved scenarios">
+          <ul class="grid gap-3 lg:grid-cols-2" aria-label="Saved scenarios">
             @for (scenario of scenarios(); track scenario.id) {
-              <li class="flex flex-wrap items-center gap-3 rounded-md border p-3">
+              <li
+                class="bg-muted/30 flex flex-wrap items-center gap-3 rounded-xl border p-4 transition-colors"
+                [class.border-brand]="isSelected(scenario.id)"
+                [class.bg-brand-soft]="isSelected(scenario.id)"
+              >
                 <input
                   type="checkbox"
-                  class="accent-primary size-4"
+                  class="accent-brand size-4"
                   [id]="'scenario-' + scenario.id"
                   [checked]="isSelected(scenario.id)"
                   [disabled]="!isSelected(scenario.id) && selectionFull()"
@@ -254,7 +273,7 @@
           </ul>
 
           @if (compared().length) {
-            <div class="overflow-x-auto">
+            <div hlmTableContainer>
               <table hlmTable data-testid="compare-table">
                 <caption class="sr-only">
                   Selected scenarios side by side
@@ -308,7 +327,7 @@
                           hlmTd
                           class="text-right tabular-nums"
                           [class.font-semibold]="isBest(row, column)"
-                          [class.text-primary]="isBest(row, column)"
+                          [class.text-brand]="isBest(row, column)"
                           [attr.data-best]="isBest(row, column) ? 'true' : null"
                         >
                           {{ kpi(row, scenario.kpis) }}

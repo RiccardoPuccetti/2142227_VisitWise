@@ -9,6 +9,7 @@ import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { AuthService } from '../../core/auth/auth.service';
 import { problemDetail } from '../../core/auth/problem-detail';
+import { AuthLayout } from './auth-layout';
 import { PASSWORD_MAX_LENGTH, requiredText } from './text-rules';
 
 /** US-31 - owner: Puccetti (task PUC-9, AUTHENTICATION.md step 7). */
@@ -18,6 +19,7 @@ import { PASSWORD_MAX_LENGTH, requiredText } from './text-rules';
     FormRoot,
     FormField,
     RouterLink,
+    AuthLayout,
     HlmAlertImports,
     HlmButtonImports,
     HlmCardImports,
@@ -25,9 +27,11 @@ import { PASSWORD_MAX_LENGTH, requiredText } from './text-rules';
     HlmInputImports,
   ],
   template: `
-    <section hlmCard class="mx-auto mt-8 max-w-sm" aria-labelledby="register-title">
-      <div hlmCardHeader>
-        <h1 hlmCardTitle id="register-title">Register</h1>
+    <app-auth-layout>
+    <section hlmCard class="shadow-raised" aria-labelledby="register-title">
+      <div hlmCardHeader class="gap-2">
+        <p class="eyebrow">Get started</p>
+        <h1 hlmCardTitle id="register-title" class="text-2xl">Register</h1>
         <p hlmCardDescription>One account for your whole federation. Its data stays private to it.</p>
       </div>
 
@@ -76,15 +80,16 @@ import { PASSWORD_MAX_LENGTH, requiredText } from './text-rules';
           <hlm-field-error>{{ registerForm.password().errors()[0]?.message }}</hlm-field-error>
         </div>
 
-        <button hlmBtn type="submit" [disabled]="registerForm().submitting()">
+        <button hlmBtn size="lg" type="submit" class="mt-1" [disabled]="registerForm().submitting()">
           {{ registerForm().submitting() ? 'Creating account...' : 'Create account' }}
         </button>
       </form>
 
-      <p hlmCardFooter class="text-muted-foreground text-sm">
-        Already registered?&nbsp;<a routerLink="/login" class="text-foreground underline underline-offset-4">Log in</a>
+      <p hlmCardFooter class="text-muted-foreground justify-center border-t pt-5 text-sm">
+        Already registered?&nbsp;<a routerLink="/login" class="text-brand font-medium underline-offset-4 hover:underline">Log in</a>
       </p>
     </section>
+    </app-auth-layout>
   `,
 })
 export class RegisterPage {

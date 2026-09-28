@@ -1,5 +1,15 @@
 import { Component, computed, inject, input, resource, Resource, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCalendarRange,
+  lucideEuro,
+  lucideFilter,
+  lucideMapPin,
+  lucideMousePointerClick,
+  lucideTrendingUp,
+  lucideUsers,
+} from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -8,7 +18,18 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EnterpriseLegend, EurPipe, formatEur, KpiCard, MapView } from '../../shared';
+import {
+  AreaChart,
+  ChartPoint,
+  DonutChart,
+  DonutSlice,
+  EnterpriseLegend,
+  EurPipe,
+  formatEur,
+  KpiCard,
+  MapView,
+  PageHeader,
+} from '../../shared';
 import { AmountBars, BarItem } from './amount-bars';
 import {
   DashboardFilter,
@@ -31,6 +52,9 @@ function valueOf<T>(resource: Resource<T | undefined>): T | undefined {
 }
 
 const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
+const WHOLE_PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 });
+/** Points of the concentration curve: enough to show the bend, few enough to label. */
+const PARETO_STEPS = 6;
 
 /**
  * Map dashboard of an import (US-13..US-18): delivery points on OpenStreetMap, colored by their main enterprise and
@@ -41,6 +65,7 @@ const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFracti
   selector: 'app-map-dashboard-page',
   imports: [
     RouterLink,
+    NgIcon,
     HlmAlertImports,
     HlmButtonImports,
     HlmCardImports,
@@ -50,10 +75,24 @@ const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFracti
     HlmTableImports,
     MapView,
     KpiCard,
+    PageHeader,
     EnterpriseLegend,
     EurPipe,
     AmountBars,
+    DonutChart,
+    AreaChart,
     PointDetails,
+  ],
+  providers: [
+    provideIcons({
+      lucideCalendarRange,
+      lucideEuro,
+      lucideFilter,
+      lucideMapPin,
+      lucideMousePointerClick,
+      lucideTrendingUp,
+      lucideUsers,
+    }),
   ],
   templateUrl: './map-dashboard-page.html',
 })
@@ -157,7 +196,61 @@ export class MapDashboardPage {
     (this.summary()?.byCity ?? []).map((c) => ({ ...c, label: c.key })),
   );
 
+  protected readonly enterpriseSlices = computed<DonutSlice[]>(() =>
+    (this.summary()?.byEnterprise ?? []).map((e) => ({
+      key: String(e.enterpriseId),
+      label: e.name,
+      value: e.revenue,
+      color: e.color,
+    })),
+  );
+
+  /** Concentration curve: cumulative revenue share at evenly spaced shares of the points, from 0 to 100%. */
+  protected readonly paretoCurve = computed<ChartPoint[]>(() => {
+    const pareto = this.summary()?.pareto ?? [];
+    const total = pareto.length;
+    if (total === 0) {
+      return [];
+    }
+    const steps = Math.min(PARETO_STEPS, total);
+    const points: ChartPoint[] = [{ label: '0%', value: 0 }];
+    for (let step = 1; step <= steps; step++) {
+      const index = Math.min(total - 1, Math.round((step / steps) * total) - 1);
+      const entry = pareto[index];
+      points.push({ label: WHOLE_PERCENT.format(entry.points / total), value: entry.revenueShare });
+    }
+    return points;
+  });
+
+  /** How many filters differ from the default, shown next to the filter title. */
+  protected readonly activeFilters = computed(() => {
+    const filter = this.filter();
+    return (
+      (filter.enterpriseIds.length > 0 ? 1 : 0) +
+      (filter.agent ? 1 : 0) +
+      (filter.city ? 1 : 0) +
+      (filter.minRevenue > 0 ? 1 : 0)
+    );
+  });
+
+  protected readonly filterHint = computed(() => {
+    const filter = this.summaryFilter();
+    if (filter.enterpriseIds.length === 0 && !filter.agent) {
+      return 'whole import';
+    }
+    const parts: string[] = [];
+    if (filter.enterpriseIds.length > 0) {
+      parts.push(`${filter.enterpriseIds.length} ${filter.enterpriseIds.length === 1 ? 'enterprise' : 'enterprises'}`);
+    }
+    if (filter.agent) {
+      parts.push(filter.agent);
+    }
+    return parts.join(' · ');
+  });
+
   protected readonly formatEur = formatEur;
+  protected readonly formatCompact = (value: number): string => formatEur(value, 'compact');
+  protected readonly formatPercent = (value: number): string => WHOLE_PERCENT.format(value);
 
   protected isSelected(enterpriseId: number): boolean {
     return this.filter().enterpriseIds.includes(enterpriseId);

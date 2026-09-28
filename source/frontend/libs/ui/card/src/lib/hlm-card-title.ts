@@ -7,6 +7,6 @@ import { classes } from '@spartan-ng/helm/utils';
 })
 export class HlmCardTitle {
   constructor() {
-    classes(() => 'text-base font-medium');
+    classes(() => 'text-base font-semibold tracking-tight');
   }
 }

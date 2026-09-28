@@ -1,6 +1,19 @@
 import { Component, computed, inject, linkedSignal, resource, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideBuilding2,
+  lucideCalendar,
+  lucideCircleCheck,
+  lucideFolderOpen,
+  lucideLayoutGrid,
+  lucideList,
+  lucideMap,
+  lucideMapPin,
+  lucideTrash2,
+  lucideUpload,
+} from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmAlertDialogImports } from '@spartan-ng/helm/alert-dialog';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
@@ -12,7 +25,7 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { PageHeader } from '../../shared';
+import { KpiCard, PageHeader } from '../../shared';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
 import { ImportsService } from './imports.service';
@@ -35,7 +48,23 @@ import { ImportsService } from './imports.service';
     HlmSpinnerImports,
     HlmTableImports,
     HlmToggleGroupImports,
+    NgIcon,
+    KpiCard,
     PageHeader,
+  ],
+  providers: [
+    provideIcons({
+      lucideBuilding2,
+      lucideCalendar,
+      lucideCircleCheck,
+      lucideFolderOpen,
+      lucideLayoutGrid,
+      lucideList,
+      lucideMap,
+      lucideMapPin,
+      lucideTrash2,
+      lucideUpload,
+    }),
   ],
   templateUrl: './imports-list-page.html',
 })
@@ -66,6 +95,16 @@ export class ImportsListPage {
       statusLabel: importStatusLabel(item.status),
     })),
   );
+
+  protected readonly totals = computed(() => {
+    const imports = this.imports();
+    return {
+      points: imports.reduce((sum, item) => sum + item.importedRows, 0),
+      ready: imports.filter((item) => item.status === 'READY').length,
+      pending: imports.filter((item) => item.status === 'PROCESSING' || item.status === 'GEOCODING').length,
+      enterprises: new Set(imports.flatMap((item) => item.enterprises.map((enterprise) => enterprise.name))).size,
+    };
+  });
 
   protected readonly deleting = signal<number | null>(null);
   protected readonly deleteError = signal<string | null>(null);
