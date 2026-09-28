@@ -16,6 +16,7 @@ import {
   lucideCalendarRange,
   lucideEuro,
   lucideGitCompare,
+  lucideInfo,
   lucideMap,
   lucideMapPin,
   lucideMapPinOff,
@@ -112,6 +113,7 @@ function dateLabel(value: string | null): string {
       lucideCalendarRange,
       lucideEuro,
       lucideGitCompare,
+      lucideInfo,
       lucideMap,
       lucideMapPin,
       lucideMapPinOff,
@@ -231,6 +233,10 @@ export class PlannerPage {
   protected readonly weights = signal<Record<number, number>>({});
   protected readonly selectedAgents = signal<string[]>([]);
   protected readonly result = signal<PlanResult | null>(null);
+  /** The plan's notes, except the one on points without coordinates: the geocoding strip already reports them. */
+  protected readonly notes = computed(() =>
+    (this.result()?.warnings ?? []).filter((note) => !note.includes('without coordinates')),
+  );
   protected readonly selectedDayIndex = signal(0);
   protected readonly submitting = signal(false);
   /** Setup (the two steps) or the generated plan. */

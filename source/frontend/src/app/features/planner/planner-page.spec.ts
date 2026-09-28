@@ -255,6 +255,26 @@ describe('PlannerPage', () => {
     expect(summary.replace(/\s+/g, ' ')).toContain('12,4 km · 31 min (road route)');
   });
 
+  it('leaves out the note on points without coordinates, already told by the geocoding strip', async () => {
+    button('Generate plan').click();
+    TestBed.tick();
+    http.expectOne('/api/imports/42/plans/simulate').flush({
+      ...RESULT,
+      warnings: [
+        '8 delivery points without coordinates were excluded',
+        '3 delivery points are farther than 50 km from the base and were excluded',
+      ],
+    });
+    await harness.fixture.whenStable();
+    http.expectOne('/api/imports/42/plans/route').flush(ROAD);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(text()).not.toContain('without coordinates');
+    expect(text()).not.toContain('Planning notes');
+    expect(text()).toContain('3 delivery points are farther than 50 km from the base and were excluded');
+  });
+
   it('falls back to the estimate when the road service is unavailable', async () => {
     button('Generate plan').click();
     TestBed.tick();

@@ -453,15 +453,16 @@
         </div>
       } @else if (result(); as plan) {
         <div class="plan-reveal flex flex-col gap-6">
-          @if (plan.warnings.length) {
-            <div hlmAlert role="status">
-              <h2 hlmAlertTitle>Planning notes</h2>
-              <ul hlmAlertDescription class="list-disc pl-5">
-                @for (warning of plan.warnings; track warning) {
-                  <li>{{ warning }}</li>
-                }
-              </ul>
-            </div>
+          <!-- Other notes on the plan, as slim lines like the geocoding strip. -->
+          @if (notes().length) {
+            <ul role="status" class="flex flex-col gap-2">
+              @for (note of notes(); track note) {
+                <li class="bg-muted/40 flex items-center gap-2 rounded-r-lg border-l-[3px] px-3 py-2 text-sm">
+                  <ng-icon name="lucideInfo" class="text-muted-foreground shrink-0 text-base" aria-hidden="true" />
+                  {{ note }}
+                </li>
+              }
+            </ul>
           }
 
           <section aria-labelledby="planner-results-title" class="flex flex-col gap-6">
