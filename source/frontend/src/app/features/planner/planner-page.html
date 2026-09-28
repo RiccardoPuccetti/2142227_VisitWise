@@ -14,41 +14,44 @@
     </div>
   }
 
+  <!-- Geocoding status as one slim line: an amber strip when addresses are missing, a neutral one while locating. -->
   @if (progress(); as geocoding) {
     @if (geocodingActive()) {
-      <div hlmAlert role="status" aria-live="polite">
-        <h2 hlmAlertTitle class="flex items-center gap-2">
-          <hlm-spinner class="size-4" /> Locating customer addresses…
-        </h2>
-        <p hlmAlertDescription>
-          {{ geocoding.located }} of {{ geocoding.total }} addresses placed on the map. Customers
-          without a position yet are left out of the plan; generate it again when this finishes.
-        </p>
+      <div
+        role="status"
+        aria-live="polite"
+        class="bg-muted/40 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-r-lg border-l-[3px] px-3 py-2 text-sm"
+      >
+        <hlm-spinner class="size-4 shrink-0" />
+        <span class="font-medium">Locating customer addresses…</span>
+        <span class="text-muted-foreground">
+          {{ geocoding.located }} of {{ geocoding.total }} addresses placed on the map · generate the plan again when
+          this finishes
+        </span>
       </div>
     } @else if (geocoding.notFound > 0 || geocoding.errorMessage) {
-      <div hlmAlert role="status">
-        <h2 hlmAlertTitle>
-          {{ geocoding.notFound }} of {{ geocoding.total }} addresses could not be located
-        </h2>
-        <div hlmAlertDescription class="flex flex-wrap items-center gap-3">
-          <span>{{
-            geocoding.errorMessage ??
-              'They are excluded from the plan. Retry, or fix the address in the source file.'
-          }}</span>
+      <div
+        role="status"
+        class="bg-warning text-warning-foreground flex flex-wrap items-center gap-x-2 gap-y-1 rounded-r-lg border-l-[3px] border-l-(--chart-4) px-3 py-2 text-sm"
+      >
+        <ng-icon name="lucideMapPinOff" class="shrink-0 text-base text-(--chart-4)" aria-hidden="true" />
+        <span class="font-medium">{{ geocoding.notFound }} of {{ geocoding.total }} addresses not located</span>
+        <span class="opacity-80">· {{ geocoding.errorMessage ?? 'left out of the plan' }}</span>
+        <span class="ml-auto flex items-center gap-4">
           <button
-            hlmBtn
             type="button"
-            size="sm"
-            variant="outline"
+            class="inline-flex items-center gap-1.5 font-medium underline underline-offset-4 disabled:opacity-60"
+            aria-label="Retry geocoding"
             [disabled]="retrying()"
             (click)="retryGeocoding()"
           >
             @if (retrying()) {
-              <hlm-spinner class="size-4" />
+              <hlm-spinner class="size-3.5" />
             }
-            Retry geocoding
+            Retry
           </button>
-        </div>
+          <a [routerLink]="['/imports', id()]" class="font-medium underline underline-offset-4">Fix positions</a>
+        </span>
       </div>
     }
   }

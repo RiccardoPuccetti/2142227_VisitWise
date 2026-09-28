@@ -420,11 +420,17 @@ describe('PlannerPage while addresses are still being geocoded', () => {
     http.expectOne('/api/imports/42/geocoding').flush({ ...PROGRESS_DONE, notFound: 2 });
     await harness.fixture.whenStable();
     harness.detectChanges();
-    expect(text()).toContain('2 of 2 addresses could not be located');
+    // One slim line: what is missing, why it matters, and the two ways to fix it.
+    expect(text()).toContain('2 of 2 addresses not located');
+    expect(text()).toContain('left out of the plan');
+    const root = harness.routeNativeElement as HTMLElement;
+    const fix = Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href="/imports/42"]')).find((link) =>
+      link.textContent?.includes('Fix positions'),
+    );
+    expect(fix).toBeDefined();
 
-    const retry = Array.from(
-      (harness.routeNativeElement as HTMLElement).querySelectorAll('button'),
-    ).find((item) => item.textContent?.includes('Retry geocoding'))!;
+    const retry = root.querySelector<HTMLButtonElement>('button[aria-label="Retry geocoding"]')!;
+    expect(retry.textContent?.trim()).toBe('Retry');
     retry.click();
     TestBed.tick();
     const request = http.expectOne('/api/imports/42/geocoding/retry');
