@@ -1,8 +1,8 @@
 /*
- * App shell layout (US-38, Puccetti PUC-13). Below 1024 px, and when logged out, the navigation is a top bar with pill
- * groups. From 1024 px a logged-in user gets the inset layout of Linear and Vercel: the sidebar sits on the app frame
- * (--shell) and the page is one panel set into it; the sidebar can shrink to icons so the panel takes the whole width.
- * --page-pad-x/y are read by the page header to reach the panel edges.
+ * App shell layout. Below 1024 px, and when logged out, the navigation is a top bar with pill groups. From 1024 px a
+ * logged-in user gets an inset layout: the sidebar sits on the app frame (--shell) and the page is one panel set into
+ * it, taking the whole remaining width; the sidebar can shrink to icons. --page-pad-x/y are read by the page header
+ * to reach the panel edges.
  */
 
 /* ---------- Top bar (default) ---------- */
@@ -23,9 +23,9 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
   font-size: 1.0625rem;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -33,12 +33,19 @@
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.125rem;
+  height: 2.125rem;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #ef5a2f, var(--brand));
+  background: linear-gradient(135deg, #ff7a50, var(--brand) 70%);
   color: var(--brand-foreground);
-  box-shadow: 0 6px 16px -6px color-mix(in oklab, var(--brand) 70%, transparent);
+  font-size: 1.125rem;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 6px 16px -6px color-mix(in oklab, var(--brand) 70%, transparent);
+}
+
+.brand-sub {
+  display: none;
 }
 
 .nav-group {
@@ -58,6 +65,7 @@
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   align-items: center;
@@ -75,6 +83,7 @@
 
 .nav-item ng-icon {
   display: none;
+  flex-shrink: 0;
   font-size: 1.125rem;
 }
 
@@ -98,7 +107,7 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
   padding: 0.25rem 0.75rem 0.25rem 0.25rem;
   border-radius: 9999px;
   background: var(--card);
@@ -116,21 +125,32 @@
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.875rem;
+  height: 1.875rem;
   border-radius: 9999px;
-  background: var(--secondary);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--brand) 25%, var(--secondary)), var(--secondary));
   color: var(--secondary-foreground);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.account-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
 }
 
 .account-name {
   overflow: hidden;
   max-width: 10rem;
-  font-weight: 500;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.account-role {
+  display: none;
 }
 
 .footer-actions {
@@ -153,14 +173,16 @@
 
 .page {
   width: 100%;
-  max-width: 1800px;
-  margin: 0 auto;
 }
 
 @media (min-width: 40rem) {
   .sidebar {
     position: sticky;
     top: 0;
+  }
+
+  .content {
+    --page-pad-x: 1.5rem;
   }
 }
 
@@ -174,12 +196,14 @@
   }
 
   .shell[data-layout='sidebar'] .sidebar {
+    position: sticky;
+    top: 0;
     flex-direction: column;
     flex-wrap: nowrap;
     flex-shrink: 0;
     align-items: stretch;
-    gap: 1.75rem;
-    width: 16rem;
+    gap: 1.5rem;
+    width: 16.5rem;
     height: 100dvh;
     overflow-x: hidden;
     overflow-y: auto;
@@ -191,7 +215,21 @@
   }
 
   .shell[data-layout='sidebar'] .brand {
-    padding: 0 0.375rem;
+    padding: 0.125rem 0.5rem;
+  }
+
+  .shell[data-layout='sidebar'] .brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+
+  .shell[data-layout='sidebar'] .brand-sub {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
   }
 
   .shell[data-layout='sidebar'] .nav-group {
@@ -211,15 +249,17 @@
     margin: 0 0 0.375rem;
     padding: 0 0.75rem;
     color: var(--muted-foreground);
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-overflow: ellipsis;
+    text-transform: uppercase;
     white-space: nowrap;
   }
 
   .shell[data-layout='sidebar'] .nav-item {
     padding: 0.5625rem 0.75rem;
-    border-radius: 0.875rem;
+    border-radius: 0.75rem;
   }
 
   .shell[data-layout='sidebar'] .nav-item ng-icon {
@@ -227,11 +267,28 @@
   }
 
   .shell[data-layout='sidebar'] .nav-item:not(.active):hover {
-    background: color-mix(in oklab, var(--foreground) 7%, transparent);
+    background: color-mix(in oklab, var(--foreground) 6%, transparent);
   }
 
   .shell[data-layout='sidebar'] .nav-item.active {
-    box-shadow: 0 8px 20px -12px color-mix(in oklab, var(--foreground) 60%, transparent);
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow: var(--shadow-card);
+  }
+
+  .shell[data-layout='sidebar'] .nav-item.active::before {
+    position: absolute;
+    top: 0.625rem;
+    bottom: 0.625rem;
+    left: 0;
+    width: 3px;
+    border-radius: 9999px;
+    background: var(--brand);
+    content: '';
+  }
+
+  .shell[data-layout='sidebar'] .nav-item.active ng-icon {
+    color: var(--brand);
   }
 
   .shell[data-layout='sidebar'] .sidebar-footer {
@@ -241,27 +298,29 @@
     margin-top: auto;
     margin-left: 0;
     padding-top: 1rem;
-    border-top: 1px solid var(--border);
-  }
-
-  .shell[data-layout='sidebar'] .sidebar-footer {
-    border-top-color: color-mix(in oklab, var(--foreground) 8%, transparent);
+    border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
   }
 
   .shell[data-layout='sidebar'] .account {
     padding: 0.375rem;
-    border-radius: 0.875rem;
+    border-radius: 0.75rem;
     background: none;
     box-shadow: none;
   }
 
   .shell[data-layout='sidebar'] .account:hover,
   .shell[data-layout='sidebar'] .account.active {
-    background: color-mix(in oklab, var(--foreground) 7%, transparent);
+    background: color-mix(in oklab, var(--foreground) 6%, transparent);
   }
 
   .shell[data-layout='sidebar'] .account-name {
     max-width: none;
+  }
+
+  .shell[data-layout='sidebar'] .account-role {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
   }
 
   .shell[data-layout='sidebar'] .logout {
@@ -276,8 +335,8 @@
   }
 
   .shell[data-layout='sidebar'] .content {
-    --page-pad-x: 2.25rem;
-    --page-pad-y: 1.75rem;
+    --page-pad-x: 2rem;
+    --page-pad-y: 1.5rem;
     flex: 1;
     min-width: 0;
     min-height: calc(100dvh - 1rem);
@@ -285,7 +344,7 @@
     border: 1px solid var(--border);
     border-radius: 1rem;
     background: var(--background);
-    box-shadow: 0 1px 2px color-mix(in oklab, black 6%, transparent);
+    box-shadow: var(--shadow-card);
   }
 
   /* Collapsed: icons only. The labels stay in the page for screen readers (visually hidden). */
@@ -293,7 +352,9 @@
     width: 4.75rem;
   }
 
-  .sidebar[data-collapsed='true'] .label {
+  .sidebar[data-collapsed='true'] .label,
+  .sidebar[data-collapsed='true'] .brand-sub,
+  .sidebar[data-collapsed='true'] .account-role {
     position: absolute;
     overflow: hidden;
     width: 1px;
@@ -331,6 +392,13 @@
 
   .sidebar[data-collapsed='true'] .logout {
     flex: none;
+  }
+}
+
+@media (min-width: 96rem) {
+  .shell[data-layout='sidebar'] .content {
+    --page-pad-x: 2.5rem;
+    --page-pad-y: 1.75rem;
   }
 }
 
