@@ -1,7 +1,15 @@
-import type { PlanParameters, PlanResult } from '../../core/models/api.models';
+import type {
+  GeoPoint,
+  PlanParameters,
+  PlanResult,
+  RouteResponse,
+} from '../../core/models/api.models';
 import type { MapMarker, MapRoute } from '../../shared';
 
 export const DEFAULT_BASE = { latitude: 41.896, longitude: 12.4823 } as const;
+export const BASE_MARKER_ID = 'base';
+const ROUTE_COLOR = '#2563eb';
+const BASE_COLOR = '#dc2626';
 
 /** Client-side feedback mirroring the planning API validation rules. */
 export function validateParameters(parameters: PlanParameters): string[] {
@@ -33,35 +41,68 @@ export function validateParameters(parameters: PlanParameters): string[] {
   return errors;
 }
 
+/** The starting base (red) plus the numbered stops of the selected day. */
 export function planMarkers(result: PlanResult | null, dayIndex: number): MapMarker[] {
-  const day = result?.days[dayIndex];
-  if (!day) {
-    return [];
-  }
-  return day.visits.map((visit) => ({
-    id: visit.deliveryPointId,
-    latitude: visit.latitude,
-    longitude: visit.longitude,
-    color: '#2563eb',
-    radius: 7,
-    title: `${visit.slot}. ${visit.pointName}`,
-  }));
-}
-
-export function planRoutes(result: PlanResult | null, dayIndex: number): MapRoute[] {
   const day = result?.days[dayIndex];
   if (!result || !day) {
     return [];
   }
   return [
     {
-      id: `${day.date}-${day.agent ?? 'single'}`,
-      color: '#2563eb',
-      points: [
-        result.parameters.base,
-        ...day.visits.map(({ latitude, longitude }) => ({ latitude, longitude })),
-        result.parameters.base,
-      ],
+      id: BASE_MARKER_ID,
+      latitude: result.parameters.base.latitude,
+      longitude: result.parameters.base.longitude,
+      color: BASE_COLOR,
+      radius: 8,
+      title: 'Starting base',
     },
+    ...day.visits.map((visit) => ({
+      id: visit.deliveryPointId,
+      latitude: visit.latitude,
+      longitude: visit.longitude,
+      color: ROUTE_COLOR,
+      radius: 7,
+      title: `${visit.slot}. ${visit.pointName}`,
+    })),
   ];
+}
+
+/** Marker for the base alone, shown before a plan exists so the user can check the address on the map. */
+export function baseMarker(base: GeoPoint | null): MapMarker[] {
+  return base
+    ? [
+        {
+          id: BASE_MARKER_ID,
+          latitude: base.latitude,
+          longitude: base.longitude,
+          color: BASE_COLOR,
+          radius: 8,
+          title: 'Starting base',
+        },
+      ]
+    : [];
+}
+
+/**
+ * The polyline of the selected day: the real road geometry when the routing service answered for this day,
+ * otherwise straight segments base → stops → base.
+ */
+export function planRoutes(
+  result: PlanResult | null,
+  dayIndex: number,
+  road: RouteResponse | null = null,
+): MapRoute[] {
+  const day = result?.days[dayIndex];
+  if (!result || !day) {
+    return [];
+  }
+  const points =
+    road && road.geometry.length >= 2
+      ? road.geometry
+      : [
+          result.parameters.base,
+          ...day.visits.map(({ latitude, longitude }) => ({ latitude, longitude })),
+          result.parameters.base,
+        ];
+  return [{ id: `${day.date}-${day.agent ?? 'single'}`, color: ROUTE_COLOR, points }];
 }

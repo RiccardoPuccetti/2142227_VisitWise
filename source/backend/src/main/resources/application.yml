@@ -80,6 +80,12 @@ visitwise:
     user-agent: ${GEOCODING_USER_AGENT:VisitWise-hackathon/0.1 (set GEOCODING_USER_AGENT in .env)}
     delay-ms: ${GEOCODING_DELAY_MS:1100}
     country-codes: it
+  routing:
+    # Public OSRM demo server (no SLA): used only to draw one day's real road route. Disable to always estimate.
+    enabled: ${ROUTING_ENABLED:true}
+    base-url: ${ROUTING_BASE_URL:https://router.project-osrm.org}
+    user-agent: ${GEOCODING_USER_AGENT:VisitWise-hackathon/0.1}
+    timeout-ms: 8000
   planning:
     # Default starting point of every working day (Rome, Piazza Venezia). Overridable per plan.
     default-base-latitude: 41.8960

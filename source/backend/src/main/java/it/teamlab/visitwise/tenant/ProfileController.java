@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,6 +34,21 @@ public class ProfileController {
     public CurrentTenant update(@AuthenticationPrincipal TenantPrincipal principal,
             @Valid @RequestBody UpdateProfileRequest request) {
         return profile.rename(principal.tenantId(), request.name());
+    }
+
+    /** Endpoint 26 (US-35): 200 with the saved base, 204 when none was saved yet. */
+    @GetMapping("/base")
+    public ResponseEntity<StartingBase> startingBase(@AuthenticationPrincipal TenantPrincipal principal) {
+        return profile.startingBase(principal.tenantId())
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    /** Endpoint 27 (US-35): geocodes and saves the base. 422 when the address is unknown, 503 geocoder down. */
+    @PutMapping("/base")
+    public StartingBase saveStartingBase(@AuthenticationPrincipal TenantPrincipal principal,
+            @Valid @RequestBody SaveStartingBaseRequest request) {
+        return profile.saveStartingBase(principal.tenantId(), request);
     }
 
     /**

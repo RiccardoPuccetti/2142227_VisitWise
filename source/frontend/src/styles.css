@@ -92,4 +92,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Native dropdown lists ignore Tailwind classes: without this they render white-on-white in dark mode. */
+  select,
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
 }

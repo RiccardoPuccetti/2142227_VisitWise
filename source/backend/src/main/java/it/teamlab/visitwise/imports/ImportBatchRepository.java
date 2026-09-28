@@ -9,4 +9,7 @@ public interface ImportBatchRepository extends JpaRepository<ImportBatch, Long> 
     List<ImportBatch> findAllByTenantIdOrderByCreatedAtDesc(Long tenantId);
 
     boolean existsByIdAndTenantId(Long id, Long tenantId);
+
+    /** Imports whose background geocoding is still running (resumed after a restart). */
+    List<ImportBatch> findByStatus(ImportStatus status);
 }

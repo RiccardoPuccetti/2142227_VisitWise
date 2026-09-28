@@ -4,6 +4,8 @@ import it.teamlab.visitwise.planning.PlanningDtos.CreatePlanRequest;
 import it.teamlab.visitwise.planning.PlanningDtos.PlanParameters;
 import it.teamlab.visitwise.planning.PlanningDtos.PlanResult;
 import it.teamlab.visitwise.planning.PlanningDtos.PlanSummary;
+import it.teamlab.visitwise.planning.PlanningDtos.RouteRequest;
+import it.teamlab.visitwise.planning.PlanningDtos.RouteResponse;
 import it.teamlab.visitwise.planning.PlanningDtos.WhatIfRequest;
 import it.teamlab.visitwise.planning.PlanningDtos.WhatIfResult;
 import it.teamlab.visitwise.planning.engine.CampaignWindow;
@@ -47,6 +49,12 @@ public class PlanningController {
     @PostMapping("/imports/{importId}/plans/what-if")
     WhatIfResult whatIf(@PathVariable Long importId, @RequestBody WhatIfRequest request) {
         return planning.whatIf(importId, request);
+    }
+
+    /** Endpoint 18 (US-24): road route of one planned day, real (OSRM) when available, estimated otherwise. */
+    @PostMapping("/imports/{importId}/plans/route")
+    RouteResponse route(@PathVariable Long importId, @RequestBody RouteRequest request) {
+        return planning.route(request);
     }
 
     @PostMapping("/imports/{importId}/plans")

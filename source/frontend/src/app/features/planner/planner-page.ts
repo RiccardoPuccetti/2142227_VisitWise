@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, resource, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  resource,
+  signal,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -12,13 +21,22 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import type {
   CampaignCode,
   CampaignPreset,
+  GeocodingProgress,
   PlanParameters,
   PlanResult,
   PlanningMode,
+  RouteResponse,
+  StartingBase,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
 import { EurPipe, KpiCard, MapView } from '../../shared';
-import { DEFAULT_BASE, planMarkers, planRoutes, validateParameters } from './planner.model';
+import {
+  DEFAULT_BASE,
+  baseMarker,
+  planMarkers,
+  planRoutes,
+  validateParameters,
+} from './planner.model';
 import { PlannerService } from './planner.service';
 
 const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
@@ -29,12 +47,16 @@ const DATE = new Intl.DateTimeFormat('en-GB', {
   year: 'numeric',
   timeZone: 'UTC',
 });
+const GEOCODING_POLL_MS = 3000;
 
 function dateLabel(value: string | null): string {
   return value ? DATE.format(new Date(`${value}T00:00:00Z`)) : '–';
 }
 
-/** MAR-4 planner: parameters, simulation KPIs, daily route and scenario save. */
+/**
+ * MAR-4 planner: starting base by address, campaign horizon, simulation KPIs, real road route of the
+ * selected day and scenario save. Customers still being geocoded are reported with a progress banner.
+ */
 @Component({
   selector: 'app-planner-page',
   imports: [
@@ -58,6 +80,7 @@ export class PlannerPage {
   readonly importId = input.required<string>();
 
   private readonly api = inject(PlannerService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly id = computed(() => Number(this.importId()));
   protected readonly campaignYear = signal(new Date().getFullYear());
 
@@ -75,6 +98,10 @@ export class PlannerPage {
     travelCostPerKm: new FormControl(2, { nonNullable: true }),
     minRevenue: new FormControl(0, { nonNullable: true }),
   });
+  protected readonly baseForm = new FormGroup({
+    address: new FormControl('', { nonNullable: true }),
+    city: new FormControl('', { nonNullable: true }),
+  });
 
   private readonly campaignsResource = resource({
     params: () => this.campaignYear(),
@@ -84,6 +111,7 @@ export class PlannerPage {
     params: () => this.id(),
     loader: ({ params }) => this.api.options(params),
   });
+  private readonly baseResource = resource({ loader: () => this.api.startingBase() });
 
   protected readonly campaigns = computed(() => this.campaignsResource.value() ?? []);
   protected readonly enterprises = computed(() => this.optionsResource.value()?.byEnterprise ?? []);
@@ -99,24 +127,56 @@ export class PlannerPage {
   protected readonly scenarioName = signal('');
   protected readonly savedMessage = signal<string | null>(null);
 
+  /** Saved base (or null): the map shows it before any plan exists. */
+  protected readonly base = signal<StartingBase | null>(null);
+  protected readonly savingBase = signal(false);
+  protected readonly baseError = signal<string | null>(null);
+  protected readonly baseSaved = signal(false);
+
+  protected readonly progress = signal<GeocodingProgress | null>(null);
+  protected readonly retrying = signal(false);
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Real road route of the selected day, keyed by day so switching back is instant. */
+  private readonly roadRoutes = signal<Record<string, RouteResponse>>({});
+  protected readonly routing = signal(false);
+
   protected readonly loading = computed(
-    () => this.campaignsResource.isLoading() || this.optionsResource.isLoading(),
+    () =>
+      this.campaignsResource.isLoading() ||
+      this.optionsResource.isLoading() ||
+      this.baseResource.isLoading(),
   );
   protected readonly loadError = computed(() => {
-    const error = this.campaignsResource.error() ?? this.optionsResource.error();
+    const error =
+      this.campaignsResource.error() ?? this.optionsResource.error() ?? this.baseResource.error();
     return error ? problemDetail(error) : null;
   });
   protected readonly selectedDay = computed(
     () => this.result()?.days[this.selectedDayIndex()] ?? null,
   );
-  protected readonly markers = computed(() => planMarkers(this.result(), this.selectedDayIndex()));
-  protected readonly routes = computed(() => planRoutes(this.result(), this.selectedDayIndex()));
+  protected readonly road = computed(() => {
+    const day = this.selectedDay();
+    return day ? (this.roadRoutes()[dayKey(day.date, day.agent)] ?? null) : null;
+  });
+  protected readonly markers = computed(() =>
+    this.result() ? planMarkers(this.result(), this.selectedDayIndex()) : baseMarker(this.base()),
+  );
+  protected readonly routes = computed(() =>
+    planRoutes(this.result(), this.selectedDayIndex(), this.road()),
+  );
+  protected readonly geocodingActive = computed(() => {
+    const progress = this.progress();
+    return !!progress && (progress.status === 'GEOCODING' || progress.pending > 0);
+  });
 
   constructor() {
     effect(() => {
       const campaigns = this.campaigns();
-      if (campaigns.length) {
-        this.applyPreset(campaigns[0]);
+      if (campaigns.length && this.form.controls.campaign.value !== 'CUSTOM') {
+        this.applyPreset(
+          campaigns.find((item) => item.code === this.form.controls.campaign.value) ?? campaigns[0],
+        );
       }
     });
     effect(() => {
@@ -131,6 +191,17 @@ export class PlannerPage {
         });
       }
     });
+    effect(() => {
+      const saved = this.baseResource.value();
+      if (saved) {
+        this.base.set(saved);
+        this.baseForm.patchValue({ address: saved.address, city: saved.city });
+      }
+    });
+    effect(() => {
+      void this.refreshProgress(this.id());
+    });
+    this.destroyRef.onDestroy(() => this.stopPolling());
   }
 
   protected setCampaignYear(event: Event): void {
@@ -140,13 +211,17 @@ export class PlannerPage {
     }
   }
 
-  protected setCampaign(event: Event): void {
-    const code = (event.target as HTMLSelectElement).value as CampaignCode;
+  protected setCampaign(value: string | null | undefined): void {
+    const code = (value || 'CUSTOM') as CampaignCode;
     this.form.controls.campaign.setValue(code);
     const preset = this.campaigns().find((item) => item.code === code);
     if (preset) {
       this.applyPreset(preset);
     }
+  }
+
+  protected setPlanningMode(value: string | null | undefined): void {
+    this.form.controls.planningMode.setValue((value || 'PER_AGENT') as PlanningMode);
   }
 
   protected setWeight(enterpriseId: number, event: Event): void {
@@ -162,6 +237,42 @@ export class PlannerPage {
 
   protected selectDay(index: number): void {
     this.selectedDayIndex.set(index);
+    void this.loadRoad();
+  }
+
+  /** Endpoint 27: geocodes the typed address and keeps it as the tenant base. */
+  protected async saveBase(): Promise<void> {
+    const { address, city } = this.baseForm.getRawValue();
+    this.baseError.set(null);
+    this.baseSaved.set(false);
+    if (!address.trim()) {
+      this.baseError.set('Enter the address of your starting point.');
+      return;
+    }
+    this.savingBase.set(true);
+    try {
+      this.base.set(
+        await this.api.saveStartingBase({ address: address.trim(), city: city.trim() }),
+      );
+      this.baseSaved.set(true);
+    } catch (error) {
+      this.baseError.set(problemDetail(error));
+    } finally {
+      this.savingBase.set(false);
+    }
+  }
+
+  protected async retryGeocoding(): Promise<void> {
+    this.retrying.set(true);
+    this.actionError.set(null);
+    try {
+      await this.api.retryGeocoding(this.id());
+      this.schedulePoll();
+    } catch (error) {
+      this.actionError.set(problemDetail(error));
+    } finally {
+      this.retrying.set(false);
+    }
   }
 
   protected async simulate(): Promise<void> {
@@ -176,7 +287,9 @@ export class PlannerPage {
     this.submitting.set(true);
     try {
       this.result.set(await this.api.simulate(this.id(), parameters));
+      this.roadRoutes.set({});
       this.selectedDayIndex.set(0);
+      await this.loadRoad();
     } catch (error) {
       this.actionError.set(problemDetail(error));
     } finally {
@@ -220,6 +333,12 @@ export class PlannerPage {
     return dateLabel(value);
   }
 
+  protected minutes(value: number): string {
+    const hours = Math.floor(value / 60);
+    const rest = Math.round(value % 60);
+    return hours ? `${hours} h ${rest} min` : `${rest} min`;
+  }
+
   private applyPreset(preset: CampaignPreset): void {
     this.form.patchValue({
       campaign: preset.code,
@@ -228,8 +347,70 @@ export class PlannerPage {
     });
   }
 
+  /** Endpoint 18: the road route of the selected day; failures keep the straight-line polyline. */
+  private async loadRoad(): Promise<void> {
+    const result = this.result();
+    const day = this.selectedDay();
+    if (!result || !day || !day.visits.length) {
+      return;
+    }
+    const key = dayKey(day.date, day.agent);
+    if (this.roadRoutes()[key]) {
+      return;
+    }
+    this.routing.set(true);
+    try {
+      const road = await this.api.route(this.id(), {
+        base: result.parameters.base,
+        stops: day.visits.map(({ latitude, longitude }) => ({ latitude, longitude })),
+        averageSpeedKmh: result.parameters.averageSpeedKmh,
+        roadFactor: result.parameters.roadFactor,
+      });
+      this.roadRoutes.update((items) => ({ ...items, [key]: road }));
+    } catch {
+      // The estimate drawn from the plan itself is good enough when the routing service is down.
+    } finally {
+      this.routing.set(false);
+    }
+  }
+
+  private async refreshProgress(importId: number): Promise<void> {
+    try {
+      this.progress.set(await this.api.geocodingProgress(importId));
+    } catch {
+      this.progress.set(null);
+      return;
+    }
+    if (this.geocodingActive()) {
+      this.schedulePoll();
+    } else {
+      this.stopPolling();
+    }
+  }
+
+  private schedulePoll(): void {
+    this.stopPolling();
+    this.pollTimer = setTimeout(() => {
+      this.pollTimer = null;
+      void this.refreshProgress(this.id()).then(() => {
+        if (this.progress() && !this.geocodingActive()) {
+          // Geocoding finished: newly located customers become available to the planner.
+          this.optionsResource.reload();
+        }
+      });
+    }, GEOCODING_POLL_MS);
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
   private parameters(): PlanParameters {
     const value = this.form.getRawValue();
+    const base = this.base();
     return {
       ...value,
       deadline: value.deadline || null,
@@ -238,7 +419,11 @@ export class PlannerPage {
         weight: this.weights()[enterprise.enterpriseId] ?? 1,
       })),
       agents: this.selectedAgents(),
-      base: DEFAULT_BASE,
+      base: base ? { latitude: base.latitude, longitude: base.longitude } : DEFAULT_BASE,
     };
   }
+}
+
+function dayKey(date: string, agent: string | null): string {
+  return `${date}|${agent ?? ''}`;
 }

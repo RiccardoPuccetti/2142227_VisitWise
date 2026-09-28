@@ -31,7 +31,10 @@ export interface ColumnMapping {
 }
 
 /** The preview's guess: a required field is null when no header of the file matched it. */
-export interface SuggestedMapping extends Omit<ColumnMapping, 'customer' | 'deliveryPoint' | 'address' | 'city'> {
+export interface SuggestedMapping extends Omit<
+  ColumnMapping,
+  'customer' | 'deliveryPoint' | 'address' | 'city'
+> {
   customer: string | null;
   deliveryPoint: string | null;
   address: string | null;
@@ -263,6 +266,46 @@ export interface WhatIfResult {
 export interface CreatePlanRequest {
   name: string;
   parameters: PlanParameters;
+}
+
+/** Endpoint 18: one day's stops (base excluded) plus the travel model used when the road service is down. */
+export interface RouteRequest {
+  base: GeoPoint;
+  stops: GeoPoint[];
+  averageSpeedKmh: number;
+  roadFactor: number;
+}
+
+export type RouteSource = 'OSRM' | 'ESTIMATE';
+
+export interface RouteLeg {
+  km: number;
+  minutes: number;
+}
+
+/** Base → stops → base: real road figures when source is OSRM, straight-line estimate otherwise. */
+export interface RouteResponse {
+  source: RouteSource;
+  km: number;
+  minutes: number;
+  legs: RouteLeg[];
+  geometry: GeoPoint[];
+}
+
+// ---------- Geocoding (owner: Puccetti, endpoints 8, 9, 9b) ----------
+
+export interface GeocodingProgress {
+  status: ImportStatus;
+  total: number;
+  located: number;
+  pending: number;
+  notFound: number;
+  errorMessage: string | null;
+}
+
+export interface LocationRequest {
+  latitude: number;
+  longitude: number;
 }
 
 // ---------- Authentication and profile (owner: Puccetti) ----------
