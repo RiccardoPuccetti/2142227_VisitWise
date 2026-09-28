@@ -50,3 +50,4 @@ The target users are the tenant admin who registers the federation, the sales an
 36) As a User, I want to switch the interface between light and dark mode, so that I can work comfortably in any light
 37) As a User, I want to stay logged in on my own device, so that I do not have to type my credentials every day
 38) As a User, I want a modern and consistent interface where the key figures stand out, so that I can read the data at a glance
+39) As an Analyst, I want the planner to use real road distances and driving times, so that every planned day can really be driven within the working hours
