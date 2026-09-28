@@ -123,8 +123,9 @@
       </div>
 
     <div hlmTabsContent="setup">
-    <!-- items-start: opening the accordions of step 2 must not stretch step 1 and resize its map. -->
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start">
+    <!-- Both cards share the row height; step 1's map has a fixed height, so opening the accordions of step 2 only
+         adds room below it instead of resizing it. -->
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
       <section hlmCard aria-labelledby="planner-base-title">
         <div hlmCardHeader>
           <h2 hlmCardTitle id="planner-base-title" class="flex items-center gap-3">
@@ -202,8 +203,8 @@
             Working days only; Italian public holidays are skipped automatically.
           </p>
         </div>
-        <div hlmCardContent>
-          <form class="flex flex-col gap-5" [formGroup]="form" (ngSubmit)="simulate()">
+        <div hlmCardContent class="flex flex-1 flex-col">
+          <form class="flex flex-1 flex-col gap-5" [formGroup]="form" (ngSubmit)="simulate()">
             <div class="grid gap-4 sm:grid-cols-2">
               <div hlmField>
                 <label hlmFieldLabel for="planner-campaign">Campaign</label>
@@ -408,7 +409,7 @@
                 </ul>
               </div>
             }
-            <button hlmBtn type="submit" size="lg" class="w-full" [disabled]="submitting()">
+            <button hlmBtn type="submit" size="lg" class="mt-auto w-full" [disabled]="submitting()">
               @if (submitting()) {
                 <hlm-spinner class="size-4" />
               } @else {
