@@ -6,3 +6,5 @@ export * from './kpi-card';
 export * from './map-view/map-view';
 export * from './map-view/map-view.model';
 export * from './page-header';
+export * from './paging';
+export * from './table-pager';
