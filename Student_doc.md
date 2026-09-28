@@ -47,6 +47,7 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 35) As an Analyst, I want to set the starting base of my tenant once by typing its address in the planner, so that every plan starts from our real base without entering it again
 36) As a User, I want to switch the interface between light and dark mode, so that I can work comfortably in any light
 37) As a User, I want to stay logged in on my own device, so that I do not have to type my credentials every day
+38) As a User, I want a modern and consistent interface where the key figures stand out, so that I can read the data at a glance
 
 
 # CONTAINERS:
