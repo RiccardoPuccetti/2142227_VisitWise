@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -8,6 +9,7 @@ import {
 import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { AnalyticsSummary, DeliveryPoint } from '../../core/models/api.models';
+import { MapView } from '../../shared';
 import { MapDashboardPage } from './map-dashboard-page';
 
 const NBSP = ' ';
@@ -250,6 +252,23 @@ describe('MapDashboardPage', () => {
       expect(rows()).toHaveLength(25);
       expect(firstPoint()).toBe('POINT 1');
       expect(pagerText()).toContain('of 5');
+    });
+
+    it('turns to the page of a point clicked on the map and scrolls the list to its row', async () => {
+      await open('/imports/42/map', MANY);
+      const scroller = page().querySelector<HTMLElement>('[data-testid="points-scroller"]')!;
+      // jsdom has no layout: record the scroll instead of performing it.
+      const scrollTo = vi.fn();
+      scroller.scrollTo = scrollTo as typeof scroller.scrollTo;
+      const map = harness.fixture.debugElement.query(By.directive(MapView)).componentInstance as MapView;
+
+      map.markerClick.emit(map.markers().find((marker) => marker.id === 75)!);
+      await harness.fixture.whenStable();
+
+      expect(pagerText()).toContain('Showing 51–100 of 120');
+      const current = page().querySelector('[aria-labelledby="points-title"] tbody tr[aria-current="true"]');
+      expect(current?.querySelector('button')?.textContent?.trim()).toBe('POINT 75');
+      expect(scrollTo).toHaveBeenCalledOnce();
     });
 
     it('starts again from the first page when a filter changes', async () => {

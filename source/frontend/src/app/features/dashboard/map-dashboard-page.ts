@@ -1,4 +1,17 @@
-import { Component, computed, inject, input, linkedSignal, resource, Resource, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  linkedSignal,
+  resource,
+  Resource,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -105,6 +118,8 @@ export class MapDashboardPage {
   private readonly api = inject(DashboardService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly injector = inject(Injector);
+  private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
 
   protected readonly id = computed(() => Number(this.importId()));
 
@@ -318,6 +333,34 @@ export class MapDashboardPage {
 
   protected select(id: number | string): void {
     this.selectedId.set(Number(id));
+  }
+
+  /** A marker was clicked: select its point, turn the list to its page and scroll the list (not the page) to its row. */
+  protected selectOnMap(id: number | string): void {
+    this.select(id);
+    const index = this.rows().findIndex((row) => row.point.id === Number(id));
+    if (index < 0) {
+      return;
+    }
+    this.page.set(Math.floor(index / this.pageSize()) + 1);
+    afterNextRender({ read: () => this.scrollToRow(Number(id)) }, { injector: this.injector });
+  }
+
+  /** Centers the row in the visible part of the list, below the sticky header. */
+  private scrollToRow(id: number): void {
+    const scroller = this.scroller()?.nativeElement;
+    const row = scroller?.querySelector<HTMLElement>(`tr[data-point-id="${id}"]`);
+    if (!scroller || !row) {
+      return;
+    }
+    const header = scroller.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+    const rowTop = row.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const visible = scroller.clientHeight - header;
+    const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    scroller.scrollTo({
+      top: Math.max(0, rowTop - header - (visible - row.offsetHeight) / 2),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
   }
 
   /** Applies a filter change and writes it in the query string (US-15), without a new history entry. */

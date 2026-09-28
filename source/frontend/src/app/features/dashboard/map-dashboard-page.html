@@ -207,7 +207,7 @@
           ariaLabel="Map of the delivery points"
           [markers]="markers()"
           [highlightedId]="selectedId()"
-          (markerClick)="select($event.id)"
+          (markerClick)="selectOnMap($event.id)"
         />
       </div>
     </section>
@@ -261,7 +261,7 @@
           </thead>
           <tbody hlmTBody>
             @for (row of listedRows(); track row.point.id) {
-              <tr hlmTr [attr.aria-current]="row.point.id === selectedId() ? 'true' : null" [class.bg-accent]="row.point.id === selectedId()">
+              <tr hlmTr [attr.data-point-id]="row.point.id" [attr.aria-current]="row.point.id === selectedId() ? 'true' : null" [class.bg-accent]="row.point.id === selectedId()">
                 <td hlmTd class="pl-6 whitespace-normal">
                   <button hlmBtn variant="link" size="sm" type="button" class="h-auto p-0 text-left font-medium whitespace-normal" (click)="select(row.point.id)">
                     {{ row.point.pointName }}
