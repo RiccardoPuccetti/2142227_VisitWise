@@ -2,6 +2,7 @@ package it.teamlab.visitwise.planning;
 
 import it.teamlab.visitwise.imports.ImportBatch;
 import jakarta.persistence.Column;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -9,8 +10,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /** A saved planning scenario: the parameters used and the resulting KPIs. */
 @Entity
@@ -38,6 +42,9 @@ public class VisitPlan {
     /** JSON (as text) of the PlanKpis of this plan. */
     @Column(columnDefinition = "text")
     private String kpis;
+
+    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PlannedVisit> visits = new ArrayList<>();
 
     protected VisitPlan() {
     }
@@ -72,5 +79,9 @@ public class VisitPlan {
 
     public String getKpis() {
         return kpis;
+    }
+
+    public void addVisit(PlannedVisit visit) {
+        visits.add(visit);
     }
 }

@@ -5,13 +5,24 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/visitwise}
     username: ${DB_USER:visitwise}
     password: ${DB_PASSWORD:visitwise}
+    hikari:
+      data-source-properties:
+        # The PostgreSQL driver turns a batch into multi-row INSERTs.
+        reWriteBatchedInserts: true
   jpa:
     open-in-view: false
+    properties:
+      hibernate:
+        # The import saves thousands of rows: send inserts in batches (US-02; ids come from pooled sequences).
+        jdbc.batch_size: 100
+        order_inserts: true
     hibernate:
       # Schema is owned by Liquibase. Hibernate only validates that entities match it.
       ddl-auto: validate
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    # "dev" also loads db/changelog/dev (demo tenant). Default: schema only.
+    contexts: ${LIQUIBASE_CONTEXTS:default}
   servlet:
     multipart:
       max-file-size: 20MB
@@ -22,6 +33,16 @@ spring:
 
 server:
   port: 8080
+  # Trust X-Forwarded-For from the nginx container, so the rate limit and the audit log see the real client IP.
+  forward-headers-strategy: native
+  servlet:
+    session:
+      # In-memory session (AUTHENTICATION.md A4): JavaScript cannot read the cookie; set SESSION_COOKIE_SECURE=true behind HTTPS.
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 management:
   endpoints:
@@ -34,14 +55,37 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+    # "Try it out" sends the XSRF-TOKEN cookie back in the X-XSRF-TOKEN header.
+    csrf:
+      enabled: true
 
 visitwise:
+  auth:
+    password:
+      # AUTHENTICATION.md A2: 8 for the demo; NIST SP 800-63B-4 recommends 15 for password-only login. Max is 64.
+      min-length: ${PASSWORD_MIN_LENGTH:8}
+    # AUTHENTICATION.md A9: login + register requests per client IP per minute.
+    rate-limit:
+      per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
+    # AUTHENTICATION.md A13: "Keep me logged in" lasts this many days on a device (US-37).
+    remember-me:
+      days: ${REMEMBER_ME_DAYS:14}
+  imports:
+    # US-02 asks for 5,000 rows; files are capped (also at 20 MB above) so one upload cannot fill the memory.
+    max-rows: 20000
+    max-columns: 200
   geocoding:
     # Public Nominatim: max 1 request/second and a real User-Agent are REQUIRED by its usage policy.
     base-url: ${GEOCODING_BASE_URL:https://nominatim.openstreetmap.org}
     user-agent: ${GEOCODING_USER_AGENT:VisitWise-hackathon/0.1 (set GEOCODING_USER_AGENT in .env)}
     delay-ms: ${GEOCODING_DELAY_MS:1100}
     country-codes: it
+  routing:
+    # Public OSRM demo server (no SLA): used only to draw one day's real road route. Disable to always estimate.
+    enabled: ${ROUTING_ENABLED:true}
+    base-url: ${ROUTING_BASE_URL:https://router.project-osrm.org}
+    user-agent: ${GEOCODING_USER_AGENT:VisitWise-hackathon/0.1}
+    timeout-ms: 8000
   planning:
     # Default starting point of every working day (Rome, Piazza Venezia). Overridable per plan.
     default-base-latitude: 41.8960

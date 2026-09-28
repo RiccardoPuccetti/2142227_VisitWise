@@ -30,6 +30,17 @@ export interface ColumnMapping {
   enterprises: EnterpriseMapping[];
 }
 
+/** The preview's guess: a required field is null when no header of the file matched it. */
+export interface SuggestedMapping extends Omit<
+  ColumnMapping,
+  'customer' | 'deliveryPoint' | 'address' | 'city'
+> {
+  customer: string | null;
+  deliveryPoint: string | null;
+  address: string | null;
+  city: string | null;
+}
+
 export interface ImportPreview {
   fileName: string;
   sheetName: string;
@@ -37,7 +48,7 @@ export interface ImportPreview {
   /** First rows of the sheet, cells rendered as strings. */
   sampleRows: string[][];
   totalRows: number;
-  suggestedMapping: ColumnMapping;
+  suggestedMapping: SuggestedMapping;
 }
 
 export interface CreateImportRequest {
@@ -168,6 +179,7 @@ export interface PlanParameters {
   averageSpeedKmh: number;
   roadFactor: number;
   maxDistanceKm: number;
+  /** Filled by the planner form from the tenant starting base (US-35); config default until one is saved. */
   base: GeoPoint;
   /** Opportunity cost of travel (EUR per km) used to trade revenue against distance. */
   travelCostPerKm: number;
@@ -254,4 +266,79 @@ export interface WhatIfResult {
 export interface CreatePlanRequest {
   name: string;
   parameters: PlanParameters;
+}
+
+/** Endpoint 18: one day's stops (base excluded) plus the travel model used when the road service is down. */
+export interface RouteRequest {
+  base: GeoPoint;
+  stops: GeoPoint[];
+  averageSpeedKmh: number;
+  roadFactor: number;
+}
+
+export type RouteSource = 'OSRM' | 'ESTIMATE';
+
+export interface RouteLeg {
+  km: number;
+  minutes: number;
+}
+
+/** Base → stops → base: real road figures when source is OSRM, straight-line estimate otherwise. */
+export interface RouteResponse {
+  source: RouteSource;
+  km: number;
+  minutes: number;
+  legs: RouteLeg[];
+  geometry: GeoPoint[];
+}
+
+// ---------- Geocoding (owner: Puccetti, endpoints 8, 9, 9b) ----------
+
+export interface GeocodingProgress {
+  status: ImportStatus;
+  total: number;
+  located: number;
+  pending: number;
+  notFound: number;
+  errorMessage: string | null;
+}
+
+export interface LocationRequest {
+  latitude: number;
+  longitude: number;
+}
+
+// ---------- Authentication and profile (owner: Puccetti) ----------
+
+export interface RegisterRequest {
+  tenantName: string;
+  email: string;
+  password: string;
+}
+
+/** The logged-in account: one per tenant. */
+export interface CurrentTenant {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface UpdateProfileRequest {
+  name: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface SaveStartingBaseRequest {
+  address: string;
+  city: string;
+}
+
+/** The tenant's starting base: every planned working day starts and ends here (US-35). */
+export interface StartingBase extends GeoPoint {
+  address: string;
+  city: string;
 }

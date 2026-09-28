@@ -19,6 +19,10 @@ public class ImportBatch {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Owner of the import and of everything under it (points, revenues, plans). See D-09. */
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private Long tenantId;
+
     @Column(nullable = false, length = 150)
     private String name;
 
@@ -54,7 +58,8 @@ public class ImportBatch {
     protected ImportBatch() {
     }
 
-    public ImportBatch(String name, String sourceFileName) {
+    public ImportBatch(Long tenantId, String name, String sourceFileName) {
+        this.tenantId = tenantId;
         this.name = name;
         this.sourceFileName = sourceFileName;
         this.createdAt = OffsetDateTime.now();
@@ -63,6 +68,10 @@ public class ImportBatch {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
     }
 
     public String getName() {

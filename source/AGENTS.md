@@ -19,6 +19,7 @@ How each tool loads this file (it lives in `source/` because the course allows o
 **VisitWise - smart visit planning for sales territories.** Hackathon project of team TeamLab (3 people, a few days).
 A web dashboard for a federation of companies that supply customers at delivery points.
 The analyst uploads the yearly ERP Excel export through a wizard (any column order, any number of enterprise columns), the data is saved in PostgreSQL and geocoded, customers are shown on an OpenStreetMap map per enterprise, and a planner proposes **which customers to visit, in which order and on which working day (Mon-Fri)** to maximize revenue within a maximum number of days, with **what-if analysis** over different horizons.
+Each federation is a **tenant** with its own login: its data is invisible to other tenants, and it saves one starting base used by every plan.
 Read these before working on the related area:
 
 - `booklets/architecture/OPTIMIZATION_STRATEGY.md` - how the planner works and why (ACCEPTED decision).
@@ -59,14 +60,16 @@ The root contains **exactly** these four visible items. **Never create any other
 
 ### Backend conventions
 
-- Package per feature under `it.teamlab.visitwise`: `imports`, `geocoding`, `planning` (+ `planning.engine`), `analytics`, `common`. Do not create `controller/`, `service/` layer packages at the top level.
+- Package per feature under `it.teamlab.visitwise`: `imports`, `geocoding`, `planning` (+ `planning.engine`), `analytics`, `tenant`, `common`. Do not create `controller/`, `service/` layer packages at the top level.
 - DTOs are Java `record`s. Never return JPA entities from controllers.
 - Errors: throw `NotFoundException` / `IllegalArgumentException`; `GlobalExceptionHandler` turns them into problem+json. Add handlers there, do not catch-and-wrap in controllers.
 - **Database schema changes only through Liquibase**: add `NNN-description.sql` in `src/main/resources/db/changelog/changes/` and include it in `db.changelog-master.yaml`. **Never edit a changeset already merged in `develop`.** Hibernate runs with `ddl-auto: validate`: entity and schema must match.
 - JSON columns are stored as `text` (e.g. `column_mapping`, `parameters`, `kpis`): serialize with the Jackson `ObjectMapper` bean.
 - **Spring Boot 4 gotchas** (your training data may be older): Jackson 3 -> `tools.jackson.databind.*` (annotations stay `com.fasterxml.jackson.annotation.*`); starters are modular (`spring-boot-starter-webmvc`, `*-test`); test slices moved packages (`org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest`, `org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest`); prefer `RestClient` for HTTP calls. If an import does not compile, check the Boot 4 package before inventing workarounds.
+- **Tenant isolation** (D-09): endpoints on tenant data live under `/api/imports/{id}/...` or `/api/plans/{planId}/...`, where the tenant guard checks ownership centrally. Never add an endpoint that lists or reads data across imports without filtering by the current tenant.
 - `planning.engine` is **pure Java** (no Spring, no JPA): unit-test it with plain JUnit.
 - Tests: JUnit 5 + AssertJ. Every engine rule has a unit test. Controllers: at least one happy-path test.
+- **Testing as a tenant**: every `/api` call needs a login. In MockMvc tests use `.with(TenantTestSupport.asTenant(tenantId))` (test sources, package `tenant`) and, for POST/PUT/PATCH/DELETE, `.with(TenantTestSupport.xsrf())` (never Spring Security's `csrf()`: it swaps the CSRF token repository of the shared test context and breaks the login tests that run after it). The tenant guard still checks ownership, so create the tenant (`TenantRepository`) and the import with its id (`new ImportBatch(tenantId, name, fileName)`) in the test. Example: `TenantIsolationTest`.
 
 ### Frontend conventions
 
@@ -77,6 +80,20 @@ The root contains **exactly** these four visible items. **Never create any other
 - HTTP: relative URLs `/api/...` (proxy in dev, nginx in Docker). Never hard-code `localhost`.
 - Map: OpenLayers (`ol`) with OSM tiles. No Leaflet, no Google Maps.
 - Charts: keep it light (plain SVG or one small library agreed in `booklets/architecture/DECISIONS.md`).
+
+### Test-driven development (mandatory, backend and frontend)
+
+Every change of behavior starts from a failing test (red -> green -> refactor):
+
+1. **Red**: write the smallest test for the next behavior (from the task's acceptance criteria and the story's non-functional requirements). Run it and see it fail for the expected reason.
+2. **Green**: write the minimum code that makes it pass.
+3. **Refactor**: clean up with all tests green. Repeat for the next behavior.
+
+- Backend (JUnit 5 + AssertJ): plain unit tests for pure logic (`planning.engine`, validators, policies); MockMvc for controllers (status codes, problem+json, security rules); tests against the `db` container for repositories and Liquibase changesets.
+- Frontend (Vitest via `ng test`): services, guards, interceptors, pipes and component logic are tested first (`HttpTestingController` for HTTP). Pure layout and styling are checked visually, not test-first.
+- A bug fix starts with a test that reproduces the bug.
+- The test and the code that makes it pass go in the same commit: never commit failing tests.
+- Agents: in the final report, list the tests written first, the failure seen before the implementation, and the passing run after.
 
 ## 4. Git workflow (mandatory)
 
@@ -113,10 +130,11 @@ Refs: <TASK-ID>[, US-xx]
 2. **Stay in your area.** Only modify files owned by your task (see `booklets/team/TASKS.md` -> "Owned paths"). Shared files (`api.models.ts`, `API_CONTRACT.md`, `docker-compose.yml`, `pom.xml`, `package.json`, `db.changelog-master.yaml`, `source/AGENTS.md`) change **only if the task says so**, in a dedicated commit. Never add visible files at the repository root.
 3. **Ask before**: adding a dependency; changing the API contract; changing the DB schema outside your task; deleting files; changing Docker/CI config; touching another member's feature.
 4. **Never**: commit to `main`/`develop`; `git push` unless the human says so; `--force` push; amend/rebase pushed commits; skip hooks (`--no-verify`); commit secrets or `.env`; **commit or paste the real dataset** (NDA - see section 8).
-5. **Verify, then report.** Before saying "done": build + tests of the touched part. Report exactly what you ran and the result. If something fails or you skipped it, say so.
+5. **Test first, verify, then report.** Work test-first (section 3, "Test-driven development"). Before saying "done": build + tests of the touched part. Report exactly what you ran and the result. If something fails or you skipped it, say so.
 6. **Do not invent.** Unknown requirement -> read the booklets; still unclear -> ask the human. Do not fabricate API fields, data, or test results.
 7. **Small commits** following section 5. Stage explicit paths (`git add <paths>`), never blindly `git add -A`.
 8. **Keep docs in sync in the same PR**: new endpoint -> `API_CONTRACT.md` (if agreed) + `Student_doc.md` endpoints table; new page -> `Student_doc.md` pages table; new table -> `Student_doc.md` DB structure.
+9. **Update the task status log when a task is completed** (or only partly done, when its work is merged): in the same PR, add a new dated section on top of `booklets/team/TASK_STATUS.md`: copy the previous section, change the rows of the tasks you worked on (status + evidence: commits, endpoints, pages, or what is still missing), update the summary and the blockers. Never edit older sections. Set the story status in `booklets/user-stories/USER_STORIES.md` and the spreadsheet too.
 
 ## 7. Every push is documented (booklets feed the slides)
 
@@ -132,12 +150,13 @@ Before every `git push`, add **one new file** in `booklets/devlog/` (one file pe
 - The real ERP file is under NDA. Keep it **outside the repo** or in `source/data-private/` (gitignored). `*.xlsx` is gitignored except the synthetic samples and the import template.
 - Never put real customer names, addresses or revenue in code, tests, fixtures, docs, screenshots committed to the repo, or prompts to external services beyond what the task strictly needs. Use `source/sample-data/` for tests and screenshots.
 - Nothing derived from the real file is committed either: no counts, totals, percentages or column layout. Figures in docs, screenshots and slides come from `source/sample-data/`.
-- The only external service that receives data is the geocoder (Nominatim), and it receives **only address + city**.
+- The only external service that receives data is the geocoder (Nominatim), and it receives **only address + city** of delivery points and of the tenant starting base.
 
 ## 9. Definition of Done (for every task)
 
-- [ ] Code builds; tests of the touched area pass; `docker compose up --build` still works.
+- [ ] Written test-first (section 3); code builds; tests of the touched area pass; `docker compose up --build` still works.
 - [ ] Acceptance criteria of the task in `TASKS.md` are met; related US ids are in the commits.
 - [ ] Docs updated (contract / Student_doc / architecture) where relevant.
+- [ ] `booklets/team/TASK_STATUS.md` has a new dated section with the task's new status (section 6, rule 9).
 - [ ] Devlog file added; screenshots for UI work.
 - [ ] PR opened into `develop` with the template filled.

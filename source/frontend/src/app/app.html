@@ -1,10 +1,92 @@
-<!-- App shell (owner: Rivera, task RIV-1). Keep it minimal: header + routed page. -->
-<header class="border-b">
-  <nav class="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3" aria-label="Main">
+<!-- App shell (owner: Rivera, task RIV-1): header with navigation + routed page + toaster.
+     Navigation and tenant menu (profile link, logout; Puccetti, PUC-9) only when logged in; dark mode toggle always. -->
+<a
+  href="#main"
+  (click)="skipToMain($event)"
+  class="bg-background text-foreground sr-only z-50 rounded-md border px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+  >Skip to main content</a
+>
+
+<header class="bg-background border-b">
+  <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
     <a routerLink="/imports" class="text-lg font-bold tracking-tight">VisitWise</a>
-    <a routerLink="/imports" routerLinkActive="font-semibold" class="text-sm">Imports</a>
-  </nav>
+
+    @if (auth.currentTenant(); as tenant) {
+      <nav aria-label="Main" class="flex items-center gap-4 text-sm">
+        <a
+          routerLink="/imports"
+          routerLinkActive="text-foreground font-semibold"
+          #importsLink="routerLinkActive"
+          [class.text-muted-foreground]="!importsLink.isActive"
+          [routerLinkActiveOptions]="{ exact: true }"
+          ariaCurrentWhenActive="page"
+          class="hover:text-foreground"
+          >Imports</a
+        >
+        <a
+          routerLink="/imports/new"
+          routerLinkActive="text-foreground font-semibold"
+          #newImportLink="routerLinkActive"
+          [class.text-muted-foreground]="!newImportLink.isActive"
+          ariaCurrentWhenActive="page"
+          class="hover:text-foreground"
+          >New import</a
+        >
+      </nav>
+
+      @if (importId() !== null) {
+        <nav
+          [attr.aria-label]="'Import ' + importId()"
+          class="flex items-center gap-4 text-sm sm:border-l sm:pl-6"
+        >
+          @for (section of importSections(); track section.label) {
+            <a
+              [routerLink]="section.link"
+              routerLinkActive="text-foreground font-semibold"
+              #sectionLink="routerLinkActive"
+              [class.text-muted-foreground]="!sectionLink.isActive"
+              [routerLinkActiveOptions]="{ exact: section.exact }"
+              ariaCurrentWhenActive="page"
+              class="hover:text-foreground"
+              >{{ section.label }}</a
+            >
+          }
+        </nav>
+      }
+
+      <div class="ml-auto flex items-center gap-2 text-sm">
+        <a
+          routerLink="/profile"
+          routerLinkActive="text-foreground font-semibold"
+          #profileLink="routerLinkActive"
+          [class.text-muted-foreground]="!profileLink.isActive"
+          ariaCurrentWhenActive="page"
+          [attr.aria-label]="'Profile of ' + tenant.name"
+          class="hover:text-foreground"
+          >{{ tenant.name }}</a
+        >
+        <button hlmBtn variant="ghost" size="sm" type="button" (click)="logout()">Log out</button>
+      </div>
+    }
+
+    <!-- Dark mode (US-36, Puccetti PUC-11): on every page, logged in or not. -->
+    <button
+      hlmBtn
+      variant="ghost"
+      size="icon-sm"
+      type="button"
+      aria-label="Dark mode"
+      [attr.aria-pressed]="theme.theme() === 'dark'"
+      [class.ml-auto]="!auth.currentTenant()"
+      (click)="theme.toggle()"
+    >
+      <ng-icon [name]="theme.theme() === 'dark' ? 'lucideSun' : 'lucideMoon'" aria-hidden="true" />
+    </button>
+  </div>
 </header>
-<main class="mx-auto max-w-7xl px-4 py-6">
+
+<main id="main" tabindex="-1" class="mx-auto max-w-7xl px-4 py-6 outline-none">
   <router-outlet />
 </main>
+
+<hlm-toaster />

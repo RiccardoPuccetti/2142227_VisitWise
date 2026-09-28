@@ -1,0 +1,204 @@
+<!-- Map dashboard (owner: Rivera, task RIV-3, US-13..US-18). -->
+<div class="flex flex-col gap-6">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-2xl font-semibold">Map</h1>
+    <p class="text-muted-foreground text-sm">
+      Delivery points of the import. Color: the enterprise with the largest revenue at the point.
+      Size: revenue.
+    </p>
+  </header>
+
+  @if (error(); as message) {
+    <div hlmAlert variant="destructive" role="alert">
+      <h2 hlmAlertTitle>The map cannot be loaded</h2>
+      <p hlmAlertDescription>{{ message }}</p>
+    </div>
+  }
+
+  <section aria-labelledby="filters-title" class="flex flex-col gap-3">
+    <h2 id="filters-title" class="sr-only">Filters</h2>
+    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Enterprises">
+      @for (enterprise of enterprises(); track enterprise.enterpriseId) {
+        <button
+          hlmBtn
+          type="button"
+          size="sm"
+          [variant]="isSelected(enterprise.enterpriseId) ? 'secondary' : 'outline'"
+          [attr.aria-pressed]="isSelected(enterprise.enterpriseId)"
+          (click)="toggleEnterprise(enterprise.enterpriseId)"
+        >
+          <span
+            class="border-foreground/20 size-2.5 rounded-full border"
+            [style.background-color]="enterprise.color"
+            aria-hidden="true"
+          ></span>
+          {{ enterprise.name }}
+        </button>
+      }
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="dashboard-agent">Agent</label>
+        <hlm-native-select
+          selectId="dashboard-agent"
+          [value]="filter().agent ?? ''"
+          (valueChange)="setAgent($event)"
+        >
+          <option hlmNativeSelectOption value="">All agents</option>
+          @for (agent of options().agents; track agent) {
+            <option hlmNativeSelectOption [value]="agent">{{ agent }}</option>
+          }
+        </hlm-native-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="dashboard-city">City</label>
+        <hlm-native-select
+          selectId="dashboard-city"
+          [value]="filter().city ?? ''"
+          (valueChange)="setCity($event)"
+        >
+          <option hlmNativeSelectOption value="">All cities</option>
+          @for (city of options().cities; track city) {
+            <option hlmNativeSelectOption [value]="city">{{ city }}</option>
+          }
+        </hlm-native-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="dashboard-min-revenue">Minimum revenue (€)</label>
+        <input
+          hlmInput
+          id="dashboard-min-revenue"
+          type="number"
+          min="0"
+          step="100"
+          inputmode="numeric"
+          [value]="filter().minRevenue || ''"
+          (change)="setMinRevenue($event)"
+        />
+      </div>
+      <div class="flex items-end">
+        <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset filters</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="flex flex-col gap-2 lg:col-span-2">
+      <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
+      <app-map-view
+        class="h-[32rem]"
+        ariaLabel="Map of the delivery points"
+        [markers]="markers()"
+        [highlightedId]="selectedId()"
+        (markerClick)="select($event.id)"
+      />
+      <p class="text-muted-foreground text-sm" aria-live="polite">
+        {{ markers().length }} of {{ filteredPoints().length }} points on the map
+        @if (withoutPosition() > 0) {
+          · {{ withoutPosition() }} {{ withoutPosition() === 1 ? 'point' : 'points' }} without
+          position ·
+          <a [routerLink]="['/imports', id()]" class="text-foreground underline underline-offset-4"
+            >Fix positions</a
+          >
+        }
+      </p>
+    </div>
+
+    <aside class="flex flex-col gap-4" aria-label="Selected point">
+      @if (selected(); as point) {
+        <app-point-details
+          [point]="point"
+          [enterprises]="enterprises()"
+          (closed)="selectedId.set(null)"
+        />
+      } @else {
+        <section hlmCard size="sm">
+          <div hlmCardContent class="text-muted-foreground text-sm">
+            Select a marker, or a point in the list below, to see its customer, address and revenue
+            per enterprise.
+          </div>
+        </section>
+      }
+    </aside>
+  </div>
+
+  <section aria-labelledby="indicators-title" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <h2 id="indicators-title" class="text-lg font-semibold">Indicators</h2>
+      <p class="text-muted-foreground text-sm">
+        Computed on the selected enterprises and agent. City and minimum revenue filter only the map
+        and the list.
+      </p>
+    </div>
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <app-kpi-card
+        label="Revenue"
+        [loading]="loading()"
+        [value]="formatEur(summary()?.totalRevenue)"
+      />
+      <app-kpi-card
+        label="Delivery points"
+        [loading]="loading()"
+        [value]="'' + (summary()?.pointCount ?? '–')"
+      />
+      <app-kpi-card
+        label="Customers"
+        [loading]="loading()"
+        [value]="'' + (summary()?.customerCount ?? '–')"
+      />
+      <app-kpi-card
+        label="Top 20% of points"
+        [loading]="loading()"
+        [value]="topShare()"
+        hint="share of the revenue they hold"
+      />
+    </div>
+    <div class="grid gap-6 md:grid-cols-3">
+      <app-amount-bars title="Revenue by enterprise" [items]="enterpriseBars()" />
+      <app-amount-bars title="Revenue by agent" [items]="agentBars()" />
+      <app-amount-bars title="Revenue by city" [items]="cityBars()" />
+    </div>
+  </section>
+
+  <section aria-labelledby="points-title" class="flex flex-col gap-2">
+    <h2 id="points-title" class="text-lg font-semibold">Delivery points</h2>
+    <p class="text-muted-foreground text-sm">
+      Largest revenue first. Showing {{ listedRows().length }} of {{ rows().length }}.
+    </p>
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr>
+            <th hlmTh scope="col">Point</th>
+            <th hlmTh scope="col">Customer</th>
+            <th hlmTh scope="col">City</th>
+            <th hlmTh scope="col">Agent</th>
+            <th hlmTh scope="col" class="text-right">Revenue</th>
+          </tr>
+        </thead>
+        <tbody hlmTBody>
+          @for (row of listedRows(); track row.point.id) {
+            <tr hlmTr [attr.aria-current]="row.point.id === selectedId() ? 'true' : null">
+              <td hlmTd>
+                <button
+                  hlmBtn
+                  variant="link"
+                  size="sm"
+                  type="button"
+                  class="h-auto p-0"
+                  (click)="select(row.point.id)"
+                >
+                  {{ row.point.pointName }}
+                </button>
+              </td>
+              <td hlmTd>{{ row.point.customerName }}</td>
+              <td hlmTd>{{ row.point.city }}</td>
+              <td hlmTd>{{ row.point.agent ?? '–' }}</td>
+              <td hlmTd class="text-right tabular-nums">{{ row.revenue | eur }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

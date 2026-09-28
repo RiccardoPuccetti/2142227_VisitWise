@@ -4,9 +4,11 @@ VisitWise is a web dashboard for a federation of companies that supply bars, res
 
 The analyst uploads the yearly revenue file exported from the company ERP through an import wizard: the file can change every year, its columns can have any name and any order, and the analyst chooses which columns contain the revenue of each company of the federation. A template can be downloaded. Each import is named by the analyst, stored in the database with its creation date, and listed as cards or as a table. Delivery addresses are geolocated automatically.
 
+Each federation registers as a tenant with its own login, and its imports and plans are invisible to other tenants. In the planner the analyst sets the tenant's starting base once, by typing its address: every plan starts and ends each working day there.
+
 On an OpenStreetMap map the analyst sees the customers of each company, filters them by company, agent, city and revenue, and reads the main indicators (revenue per company, per agent, per city, concentration of revenue). The planner then proposes which customers to visit, in which order and on which working day (Monday to Friday, public holidays excluded) in order to maximize the revenue covered within a maximum number of days chosen by the analyst, inside a commercial campaign window. The analyst can run what-if analyses (for example 20, 30 or 40 working days), save plans as scenarios and compare them; agents can consult and export their own visit calendar.
 
-The target users are the sales analyst of the federation, the sales manager who decides how much time to invest in a campaign, and the sales agents who carry out the visits.
+The target users are the tenant admin who registers the federation, the sales analyst of the federation, the sales manager who decides how much time to invest in a campaign, and the sales agents who carry out the visits.
 
 # USER STORIES:
 
@@ -30,7 +32,7 @@ The target users are the sales analyst of the federation, the sales manager who 
 18) As a Sales Manager, I want to see summary indicators (revenue per enterprise, per agent, per city, top customers, revenue concentration), so that I can understand where the value is
 19) As an Analyst, I want to choose a commercial campaign (before Christmas, before Easter, end of summer or custom dates), so that visits are concentrated in the periods of greatest interest
 20) As an Analyst, I want to set the maximum number of working days within which the visits must be completed, so that the plan fits the available time
-21) As an Analyst, I want to set the visit parameters (visit duration, working hours, starting point, maximum distance), so that the plan is realistic
+21) As an Analyst, I want to set the visit parameters (visit duration, working hours, maximum distance), so that the plan is realistic
 22) As an Analyst, I want to choose which enterprises and agents to include and give priority weights to the enterprises, so that the plan follows the commercial goals of the campaign
 23) As an Analyst, I want the system to propose which customers to visit, in which order and on which day (Monday to Friday, public holidays excluded), so that the expected revenue is maximized
 24) As an Analyst, I want to see the itinerary of each day on the map, so that I can check that the route makes sense
@@ -40,3 +42,10 @@ The target users are the sales analyst of the federation, the sales manager who 
 28) As a Sales Agent, I want to see my visit calendar day by day, so that I know which customers to visit and when
 29) As a Sales Agent, I want to export my plan to Excel, so that I can use it offline and share it
 30) As a Sales Agent, I want to open a planned visit in OpenStreetMap directions, so that I can reach the customer easily
+31) As a Tenant admin, I want to register my tenant with its name, my email and a password, so that my team gets its own private workspace
+32) As a User, I want to log in and log out, so that only my team can see our data
+33) As a Tenant admin, I want the imports, maps and plans of my tenant to be invisible to any other tenant, so that our confidential revenue data stays private (NDA)
+34) As a Tenant admin, I want a profile page to change the tenant name and the password, so that our information stays up to date
+35) As an Analyst, I want to set the starting base of my tenant once by typing its address in the planner, so that every plan starts from our real base without entering it again
+36) As a User, I want to switch the interface between light and dark mode, so that I can work comfortably in any light
+37) As a User, I want to stay logged in on my own device, so that I do not have to type my credentials every day

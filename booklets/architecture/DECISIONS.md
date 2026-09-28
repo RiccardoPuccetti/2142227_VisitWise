@@ -36,3 +36,13 @@
 - Context: the first split gave all frontend pages to one member; those pages depended on the other two members' APIs (mocks everywhere) and the backend-only member ran out of work early.
 - Decision: each member owns a feature end to end - Puccetti: import; Marzella: planning (engine, API, planner/what-if/scenarios pages); Rivera: platform (shell, UI kit, shared `MapView`), read API, map dashboard, agent plan + export, booklets/slides.
 - Consequences: each page is built on its owner's own API; only 4 cross-member hand-offs remain (dev seed, UI kit, points endpoint, plans API), delivered first (see `booklets/team/TASKS.md`).
+
+### D-09 Tenants, login and data isolation
+- Context: the data is under NDA and was reachable by anyone with the URL; more federations could share one deployment; the enterprises had to be re-entered at every import.
+- Decision: a **tenant** is one federation with one login (email + password). Out of scope: several users per tenant, roles, email verification, password reset. The `tenant` table holds the credentials too (no separate user table). Spring Security with a server session (HttpOnly cookie) and a CSRF cookie that Angular `HttpClient` sends back automatically; no JWT. `import_batch.tenant_id` is the only tenant column on imported data: points, revenues and plans hang off the import, so one guard on `/api/imports/{id}/**` and `/api/plans/{planId}/**` isolates everything and answers 404 for other tenants.
+- Consequences: after PUC-8 merges every API call needs a session (demo tenant in the dev seed). New endpoints on tenant data stay under those routes, or filter by the current tenant explicitly.
+
+### D-10 One starting base per tenant
+- Context: the planner needs the point where every working day starts and ends; typing it for every plan is error-prone. The enterprise registry first proposed with D-09 was dropped as not needed for the demo.
+- Decision: the tenant saves one starting base (address + city, geocoded with the Nominatim cache) from a field at the top of the planner form, owned by Puccetti. The field fills the existing `PlanParameters.base`, so the engine and the plan contract do not change; each saved plan keeps the base it used.
+- Consequences: until a base is saved the planner uses the configured default (Rome centre). Changing the base does not change saved plans. The geocoder also receives the base address (address + city only).

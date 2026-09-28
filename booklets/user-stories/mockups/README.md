@@ -10,11 +10,13 @@ One mockup per screen. Every user story points to its screen in `../USER_STORIES
 | S4 Wizard - enterprises & name | `S4-wizard-enterprises.*` | Puccetti | Checkbox list of numeric columns, display name + color per enterprise, import name, Confirm |
 | S5 Import report / detail | `S5-import-detail.*` | Puccetti | Counts (total/imported/skipped), geocoding progress bar, points table with "Not found" filter and lat/lon edit, buttons Map / Planner |
 | S6 Map dashboard | `S6-map-dashboard.*` | Rivera | Map with colored markers, filter bar (enterprise, agent, city, min revenue), popup, KPI side panel, legend |
-| S7 Planner - parameters | `S7-planner-parameters.*` | Marzella | Campaign presets, start date, max working days, enterprise weight sliders, agents, advanced section, Simulate |
+| S7 Planner - parameters | `S7-planner-parameters.*` | Marzella (starting base field: Puccetti) | Starting base (address, city, Save, geocoded position or "not found"), campaign presets, start date, max working days, enterprise weight sliders, agents, advanced section, Simulate |
 | S8 Planner - result | `S8-planner-result.*` | Marzella | KPI cards, timeline per agent/day, map with day route + day selector, not-planned list, warnings, Save scenario |
 | S9 What-if | `S9-what-if.*` | Marzella | Horizon chips (10/20/30/40/60), coverage curve, marginal revenue bars, table |
 | S10 Scenarios compare | `S10-scenarios-compare.*` | Marzella | 2-3 columns of KPIs with differences highlighted |
 | S11 Agent plan | `S11-agent-plan.*` | Rivera | Agent selector, day-by-day calendar, Export Excel, Directions link per visit |
+| S12 Register / Log in | `S12-register-login.*` | Puccetti | Log in form (email, password, generic error), Register form (tenant name, email, password) |
+| S13 Tenant profile | `S13-tenant-profile.*` | Puccetti | Tenant name, change password (current + new) |
 
 Rules
 
