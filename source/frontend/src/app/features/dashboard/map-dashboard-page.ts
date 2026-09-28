@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, resource, Resource, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, resource, Resource, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -18,6 +18,7 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { problemDetail } from '../../core/auth/problem-detail';
+import { pageCount, pageOf } from '../imports/import-detail.model';
 import {
   AreaChart,
   ChartPoint,
@@ -44,8 +45,9 @@ import {
 import { DashboardService, SummaryFilter } from './dashboard.service';
 import { PointDetails } from './point-details';
 
-/** Rows of the points list; the map shows all of them. */
-const LIST_LIMIT = 50;
+/** Rows per page of the points list; the map shows all the points. */
+export const PAGE_SIZES = [25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 50;
 /** A resource's value, or undefined while it loads or when it failed (value() throws in the error state). */
 function valueOf<T>(resource: Resource<T | undefined>): T | undefined {
   return resource.hasValue() ? resource.value() : undefined;
@@ -169,7 +171,26 @@ export class MapDashboardPage {
       .map((point) => ({ point, revenue: pointRevenue(point, this.filter().enterpriseIds) }))
       .sort((a, b) => b.revenue - a.revenue || a.point.id - b.point.id),
   );
-  protected readonly listedRows = computed(() => this.rows().slice(0, LIST_LIMIT));
+
+  protected readonly pageSizes = PAGE_SIZES;
+  protected readonly pageSize = signal<number>(DEFAULT_PAGE_SIZE);
+  protected readonly pages = computed(() => pageCount(this.rows().length, this.pageSize()));
+  /** 1-based; back to the first page when the filter or the page size changes. */
+  protected readonly page = linkedSignal({
+    source: () => ({ filter: this.filter(), size: this.pageSize() }),
+    computation: () => 1,
+  });
+  protected readonly pageNumbers = computed(() => Array.from({ length: this.pages() }, (_, index) => index + 1));
+  protected readonly listedRows = computed(() => pageOf(this.rows(), this.page(), this.pageSize()));
+  /** "51–100": positions of the listed rows in the whole list. */
+  protected readonly listedRange = computed(() => {
+    const total = this.rows().length;
+    if (total === 0) {
+      return '0';
+    }
+    const first = (this.page() - 1) * this.pageSize() + 1;
+    return `${first}–${first + this.listedRows().length - 1}`;
+  });
 
   protected readonly selected = computed(
     () => this.filteredPoints().find((point) => point.id === this.selectedId()) ?? null,
@@ -279,6 +300,20 @@ export class MapDashboardPage {
 
   protected resetFilters(): void {
     this.update({ enterpriseIds: [], agent: null, city: null, minRevenue: 0 });
+  }
+
+  protected setPageSize(value: string | null | undefined): void {
+    const size = Number(value);
+    if ((PAGE_SIZES as readonly number[]).includes(size)) {
+      this.pageSize.set(size);
+    }
+  }
+
+  protected goToPage(value: number | string | null | undefined): void {
+    const page = Number(value);
+    if (Number.isInteger(page)) {
+      this.page.set(Math.min(this.pages(), Math.max(1, page)));
+    }
   }
 
   protected select(id: number | string): void {

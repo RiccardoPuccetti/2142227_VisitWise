@@ -235,14 +235,23 @@
     <div hlmCardHeader class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h2 hlmCardTitle id="points-title">Delivery points</h2>
-        <p hlmCardDescription>Largest revenue first. Showing {{ listedRows().length }} of {{ rows().length }}.</p>
+        <p hlmCardDescription>Largest revenue first. Choose a point to see its details.</p>
       </div>
     </div>
     <div hlmCardContent class="px-0">
-      <div hlmTableContainer class="border-t">
+      <!-- Scrolls inside the card (the header stays visible) so a long page does not push the pager off screen. -->
+      <div
+        hlmTableContainer
+        data-testid="points-scroller"
+        class="max-h-[28rem] overflow-y-auto border-t"
+        tabindex="0"
+        role="region"
+        aria-labelledby="points-title"
+        #scroller
+      >
         <table hlmTable>
-          <thead hlmTHead>
-            <tr hlmTr>
+          <thead hlmTHead class="bg-card sticky top-0 z-10 shadow-[inset_0_-1px_0_var(--border)]">
+            <tr hlmTr class="hover:bg-transparent">
               <th hlmTh scope="col" class="pl-6">Point</th>
               <th hlmTh scope="col">Customer</th>
               <th hlmTh scope="col">City</th>
@@ -253,12 +262,12 @@
           <tbody hlmTBody>
             @for (row of listedRows(); track row.point.id) {
               <tr hlmTr [attr.aria-current]="row.point.id === selectedId() ? 'true' : null" [class.bg-accent]="row.point.id === selectedId()">
-                <td hlmTd class="pl-6">
-                  <button hlmBtn variant="link" size="sm" type="button" class="h-auto p-0 font-medium" (click)="select(row.point.id)">
+                <td hlmTd class="pl-6 whitespace-normal">
+                  <button hlmBtn variant="link" size="sm" type="button" class="h-auto p-0 text-left font-medium whitespace-normal" (click)="select(row.point.id)">
                     {{ row.point.pointName }}
                   </button>
                 </td>
-                <td hlmTd>{{ row.point.customerName }}</td>
+                <td hlmTd class="whitespace-normal">{{ row.point.customerName }}</td>
                 <td hlmTd>{{ row.point.city }}</td>
                 <td hlmTd>{{ row.point.agent ?? '–' }}</td>
                 <td hlmTd class="pr-6 text-right tabular-nums">{{ row.revenue | eur }}</td>
@@ -267,6 +276,34 @@
           </tbody>
         </table>
       </div>
+      <nav aria-label="Pages of points" class="flex flex-wrap items-center justify-between gap-3 border-t px-6 pt-3 text-sm">
+        <div class="flex items-center gap-2">
+          <label hlmLabel for="points-page-size" class="font-normal">Rows per page</label>
+          <hlm-native-select selectId="points-page-size" size="sm" [value]="'' + pageSize()" (valueChange)="setPageSize($event); scroller.scrollTop = 0">
+            @for (size of pageSizes; track size) {
+              <option hlmNativeSelectOption [value]="'' + size">{{ size }}</option>
+            }
+          </hlm-native-select>
+        </div>
+        <p class="text-muted-foreground tabular-nums" aria-live="polite">Showing {{ listedRange() }} of {{ rows().length }}</p>
+        <div class="flex items-center gap-2">
+          <button hlmBtn size="sm" variant="outline" type="button" [disabled]="page() === 1" (click)="goToPage(page() - 1); scroller.scrollTop = 0">
+            Previous<span class="max-sm:sr-only"> page</span>
+          </button>
+          <label hlmLabel for="points-page" class="sr-only">Page</label>
+          <span class="flex items-center gap-2">
+            <hlm-native-select selectId="points-page" size="sm" class="shrink-0" [value]="'' + page()" (valueChange)="goToPage($event); scroller.scrollTop = 0">
+              @for (number of pageNumbers(); track number) {
+                <option hlmNativeSelectOption [value]="'' + number">{{ number }}</option>
+              }
+            </hlm-native-select>
+            <span class="text-muted-foreground tabular-nums whitespace-nowrap">of {{ pages() }}</span>
+          </span>
+          <button hlmBtn size="sm" variant="outline" type="button" [disabled]="page() === pages()" (click)="goToPage(page() + 1); scroller.scrollTop = 0">
+            Next<span class="max-sm:sr-only"> page</span>
+          </button>
+        </div>
+      </nav>
     </div>
   </section>
 </div>

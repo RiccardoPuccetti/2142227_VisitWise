@@ -108,9 +108,9 @@ describe('MapDashboardPage', () => {
     http.match((r) => r.url === '/api/imports/42/analytics/summary');
 
   /** Opens the page and answers its first requests (points + unfiltered summary). */
-  async function open(url = '/imports/42/map'): Promise<void> {
+  async function open(url = '/imports/42/map', points: DeliveryPoint[] = POINTS): Promise<void> {
     await harness.navigateByUrl(url);
-    http.expectOne('/api/imports/42/points').flush(POINTS);
+    http.expectOne('/api/imports/42/points').flush(points);
     for (const request of summaryRequests()) {
       request.flush(summary());
     }
@@ -190,6 +190,78 @@ describe('MapDashboardPage', () => {
     expect(detailsText).toContain(`Enterprise A 1250,50${NBSP}€`);
     expect(detailsText).toContain(`Enterprise B 830,00${NBSP}€`);
     expect(document.activeElement?.id).toBe('point-details-title');
+  });
+
+  describe('list of points', () => {
+    /** 120 points, POINT 1 with the largest revenue, POINT 120 with the smallest; 100 in ROMA, 20 in TIVOLI. */
+    const MANY = Array.from({ length: 120 }, (_, index) =>
+      point(index + 1, [[21, 10_000 - index]], { city: index < 100 ? 'ROMA' : 'TIVOLI' }),
+    );
+
+    const rows = () => [...page().querySelectorAll('[aria-labelledby="points-title"] tbody tr')];
+    const firstPoint = () => rows()[0]?.querySelector('button')?.textContent?.trim();
+    const pager = () => page().querySelector<HTMLElement>('nav[aria-label="Pages of points"]');
+    const pagerText = () => pager()?.textContent?.replace(/[ \t\r\n]+/g, ' ') ?? '';
+
+    async function choose(selector: string, value: string): Promise<void> {
+      const select = page().querySelector<HTMLSelectElement>(selector);
+      if (!select) {
+        throw new Error(`No select ${selector}`);
+      }
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      await harness.fixture.whenStable();
+    }
+
+    it('shows one page of 50 rows at a time, with previous and next', async () => {
+      await open('/imports/42/map', MANY);
+
+      expect(rows()).toHaveLength(50);
+      expect(firstPoint()).toBe('POINT 1');
+      expect(pagerText()).toContain('Showing 1–50 of 120');
+      expect(pagerText()).toContain('of 3');
+      expect(button('Previous page').disabled).toBe(true);
+
+      button('Next page').click();
+      await harness.fixture.whenStable();
+
+      expect(firstPoint()).toBe('POINT 51');
+      expect(pagerText()).toContain('Showing 51–100 of 120');
+      expect(button('Previous page').disabled).toBe(false);
+    });
+
+    it('jumps to a page chosen in the page selector', async () => {
+      await open('/imports/42/map', MANY);
+
+      await choose('#points-page', '3');
+
+      expect(rows()).toHaveLength(20);
+      expect(firstPoint()).toBe('POINT 101');
+      expect(button('Next page').disabled).toBe(true);
+    });
+
+    it('changes the rows per page and starts again from the first page', async () => {
+      await open('/imports/42/map', MANY);
+      button('Next page').click();
+      await harness.fixture.whenStable();
+
+      await choose('#points-page-size', '25');
+
+      expect(rows()).toHaveLength(25);
+      expect(firstPoint()).toBe('POINT 1');
+      expect(pagerText()).toContain('of 5');
+    });
+
+    it('starts again from the first page when a filter changes', async () => {
+      await open('/imports/42/map', MANY);
+      button('Next page').click();
+      await harness.fixture.whenStable();
+
+      await choose('#dashboard-city', 'TIVOLI');
+
+      expect(firstPoint()).toBe('POINT 101');
+      expect(pagerText()).toContain('Showing 1–20 of 20');
+    });
   });
 
   it('shows the problem when the points cannot be loaded', async () => {
