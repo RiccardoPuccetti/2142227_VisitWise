@@ -60,7 +60,7 @@ Owns: backend `planning/` (except `planning/export/`); frontend `features/planne
 | MAR-3 | Planning API: campaigns, simulate, what-if, save/list/get/delete plans | 19-28 | MAR-2, PUC-3 |
 | MAR-4 | Planner page: parameters form, KPIs, day-by-day timeline, routes on `MapView`, save scenario | 19-25 | MAR-3, RIV-1 |
 | MAR-5 | What-if page (coverage curve over horizons) + scenarios side-by-side compare | 26, 27 | MAR-3, RIV-1 |
-| MAR-6 | Update the strategy doc with measured results, mockups S7-S10 | - | - |
+| MAR-6 | Mockups S7-S10 (planner parameters, planner result, what-if, scenarios compare) | - | - |
 
 ## Rivera - Platform & map
 
