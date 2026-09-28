@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -22,19 +23,22 @@ public class ImportService {
     private final EnterpriseRepository enterprises;
     private final EntityManager entityManager;
     private final JsonMapper jsonMapper;
+    private final ApplicationEventPublisher events;
 
     ImportService(ExcelSheetReader reader, ImportBatchRepository imports, EnterpriseRepository enterprises,
-            EntityManager entityManager, JsonMapper jsonMapper) {
+            EntityManager entityManager, JsonMapper jsonMapper, ApplicationEventPublisher events) {
         this.reader = reader;
         this.imports = imports;
         this.enterprises = enterprises;
         this.entityManager = entityManager;
         this.jsonMapper = jsonMapper;
+        this.events = events;
     }
 
     /**
-     * All or nothing: an invalid mapping (400) or a file without importable rows (422) saves nothing. Geocoding does
-     * not exist yet (PUC-4): the import is READY and points without coordinates in the file stay PENDING.
+     * All or nothing: an invalid mapping (400) or a file without importable rows (422) saves nothing. Points without
+     * coordinates in the file stay PENDING and the import is GEOCODING: the background job (US-08) resolves them after
+     * this transaction commits and turns the import READY.
      */
     @Transactional
     public ImportSummary create(Long tenantId, String fileName, InputStream file, CreateImportRequest request) {
@@ -47,13 +51,15 @@ public class ImportService {
                     "No row of the file can be imported: check that the columns are mapped to the right fields");
         }
 
+        int withCoordinates = (int) parsed.rows().stream().filter(row -> row.latitude() != null).count();
         ImportBatch batch = new ImportBatch(tenantId, request.name(), fileName);
         batch.setColumnMapping(jsonMapper.writeValueAsString(mapping));
         batch.setTotalRows(sheet.rows().size());
         batch.setImportedRows(parsed.rows().size());
         batch.setSkippedRows(parsed.skipped());
-        batch.setGeocodedRows((int) parsed.rows().stream().filter(row -> row.latitude() != null).count());
-        batch.setStatus(ImportStatus.READY);
+        batch.setGeocodedRows(withCoordinates);
+        boolean needsGeocoding = withCoordinates < parsed.rows().size();
+        batch.setStatus(needsGeocoding ? ImportStatus.GEOCODING : ImportStatus.READY);
         imports.save(batch);
 
         List<Enterprise> saved = new ArrayList<>();
@@ -70,6 +76,9 @@ public class ImportService {
                 entityManager.flush();
                 entityManager.clear();
             }
+        }
+        if (needsGeocoding) {
+            events.publishEvent(new ImportCreatedEvent(batch.getId()));
         }
         return ImportSummary.of(batch, saved);
     }

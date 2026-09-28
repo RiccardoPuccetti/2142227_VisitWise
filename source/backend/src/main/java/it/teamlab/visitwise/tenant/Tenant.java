@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * A federation using VisitWise: owner of its imports and plans, and its only login account (one account per tenant).
@@ -50,6 +51,19 @@ public class Tenant {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
+
+    /** Starting base (US-35): null until the tenant saves one in the planner. */
+    @Column(name = "base_address")
+    private String baseAddress;
+
+    @Column(name = "base_city", length = 120)
+    private String baseCity;
+
+    @Column(name = "base_latitude")
+    private Double baseLatitude;
+
+    @Column(name = "base_longitude")
+    private Double baseLongitude;
 
     protected Tenant() {
     }
@@ -102,6 +116,22 @@ public class Tenant {
         failedLoginCount = 0;
         lockedUntil = null;
         lastLoginAt = now;
+    }
+
+    /** Saves the geocoded starting base; the previous one is replaced only here, never on a failed geocoding. */
+    public void setStartingBase(String address, String city, double latitude, double longitude) {
+        this.baseAddress = address;
+        this.baseCity = city;
+        this.baseLatitude = latitude;
+        this.baseLongitude = longitude;
+    }
+
+    /** @return the saved base, or empty when the tenant never saved one */
+    public Optional<StartingBase> getStartingBase() {
+        if (baseAddress == null || baseCity == null || baseLatitude == null || baseLongitude == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new StartingBase(baseAddress, baseCity, baseLatitude, baseLongitude));
     }
 
     public Long getId() {

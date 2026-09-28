@@ -29,6 +29,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-visitwise}
       GEOCODING_BASE_URL: ${GEOCODING_BASE_URL:-https://nominatim.openstreetmap.org}
       GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT:-VisitWise-hackathon/0.1}
+      ROUTING_ENABLED: ${ROUTING_ENABLED:-true}
+      ROUTING_BASE_URL: ${ROUTING_BASE_URL:-https://router.project-osrm.org}
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       REMEMBER_ME_DAYS: ${REMEMBER_ME_DAYS:-14}

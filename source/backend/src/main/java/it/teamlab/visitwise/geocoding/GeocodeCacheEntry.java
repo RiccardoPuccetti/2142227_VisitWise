@@ -73,4 +73,13 @@ public class GeocodeCacheEntry {
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }
+
+    /** Overwrites a cached miss after a successful retry (keeps the unique key, no delete + insert). */
+    public void update(Double latitude, Double longitude, boolean found, String provider) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.found = found;
+        this.provider = provider;
+        this.createdAt = OffsetDateTime.now();
+    }
 }

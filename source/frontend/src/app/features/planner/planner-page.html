@@ -1,0 +1,579 @@
+<div class="flex flex-col gap-6">
+  <header>
+    <h1 class="text-2xl font-semibold">Visit planner</h1>
+    <p class="text-muted-foreground mt-1">
+      Set where the day starts, choose the campaign and generate the best routes for your visits.
+    </p>
+  </header>
+
+  @if (loadError()) {
+    <div hlmAlert variant="destructive" role="alert">
+      <h2 hlmAlertTitle>Planner data could not be loaded</h2>
+      <p hlmAlertDescription>{{ loadError() }}</p>
+    </div>
+  }
+
+  @if (progress(); as geocoding) {
+    @if (geocodingActive()) {
+      <div hlmAlert role="status" aria-live="polite">
+        <h2 hlmAlertTitle class="flex items-center gap-2">
+          <hlm-spinner class="size-4" /> Locating customer addresses…
+        </h2>
+        <p hlmAlertDescription>
+          {{ geocoding.located }} of {{ geocoding.total }} addresses placed on the map. Customers
+          without a position yet are left out of the plan; generate it again when this finishes.
+        </p>
+      </div>
+    } @else if (geocoding.notFound > 0 || geocoding.errorMessage) {
+      <div hlmAlert role="status">
+        <h2 hlmAlertTitle>
+          {{ geocoding.notFound }} of {{ geocoding.total }} addresses could not be located
+        </h2>
+        <div hlmAlertDescription class="flex flex-wrap items-center gap-3">
+          <span>{{
+            geocoding.errorMessage ??
+              'They are excluded from the plan. Retry, or fix the address in the source file.'
+          }}</span>
+          <button
+            hlmBtn
+            type="button"
+            size="sm"
+            variant="outline"
+            [disabled]="retrying()"
+            (click)="retryGeocoding()"
+          >
+            @if (retrying()) {
+              <hlm-spinner class="size-4" />
+            }
+            Retry geocoding
+          </button>
+        </div>
+      </div>
+    }
+  }
+
+  @if (loading()) {
+    <div class="flex items-center gap-2" aria-live="polite"><hlm-spinner /> Loading options…</div>
+  } @else {
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,26rem)_1fr]">
+      <div class="flex flex-col gap-6">
+        <section hlmCard aria-labelledby="planner-base-title">
+          <div hlmCardHeader>
+            <h2 hlmCardTitle id="planner-base-title">1. Starting point</h2>
+            <p hlmCardDescription>
+              Every day starts and ends here. Type the address: it is placed on the map for you.
+            </p>
+          </div>
+          <div hlmCardContent>
+            <form class="flex flex-col gap-3" [formGroup]="baseForm" (ngSubmit)="saveBase()">
+              <div hlmField>
+                <label hlmFieldLabel for="planner-base-address">Address</label
+                ><input
+                  hlmInput
+                  id="planner-base-address"
+                  formControlName="address"
+                  placeholder="Via del Corso 300"
+                  maxlength="255"
+                  autocomplete="street-address"
+                />
+              </div>
+              <div hlmField>
+                <label hlmFieldLabel for="planner-base-city">City</label
+                ><input
+                  hlmInput
+                  id="planner-base-city"
+                  formControlName="city"
+                  placeholder="Roma"
+                  maxlength="120"
+                  autocomplete="address-level2"
+                />
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <button hlmBtn type="submit" variant="secondary" [disabled]="savingBase()">
+                  @if (savingBase()) {
+                    <hlm-spinner class="size-4" />
+                  }
+                  Use this starting point
+                </button>
+                @if (base(); as saved) {
+                  <span class="text-muted-foreground text-sm" data-testid="planner-base-status">
+                    @if (baseSaved()) {
+                      Saved ·
+                    }
+                    {{ saved.address }}, {{ saved.city }}
+                  </span>
+                } @else {
+                  <span class="text-muted-foreground text-sm"
+                    >No starting point yet: Rome city centre is used.</span
+                  >
+                }
+              </div>
+              @if (baseError()) {
+                <p class="text-destructive text-sm" role="alert">{{ baseError() }}</p>
+              }
+            </form>
+          </div>
+        </section>
+
+        <section hlmCard aria-labelledby="planner-parameters-title">
+          <div hlmCardHeader>
+            <h2 hlmCardTitle id="planner-parameters-title">2. Campaign and visits</h2>
+            <p hlmCardDescription>
+              Working days only; Italian public holidays are skipped automatically.
+            </p>
+          </div>
+          <div hlmCardContent>
+            <form class="flex flex-col gap-5" [formGroup]="form" (ngSubmit)="simulate()">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div hlmField>
+                  <label hlmFieldLabel for="planner-campaign">Campaign</label>
+                  <hlm-native-select
+                    selectId="planner-campaign"
+                    [value]="form.controls.campaign.value"
+                    (valueChange)="setCampaign($event)"
+                  >
+                    @for (campaign of campaigns(); track campaign.code) {
+                      <option hlmNativeSelectOption [value]="campaign.code">
+                        {{ campaign.label }}
+                      </option>
+                    }
+                    <option hlmNativeSelectOption value="CUSTOM">Custom dates</option>
+                  </hlm-native-select>
+                </div>
+                <div hlmField>
+                  <label hlmFieldLabel for="planner-campaign-year">Year</label
+                  ><input
+                    hlmInput
+                    id="planner-campaign-year"
+                    type="number"
+                    min="1583"
+                    max="9999"
+                    [value]="campaignYear()"
+                    (change)="setCampaignYear($event)"
+                  />
+                </div>
+                <div hlmField>
+                  <label hlmFieldLabel for="planner-start-date">Start date</label
+                  ><input
+                    hlmInput
+                    id="planner-start-date"
+                    type="date"
+                    formControlName="startDate"
+                    required
+                  />
+                </div>
+                <div hlmField>
+                  <label hlmFieldLabel for="planner-deadline">Deadline</label
+                  ><input hlmInput id="planner-deadline" type="date" formControlName="deadline" />
+                </div>
+                <div hlmField>
+                  <label hlmFieldLabel for="planner-working-days">Working days available</label
+                  ><input
+                    hlmInput
+                    id="planner-working-days"
+                    type="number"
+                    min="1"
+                    max="260"
+                    formControlName="workingDays"
+                  />
+                </div>
+                <div hlmField>
+                  <label hlmFieldLabel for="planner-mode">Who visits</label>
+                  <hlm-native-select
+                    selectId="planner-mode"
+                    [value]="form.controls.planningMode.value"
+                    (valueChange)="setPlanningMode($event)"
+                  >
+                    <option hlmNativeSelectOption value="PER_AGENT">Each agent, own route</option>
+                    <option hlmNativeSelectOption value="SINGLE_VISITOR">One visitor</option>
+                  </hlm-native-select>
+                </div>
+              </div>
+
+              @if (enterprises().length > 1 || agents().length > 1) {
+                <details class="rounded-md border p-3">
+                  <summary class="cursor-pointer font-medium">Priorities and agents</summary>
+                  <div class="mt-4 grid gap-6 sm:grid-cols-2">
+                    <fieldset hlmFieldSet>
+                      <legend hlmFieldLegend>Enterprise priority</legend>
+                      <p hlmFieldDescription>0 excludes, 1 is neutral, higher favours.</p>
+                      <div hlmFieldGroup class="mt-3">
+                        @for (enterprise of enterprises(); track enterprise.enterpriseId) {
+                          <div hlmField orientation="horizontal">
+                            <label
+                              hlmFieldLabel
+                              [for]="'planner-weight-' + enterprise.enterpriseId"
+                              >{{ enterprise.name }}</label
+                            ><input
+                              hlmInput
+                              class="max-w-24"
+                              [id]="'planner-weight-' + enterprise.enterpriseId"
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              [value]="weights()[enterprise.enterpriseId] ?? 1"
+                              (input)="setWeight(enterprise.enterpriseId, $event)"
+                            />
+                          </div>
+                        }
+                      </div>
+                    </fieldset>
+                    <fieldset hlmFieldSet>
+                      <legend hlmFieldLegend>Agents</legend>
+                      <p hlmFieldDescription>None selected = all agents.</p>
+                      <div hlmFieldGroup class="mt-3">
+                        @for (agent of agents(); track agent.key) {
+                          <div hlmField orientation="horizontal">
+                            <hlm-checkbox
+                              [id]="'planner-agent-' + $index"
+                              (checkedChange)="toggleAgent(agent.key, $event)"
+                            /><label hlmFieldLabel [for]="'planner-agent-' + $index">{{
+                              agent.key
+                            }}</label>
+                          </div>
+                        }
+                      </div>
+                    </fieldset>
+                  </div>
+                </details>
+              }
+
+              <details class="rounded-md border p-3">
+                <summary class="cursor-pointer font-medium">Advanced settings</summary>
+                <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-visit-duration">Visit duration (min)</label
+                    ><input
+                      hlmInput
+                      id="planner-visit-duration"
+                      type="number"
+                      min="30"
+                      max="480"
+                      formControlName="visitDurationMinutes"
+                    />
+                  </div>
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-workday">Workday (min)</label
+                    ><input
+                      hlmInput
+                      id="planner-workday"
+                      type="number"
+                      min="30"
+                      formControlName="workdayMinutes"
+                    />
+                  </div>
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-max-distance"
+                      >Max distance from base (km)</label
+                    ><input
+                      hlmInput
+                      id="planner-max-distance"
+                      type="number"
+                      min="1"
+                      formControlName="maxDistanceKm"
+                    />
+                  </div>
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-min-revenue">Minimum revenue (€)</label
+                    ><input
+                      hlmInput
+                      id="planner-min-revenue"
+                      type="number"
+                      min="0"
+                      formControlName="minRevenue"
+                    />
+                  </div>
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-speed">Average speed (km/h)</label
+                    ><input
+                      hlmInput
+                      id="planner-speed"
+                      type="number"
+                      min="1"
+                      formControlName="averageSpeedKmh"
+                    />
+                  </div>
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-road-factor">Road factor</label
+                    ><input
+                      hlmInput
+                      id="planner-road-factor"
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      formControlName="roadFactor"
+                    />
+                  </div>
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-travel-cost">Travel cost (€/km)</label
+                    ><input
+                      hlmInput
+                      id="planner-travel-cost"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      formControlName="travelCostPerKm"
+                    />
+                  </div>
+                </div>
+              </details>
+
+              @if (validationErrors().length) {
+                <div hlmAlert variant="destructive" role="alert">
+                  <h2 hlmAlertTitle>Check the parameters</h2>
+                  <ul hlmAlertDescription class="list-disc pl-5">
+                    @for (error of validationErrors(); track error) {
+                      <li>{{ error }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+              <button hlmBtn type="submit" class="w-full" [disabled]="submitting()">
+                @if (submitting()) {
+                  <hlm-spinner class="size-4" />
+                }
+                Generate plan
+              </button>
+            </form>
+          </div>
+        </section>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        @if (actionError()) {
+          <div hlmAlert variant="destructive" role="alert">
+            <h2 hlmAlertTitle>Action failed</h2>
+            <p hlmAlertDescription>{{ actionError() }}</p>
+          </div>
+        }
+
+        @if (result(); as plan) {
+          @if (plan.warnings.length) {
+            <div hlmAlert role="status">
+              <h2 hlmAlertTitle>Planning notes</h2>
+              <ul hlmAlertDescription class="list-disc pl-5">
+                @for (warning of plan.warnings; track warning) {
+                  <li>{{ warning }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          <section aria-labelledby="planner-results-title" class="flex flex-col gap-4">
+            <h2 id="planner-results-title" class="sr-only">Plan result</h2>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <app-kpi-card
+                label="Covered revenue"
+                [value]="plan.kpis.coveredRevenue | eur: 'rounded'"
+                [hint]="percent(plan.kpis.coverage) + ' of eligible revenue'"
+              />
+              <app-kpi-card
+                label="Visits"
+                [value]="'' + plan.kpis.plannedVisits"
+                [hint]="plan.kpis.uniqueCustomers + ' customers'"
+              />
+              <app-kpi-card
+                label="Working days"
+                [value]="'' + plan.kpis.workingDaysUsed"
+                [hint]="'last visit ' + date(plan.kpis.lastVisitDate)"
+              />
+              <app-kpi-card
+                label="Distance"
+                [value]="decimal(plan.kpis.totalKm) + ' km'"
+                [hint]="decimal(plan.kpis.travelHours) + ' h on the road (estimate)'"
+              />
+            </div>
+
+            @if (plan.days.length) {
+              <div class="grid gap-4 xl:grid-cols-[16rem_1fr]">
+                <section hlmCard aria-labelledby="planner-days-title">
+                  <div hlmCardHeader>
+                    <h3 hlmCardTitle id="planner-days-title">Days</h3>
+                  </div>
+                  <div hlmCardContent>
+                    <ol class="flex max-h-[34rem] flex-col gap-1 overflow-auto">
+                      @for (day of plan.days; track day.date + (day.agent ?? ''); let i = $index) {
+                        <li>
+                          <button
+                            hlmBtn
+                            type="button"
+                            class="h-auto w-full justify-start py-2"
+                            [variant]="selectedDayIndex() === i ? 'secondary' : 'ghost'"
+                            [attr.aria-pressed]="selectedDayIndex() === i"
+                            (click)="selectDay(i)"
+                          >
+                            <span class="text-left"
+                              ><strong>{{ date(day.date) }}</strong
+                              ><br /><span class="text-muted-foreground text-xs"
+                                >{{ day.agent ?? 'One visitor' }} · {{ day.visits.length }} visits ·
+                                {{ decimal(day.km) }} km</span
+                              ></span
+                            >
+                          </button>
+                        </li>
+                      }
+                    </ol>
+                  </div>
+                </section>
+
+                @if (selectedDay(); as day) {
+                  <section
+                    class="flex flex-col gap-3"
+                    [attr.aria-labelledby]="'planner-day-' + selectedDayIndex()"
+                  >
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <h3 class="text-lg font-semibold" [id]="'planner-day-' + selectedDayIndex()">
+                        {{ date(day.date) }}
+                        @if (day.agent) {
+                          <span class="text-muted-foreground text-base font-normal"
+                            >· {{ day.agent }}</span
+                          >
+                        }
+                      </h3>
+                      <p class="text-sm" data-testid="planner-road-summary">
+                        @if (routing()) {
+                          <span class="text-muted-foreground inline-flex items-center gap-1"
+                            ><hlm-spinner class="size-3" /> Computing road route…</span
+                          >
+                        } @else if (road(); as route) {
+                          <strong>{{ decimal(route.km) }} km</strong> · {{ minutes(route.minutes)
+                          }}{{ ' ' }}
+                          <span class="text-muted-foreground"
+                            >({{ route.source === 'OSRM' ? 'road route' : 'estimate' }})</span
+                          >
+                        } @else {
+                          <strong>{{ decimal(day.km) }} km</strong>{{ ' ' }}
+                          <span class="text-muted-foreground">(estimate)</span>
+                        }
+                      </p>
+                    </div>
+                    <app-map-view
+                      class="h-[26rem]"
+                      [markers]="markers()"
+                      [routes]="routes()"
+                      [ariaLabel]="'Itinerary for ' + date(day.date)"
+                    />
+                    <ol class="grid gap-2 sm:grid-cols-2">
+                      @for (visit of day.visits; track visit.deliveryPointId) {
+                        <li hlmCard size="sm">
+                          <div hlmCardContent class="flex gap-3 pt-4">
+                            <span
+                              class="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                              >{{ visit.slot }}</span
+                            >
+                            <div class="min-w-0">
+                              <p class="truncate font-medium">{{ visit.pointName }}</p>
+                              <p class="text-muted-foreground text-sm">
+                                {{ visit.customerName }} · {{ visit.address }}, {{ visit.city }}
+                              </p>
+                              <p class="mt-1 text-sm">
+                                {{ visit.expectedRevenue | eur }} ·
+                                {{ decimal(road()?.legs?.[$index]?.km ?? visit.travelKm) }} km from
+                                previous stop
+                              </p>
+                            </div>
+                          </div>
+                        </li>
+                      }
+                    </ol>
+                  </section>
+                }
+              </div>
+            } @else {
+              <div hlmAlert role="status">
+                <h3 hlmAlertTitle>No visits fit these parameters</h3>
+                <p hlmAlertDescription>
+                  Adjust the horizon, filters or distance and generate the plan again.
+                </p>
+              </div>
+            }
+
+            <section hlmCard aria-labelledby="planner-save-title">
+              <div hlmCardHeader>
+                <h3 hlmCardTitle id="planner-save-title">Save this plan as a scenario</h3>
+              </div>
+              <div hlmCardContent class="flex flex-wrap items-end gap-2">
+                <div hlmField class="grow">
+                  <label hlmFieldLabel for="planner-scenario-name">Scenario name</label
+                  ><input
+                    hlmInput
+                    id="planner-scenario-name"
+                    maxlength="150"
+                    [value]="scenarioName()"
+                    (input)="setScenarioName($event)"
+                  />
+                </div>
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="outline"
+                  [disabled]="saving()"
+                  (click)="saveScenario()"
+                >
+                  @if (saving()) {
+                    <hlm-spinner class="size-4" />
+                  }
+                  Save scenario
+                </button>
+                @if (savedMessage()) {
+                  <p class="basis-full text-sm" role="status">{{ savedMessage() }}</p>
+                }
+              </div>
+            </section>
+
+            @if (plan.notPlanned.length) {
+              <section hlmCard aria-labelledby="planner-excluded-title">
+                <div hlmCardHeader>
+                  <h3 hlmCardTitle id="planner-excluded-title">Valuable customers left out</h3>
+                  <p hlmCardDescription>Eligible customers that did not fit in the horizon.</p>
+                </div>
+                <div hlmCardContent>
+                  <div class="overflow-x-auto">
+                    <table hlmTable>
+                      <thead hlmTHead>
+                        <tr hlmTr>
+                          <th hlmTh>Delivery point</th>
+                          <th hlmTh>City</th>
+                          <th hlmTh>Agent</th>
+                          <th hlmTh class="text-right">Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody hlmTBody>
+                        @for (point of plan.notPlanned; track point.id) {
+                          <tr hlmTr>
+                            <td hlmTd>
+                              <strong>{{ point.pointName }}</strong
+                              ><br /><span class="text-muted-foreground text-xs">{{
+                                point.customerName
+                              }}</span>
+                            </td>
+                            <td hlmTd>{{ point.city }}</td>
+                            <td hlmTd>{{ point.agent ?? '–' }}</td>
+                            <td hlmTd class="text-right">{{ point.totalRevenue | eur }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            }
+          </section>
+        } @else {
+          <section hlmCard aria-labelledby="planner-map-title" class="flex min-h-[28rem] flex-col">
+            <div hlmCardHeader>
+              <h2 hlmCardTitle id="planner-map-title">Map</h2>
+              <p hlmCardDescription>
+                Your starting point is shown in red. The daily route appears here after you generate
+                the plan.
+              </p>
+            </div>
+            <div hlmCardContent class="grow">
+              <app-map-view class="h-[22rem]" [markers]="markers()" ariaLabel="Starting point" />
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+  }
+</div>

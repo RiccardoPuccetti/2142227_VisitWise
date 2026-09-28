@@ -93,7 +93,7 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 	| Import wizard | Upload, preview, column mapping, enterprise columns, name, report; template download | visitwise-backend | 1, 2, 3, 4, 5, 6, 7 |
 	| Import detail | Summary, geocoding progress, delivery points table, manual position fix, delete | visitwise-backend | 8, 9, 11, 12 |
 	| Map dashboard | OpenStreetMap map of delivery points with filters and summary indicators | visitwise-backend | 13, 14, 15, 16, 17, 18 |
-	| Visit planner | Campaign and parameters, proposed plan (calendar, map itineraries, indicators) | visitwise-backend | 19, 20, 21, 22, 23, 24, 25 |
+	| Visit planner | Starting base by address, campaign and parameters, geocoding progress, proposed plan (calendar, real road itinerary of the selected day on the map, indicators), scenario save | visitwise-backend | 8, 9, 19, 20, 21, 22, 23, 24, 25, 27, 35 |
 	| What-if and scenarios | Coverage over different horizons, saved scenarios compared side by side | visitwise-backend | 26, 27 |
 	| Plan detail | Day-by-day calendar per agent, Excel export, directions links | visitwise-backend | 28, 29, 30 |
 
@@ -116,6 +116,8 @@ Every tenant, import, delivery point, revenue, geocoding result and saved plan i
 
 ### EXTERNAL SERVICES CONNECTIONS
 Nominatim (OpenStreetMap geocoding, https://nominatim.openstreetmap.org) to turn addresses into coordinates: at most 1 request per second with an identifying User-Agent, as required by its usage policy. Every result is cached in the database, so an address is geocoded only once. Only address and city are sent: customer names and revenues never leave the system.
+
+OSRM (OpenStreetMap routing, https://router.project-osrm.org) to compute the real road route of the day selected in the planner (a few requests per session, never a full distance matrix). When it is disabled (`ROUTING_ENABLED=false`) or unreachable the backend falls back to the straight-line estimate used by the planning engine. Only coordinates are sent.
 
 ### MICROSERVICES:
 
@@ -141,9 +143,11 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| GET | /api/imports/{id}/points | Delivery points of an import with coordinates and revenues | 9, 11, 13 |
 	| PATCH | /api/imports/{id}/points/{pointId}/location | Set the position of a point manually | 9 |
 	| POST | /api/imports/{id}/geocoding/retry | Retry geocoding of points not found | 9 |
+	| GET | /api/imports/{id}/geocoding | Geocoding progress of an import (total, located, pending, not found) | 8, 9 |
 	| GET | /api/imports/{id}/analytics/summary | Indicators by enterprise, agent and city, top points, revenue concentration | 18 |
 	| GET | /api/planning/campaigns | Campaign windows (Christmas, Easter, end of summer) for a year | 19 |
 	| POST | /api/imports/{id}/plans/simulate | Compute a visit plan without saving it | 20, 21, 22, 23, 25 |
+	| POST | /api/imports/{id}/plans/route | Real road route (OSRM) of one day's stops, or the straight-line estimate when routing is unavailable | 24 |
 	| POST | /api/imports/{id}/plans/what-if | Compute the plan indicators for several horizons | 26 |
 	| POST | /api/imports/{id}/plans | Compute and save a plan as a named scenario | 27 |
 	| GET | /api/imports/{id}/plans | List saved plans of an import | 27 |
@@ -157,6 +161,8 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| GET | /api/auth/me | The logged-in tenant | 32 |
 	| PATCH | /api/profile | Rename the tenant | 34 |
 	| PUT | /api/profile/password | Change the password (current password required); logs out the other sessions and every remembered device | 34, 37 |
+	| GET | /api/profile/base | The tenant's starting base (address and coordinates), or no content when not set | 35 |
+	| PUT | /api/profile/base | Geocode and save the tenant's starting base from its address and city | 35 |
 
 ## CONTAINER_NAME: visitwise-db
 
@@ -191,7 +197,7 @@ Single database `visitwise`, schema `public`.
 
 - DB STRUCTURE: 
 
-	**_tenant_** :	| **_id_** | name | email | password_hash | failed_login_count | locked_until | password_changed_at | last_login_at | created_at |
+	**_tenant_** :	| **_id_** | name | email | password_hash | failed_login_count | locked_until | password_changed_at | last_login_at | created_at | base_address | base_city | base_latitude | base_longitude |
 
 	**_persistent_logins_** :	| **_series_** | username | token | last_used |
 
