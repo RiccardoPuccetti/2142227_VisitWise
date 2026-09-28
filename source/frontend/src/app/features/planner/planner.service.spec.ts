@@ -62,4 +62,27 @@ describe('PlannerService', () => {
     saveRequest.flush({ id: 7 });
     await save;
   });
+
+  it('runs a what-if analysis over several horizons', async () => {
+    const result = service.whatIf(42, { base: PARAMETERS, horizons: [20, 30, 40] });
+    const request = http.expectOne('/api/imports/42/plans/what-if');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ base: PARAMETERS, horizons: [20, 30, 40] });
+    request.flush({ rows: [] });
+    await expect(result).resolves.toEqual({ rows: [] });
+  });
+
+  it('lists and deletes the saved scenarios of an import', async () => {
+    const list = service.plans(42);
+    const listRequest = http.expectOne('/api/imports/42/plans');
+    expect(listRequest.request.method).toBe('GET');
+    listRequest.flush([{ id: 7, name: 'Christmas priority' }]);
+    await expect(list).resolves.toEqual([{ id: 7, name: 'Christmas priority' }]);
+
+    const removal = service.deletePlan(7);
+    const deleteRequest = http.expectOne('/api/plans/7');
+    expect(deleteRequest.request.method).toBe('DELETE');
+    deleteRequest.flush(null, { status: 204, statusText: 'No Content' });
+    await removal;
+  });
 });

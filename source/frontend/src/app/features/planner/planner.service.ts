@@ -13,9 +13,11 @@ import type {
   RouteResponse,
   SaveStartingBaseRequest,
   StartingBase,
+  WhatIfRequest,
+  WhatIfResult,
 } from '../../core/models/api.models';
 
-/** API calls used by the MAR-4 planner page. */
+/** API calls used by the planner (MAR-4) and the what-if / scenarios (MAR-5) pages. */
 @Service()
 export class PlannerService {
   private readonly http = inject(HttpClient);
@@ -67,5 +69,21 @@ export class PlannerService {
   save(importId: number, name: string, parameters: PlanParameters): Promise<PlanSummary> {
     const request: CreatePlanRequest = { name, parameters };
     return firstValueFrom(this.http.post<PlanSummary>(`/api/imports/${importId}/plans`, request));
+  }
+
+  /** Endpoint 13 (US-26): KPIs of the same plan over several horizons. */
+  whatIf(importId: number, request: WhatIfRequest): Promise<WhatIfResult> {
+    return firstValueFrom(
+      this.http.post<WhatIfResult>(`/api/imports/${importId}/plans/what-if`, request),
+    );
+  }
+
+  /** Endpoint 15 (US-27): saved scenarios, newest first. */
+  plans(importId: number): Promise<PlanSummary[]> {
+    return firstValueFrom(this.http.get<PlanSummary[]>(`/api/imports/${importId}/plans`));
+  }
+
+  deletePlan(planId: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`/api/plans/${planId}`));
   }
 }
