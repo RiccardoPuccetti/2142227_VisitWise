@@ -300,21 +300,47 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       expect(text(rows(fixture)[0])).toContain('BAR ACME 2');
     });
 
-    it('shows long lists 50 points at a time', async () => {
+    it('pages long lists: 50 points at a time, a page selector and the rows per page', async () => {
       const many = Array.from({ length: 120 }, (_, index) => point(2000 + index, `POINT ${index + 1}`, 'OK'));
       const fixture = await render(DETAIL, many);
+      const pager = () => text(root(fixture).querySelector('nav[aria-label="Pages of points"]'));
+      const choose = async (id: string, value: string) => {
+        const select = root(fixture).querySelector<HTMLSelectElement>(`#${id}`)!;
+        select.value = value;
+        select.dispatchEvent(new Event('change'));
+        await settle(fixture);
+      };
 
       expect(rows(fixture)).toHaveLength(50);
-      expect(text(root(fixture).querySelector('[data-testid="pages"]'))).toContain('Page 1 of 3');
+      expect(pager()).toContain('Showing 1–50 of 120');
       expect(button('Previous page', root(fixture)).disabled).toBe(true);
 
       button('Next page', root(fixture)).click();
-      button('Next page', root(fixture)).click();
       await settle(fixture);
+      expect(text(rows(fixture)[0])).toContain('POINT 51');
 
+      await choose('points-page', '3');
       expect(rows(fixture)).toHaveLength(20);
       expect(text(rows(fixture)[0])).toContain('POINT 101');
       expect(button('Next page', root(fixture)).disabled).toBe(true);
+
+      await choose('points-page-size', '25');
+      expect(rows(fixture)).toHaveLength(25);
+      expect(pager()).toContain('Showing 1–25 of 120');
+    });
+
+    it('goes back to the first page when the list filter changes', async () => {
+      const many = Array.from({ length: 120 }, (_, index) => point(2000 + index, `POINT ${index + 1}`, 'OK'));
+      const fixture = await render(DETAIL, many);
+      button('Next page', root(fixture)).click();
+      await settle(fixture);
+
+      button('Not located (0)', root(fixture)).click();
+      await settle(fixture);
+      button('All points', root(fixture)).click();
+      await settle(fixture);
+
+      expect(text(rows(fixture)[0])).toContain('POINT 1');
     });
 
     it('places a point that was not found by hand', async () => {

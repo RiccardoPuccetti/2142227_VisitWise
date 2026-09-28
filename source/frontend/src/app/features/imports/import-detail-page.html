@@ -101,11 +101,19 @@
             <p hlmAlertDescription>{{ error }}</p>
           </div>
         } @else {
-          <div hlmTableContainer class="rounded-none border-0">
+          <!-- Scrolls inside the card (the header stays visible) so a long page does not push the pager off screen. -->
+          <div
+            hlmTableContainer
+            #scroller
+            class="max-h-[28rem] overflow-y-auto rounded-none border-0"
+            tabindex="0"
+            role="region"
+            aria-label="Delivery points of the import"
+          >
             <table hlmTable>
               <caption class="sr-only">Delivery points of the import</caption>
-              <thead hlmTHead>
-                <tr hlmTr>
+              <thead hlmTHead class="bg-card sticky top-0 z-10 shadow-[inset_0_-1px_0_var(--border)]">
+                <tr hlmTr class="hover:bg-transparent">
                   <th hlmTh scope="col" class="pl-6">Delivery point</th>
                   <th hlmTh scope="col">Address</th>
                   <th hlmTh scope="col">Agent</th>
@@ -117,11 +125,11 @@
               <tbody hlmTBody>
                 @for (row of rows(); track row.point.id) {
                   <tr hlmTr>
-                    <td hlmTd class="pl-6">
+                    <td hlmTd class="pl-6 whitespace-normal">
                       <span class="font-medium">{{ row.point.pointName }}</span>
                       <span class="text-muted-foreground block text-xs">{{ row.point.customerName }}</span>
                     </td>
-                    <td hlmTd>{{ row.point.address }}, {{ row.point.city }}</td>
+                    <td hlmTd class="whitespace-normal">{{ row.point.address }}, {{ row.point.city }}</td>
                     <td hlmTd>{{ row.point.agent ?? '–' }}</td>
                     <td hlmTd class="text-right tabular-nums">{{ row.point.totalRevenue | eur }}</td>
                     <td hlmTd>
@@ -149,15 +157,7 @@
               </tbody>
             </table>
           </div>
-          <nav data-testid="pages" aria-label="Pages of points" class="flex items-center justify-end gap-3 border-t px-6 py-3 text-sm">
-            <button hlmBtn size="sm" variant="outline" [disabled]="page() === 1" (click)="previousPage()">
-              Previous page
-            </button>
-            <span>Page {{ page() }} of {{ pages() }}</span>
-            <button hlmBtn size="sm" variant="outline" [disabled]="page() === pages()" (click)="nextPage()">
-              Next page
-            </button>
-          </nav>
+          <app-table-pager class="pb-3" [paging]="paging" idPrefix="points" label="Pages of points" [scroller]="scroller" />
         }
       </section>
 

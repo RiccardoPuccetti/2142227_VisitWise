@@ -38,7 +38,7 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { DeliveryPoint, GeocodingProgress } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, MapView, PageHeader } from '../../shared';
+import { createPaging, EurPipe, MapView, PageHeader, TablePager } from '../../shared';
 import {
   geocodeStatusLabel,
   geocodingRunning,
@@ -46,8 +46,6 @@ import {
   mappingRows,
   missingAddresses,
   needsLocation,
-  pageCount,
-  pageOf,
   territoryMarkers,
 } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
@@ -59,8 +57,6 @@ export const GEOCODING_POLL_MS = new InjectionToken<number>('GEOCODING_POLL_MS',
   providedIn: 'root',
   factory: () => 3000,
 });
-
-const PAGE_SIZE = 50;
 
 type PointFilter = 'all' | 'missing';
 
@@ -85,6 +81,7 @@ type PointFilter = 'all' | 'missing';
     EurPipe,
     MapView,
     PageHeader,
+    TablePager,
     PointLocationForm,
   ],
   providers: [
@@ -190,11 +187,10 @@ export class ImportDetailPage {
   private readonly shown = computed(() =>
     this.filter() === 'missing' ? this.points().filter((point) => needsLocation(point.geocodeStatus)) : this.points(),
   );
-  protected readonly pages = computed(() => pageCount(this.shown().length, PAGE_SIZE));
-  /** Back to the first page when the filter changes. */
-  protected readonly page = linkedSignal({ source: this.filter, computation: () => 1 });
+  /** Pages of the list; back to the first page when the filter changes (not when geocoding refreshes it). */
+  protected readonly paging = createPaging(this.shown, this.filter);
   protected readonly rows = computed(() =>
-    pageOf(this.shown(), this.page(), PAGE_SIZE).map((point) => ({
+    this.paging.rows().map((point) => ({
       point,
       location: geocodeStatusLabel(point.geocodeStatus),
       canLocate: needsLocation(point.geocodeStatus),
@@ -226,14 +222,6 @@ export class ImportDetailPage {
     if (value === 'all' || value === 'missing') {
       this.filter.set(value);
     }
-  }
-
-  protected previousPage(): void {
-    this.page.update((page) => Math.max(1, page - 1));
-  }
-
-  protected nextPage(): void {
-    this.page.update((page) => Math.min(this.pages(), page + 1));
   }
 
   protected edit(point: DeliveryPoint, trigger: EventTarget | null): void {

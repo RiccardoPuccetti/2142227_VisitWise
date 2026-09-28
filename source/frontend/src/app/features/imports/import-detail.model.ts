@@ -66,15 +66,6 @@ export function needsLocation(status: GeocodeStatus): boolean {
   return status === 'NOT_FOUND' || status === 'PENDING';
 }
 
-export function pageCount(total: number, size: number): number {
-  return Math.max(1, Math.ceil(total / size));
-}
-
-/** Items of a 1-based page. */
-export function pageOf<T>(items: readonly T[], page: number, size: number): T[] {
-  return items.slice((page - 1) * size, page * size);
-}
-
 export interface MappingRow {
   field: string;
   column: string;
