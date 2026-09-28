@@ -142,8 +142,8 @@ describe('MapDashboardPage', () => {
   it('links to the import detail to place the points without position', async () => {
     await open();
 
-    const link = page().querySelector<HTMLAnchorElement>('a[href="/imports/42"]');
-    expect(link?.textContent).toContain('Fix positions');
+    const links = [...page().querySelectorAll<HTMLAnchorElement>('a[href="/imports/42"]')];
+    expect(links.some((link) => link.textContent?.includes('Fix positions'))).toBe(true);
   });
 
   it('filters by enterprise, keeps the filter in the URL and reloads the indicators', async () => {

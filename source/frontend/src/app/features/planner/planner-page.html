@@ -1,10 +1,11 @@
 <div class="flex flex-col gap-6">
-  <header>
-    <h1 class="text-2xl font-semibold">Visit planner</h1>
-    <p class="text-muted-foreground mt-1">
-      Set where the day starts, choose the campaign and generate the best routes for your visits.
-    </p>
-  </header>
+  <app-page-header title="Visit planner" [trail]="[{ label: 'Imports', link: '/imports' }, { label: 'Import ' + id(), link: ['/imports', id()] }]">
+    <p>Set where the day starts, choose the campaign and generate the best routes for your visits.</p>
+    <div actions class="flex flex-wrap gap-2">
+      <a hlmBtn variant="outline" [routerLink]="['/imports', id(), 'map']"><ng-icon name="lucideMap" aria-hidden="true" /> Map</a>
+      <a hlmBtn variant="outline" [routerLink]="['/imports', id(), 'scenarios']"><ng-icon name="lucideGitCompare" aria-hidden="true" /> Scenarios</a>
+    </div>
+  </app-page-header>
 
   @if (loadError()) {
     <div hlmAlert variant="destructive" role="alert">
@@ -55,11 +56,14 @@
   @if (loading()) {
     <div class="flex items-center gap-2" aria-live="polite"><hlm-spinner /> Loading options…</div>
   } @else {
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,26rem)_1fr]">
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,26rem)_1fr]">
       <div class="flex flex-col gap-6">
         <section hlmCard aria-labelledby="planner-base-title">
           <div hlmCardHeader>
-            <h2 hlmCardTitle id="planner-base-title">1. Starting point</h2>
+            <h2 hlmCardTitle id="planner-base-title" class="flex items-center gap-3">
+              <span class="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold text-white" aria-hidden="true">1</span>
+              Starting point
+            </h2>
             <p hlmCardDescription>
               Every day starts and ends here. Type the address: it is placed on the map for you.
             </p>
@@ -117,7 +121,10 @@
 
         <section hlmCard aria-labelledby="planner-parameters-title">
           <div hlmCardHeader>
-            <h2 hlmCardTitle id="planner-parameters-title">2. Campaign and visits</h2>
+            <h2 hlmCardTitle id="planner-parameters-title" class="flex items-center gap-3">
+              <span class="bg-brand grid size-7 shrink-0 place-items-center rounded-full text-sm font-semibold text-white" aria-hidden="true">2</span>
+              Campaign and visits
+            </h2>
             <p hlmCardDescription>
               Working days only; Italian public holidays are skipped automatically.
             </p>
@@ -191,7 +198,7 @@
               </div>
 
               @if (enterprises().length > 1 || agents().length > 1) {
-                <details class="rounded-md border p-3">
+                <details class="bg-muted/30 rounded-xl border p-4">
                   <summary class="cursor-pointer font-medium">Priorities and agents</summary>
                   <div class="mt-4 grid gap-6 sm:grid-cols-2">
                     <fieldset hlmFieldSet>
@@ -238,7 +245,7 @@
                 </details>
               }
 
-              <details class="rounded-md border p-3">
+              <details class="bg-muted/30 rounded-xl border p-4">
                 <summary class="cursor-pointer font-medium">Advanced settings</summary>
                 <div class="mt-4 grid gap-4 sm:grid-cols-2">
                   <div hlmField>
@@ -328,9 +335,11 @@
                   </ul>
                 </div>
               }
-              <button hlmBtn type="submit" class="w-full" [disabled]="submitting()">
+              <button hlmBtn type="submit" size="lg" class="w-full" [disabled]="submitting()">
                 @if (submitting()) {
                   <hlm-spinner class="size-4" />
+                } @else {
+                  <ng-icon name="lucideSparkles" aria-hidden="true" />
                 }
                 Generate plan
               </button>
@@ -339,7 +348,21 @@
         </section>
       </div>
 
-      <div class="flex flex-col gap-4">
+      <div class="flex min-w-0 flex-col gap-4">
+        @if (!result() && !actionError()) {
+          <div hlmEmpty class="h-full min-h-[24rem] border-dashed">
+            <div hlmEmptyHeader>
+              <span class="bg-brand-soft text-brand mx-auto grid size-14 place-items-center rounded-2xl" aria-hidden="true">
+                <ng-icon name="lucideRoute" class="text-2xl" />
+              </span>
+              <h2 hlmEmptyTitle>Your plan will appear here</h2>
+              <p hlmEmptyDescription>
+                Fill in the starting point and the campaign on the left, then generate the plan to see the routes, the
+                days and the revenue covered.
+              </p>
+            </div>
+          </div>
+        }
         @if (actionError()) {
           <div hlmAlert variant="destructive" role="alert">
             <h2 hlmAlertTitle>Action failed</h2>
@@ -361,50 +384,64 @@
 
           <section aria-labelledby="planner-results-title" class="flex flex-col gap-4">
             <h2 id="planner-results-title" class="sr-only">Plan result</h2>
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <app-kpi-card
                 label="Covered revenue"
+                icon="lucideEuro"
+                tone="brand"
                 [value]="plan.kpis.coveredRevenue | eur: 'rounded'"
                 [hint]="percent(plan.kpis.coverage) + ' of eligible revenue'"
               />
               <app-kpi-card
                 label="Visits"
+                icon="lucideMapPin"
+                tone="chart-2"
                 [value]="'' + plan.kpis.plannedVisits"
                 [hint]="plan.kpis.uniqueCustomers + ' customers'"
               />
               <app-kpi-card
                 label="Working days"
+                icon="lucideCalendarRange"
+                tone="chart-3"
                 [value]="'' + plan.kpis.workingDaysUsed"
                 [hint]="'last visit ' + date(plan.kpis.lastVisitDate)"
               />
               <app-kpi-card
                 label="Distance"
+                icon="lucideRoute"
+                tone="chart-4"
                 [value]="decimal(plan.kpis.totalKm) + ' km'"
                 [hint]="decimal(plan.kpis.travelHours) + ' h on the road (estimate)'"
               />
             </div>
 
             @if (plan.days.length) {
-              <div class="grid gap-4 xl:grid-cols-[16rem_1fr]">
-                <section hlmCard aria-labelledby="planner-days-title">
+              <div class="grid gap-4 xl:grid-cols-[17rem_1fr]">
+                <section hlmCard aria-labelledby="planner-days-title" class="gap-3">
                   <div hlmCardHeader>
                     <h3 hlmCardTitle id="planner-days-title">Days</h3>
+                    <p hlmCardDescription>{{ plan.days.length }} days planned</p>
                   </div>
-                  <div hlmCardContent>
+                  <div hlmCardContent class="px-3">
                     <ol class="flex max-h-[34rem] flex-col gap-1 overflow-auto">
                       @for (day of plan.days; track day.date + (day.agent ?? ''); let i = $index) {
                         <li>
                           <button
-                            hlmBtn
                             type="button"
-                            class="h-auto w-full justify-start py-2"
-                            [variant]="selectedDayIndex() === i ? 'secondary' : 'ghost'"
+                            class="hover:bg-muted flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors"
+                            [class.bg-brand-soft]="selectedDayIndex() === i"
                             [attr.aria-pressed]="selectedDayIndex() === i"
                             (click)="selectDay(i)"
                           >
-                            <span class="text-left"
-                              ><strong>{{ date(day.date) }}</strong
-                              ><br /><span class="text-muted-foreground text-xs"
+                            <span
+                              class="grid size-8 shrink-0 place-items-center rounded-lg text-xs font-semibold tabular-nums"
+                              [class]="selectedDayIndex() === i ? 'bg-brand text-white' : 'bg-muted text-muted-foreground'"
+                              aria-hidden="true"
+                              >{{ i + 1 }}</span
+                            >
+                            <span class="flex min-w-0 flex-col"
+                              ><strong class="truncate">{{ date(day.date) }}</strong
+                              ><span class="text-muted-foreground truncate text-xs"
                                 >{{ day.agent ?? 'One visitor' }} · {{ day.visits.length }} visits ·
                                 {{ decimal(day.km) }} km</span
                               ></span
@@ -418,11 +455,12 @@
 
                 @if (selectedDay(); as day) {
                   <section
-                    class="flex flex-col gap-3"
+                    hlmCard
+                    class="min-w-0 gap-4"
                     [attr.aria-labelledby]="'planner-day-' + selectedDayIndex()"
                   >
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                      <h3 class="text-lg font-semibold" [id]="'planner-day-' + selectedDayIndex()">
+                    <div hlmCardHeader class="flex flex-wrap items-center justify-between gap-2">
+                      <h3 hlmCardTitle class="text-lg" [id]="'planner-day-' + selectedDayIndex()">
                         {{ date(day.date) }}
                         @if (day.agent) {
                           <span class="text-muted-foreground text-base font-normal"
@@ -447,18 +485,19 @@
                         }
                       </p>
                     </div>
+                    <div hlmCardContent class="flex flex-col gap-4">
                     <app-map-view
-                      class="h-[26rem]"
+                      class="h-[26rem] overflow-hidden rounded-xl"
                       [markers]="markers()"
                       [routes]="routes()"
                       [ariaLabel]="'Itinerary for ' + date(day.date)"
                     />
-                    <ol class="grid gap-2 sm:grid-cols-2">
+                    <ol class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                       @for (visit of day.visits; track visit.deliveryPointId) {
-                        <li hlmCard size="sm">
-                          <div hlmCardContent class="flex gap-3 pt-4">
+                        <li class="bg-muted/30 rounded-xl border p-4">
+                          <div class="flex gap-3">
                             <span
-                              class="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                              class="bg-brand flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
                               >{{ visit.slot }}</span
                             >
                             <div class="min-w-0">
@@ -476,6 +515,7 @@
                         </li>
                       }
                     </ol>
+                    </div>
                   </section>
                 }
               </div>
@@ -528,7 +568,7 @@
                   <p hlmCardDescription>Eligible customers that did not fit in the horizon.</p>
                 </div>
                 <div hlmCardContent>
-                  <div class="overflow-x-auto">
+                  <div hlmTableContainer>
                     <table hlmTable>
                       <thead hlmTHead>
                         <tr hlmTr>

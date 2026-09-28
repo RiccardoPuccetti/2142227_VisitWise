@@ -1,5 +1,7 @@
 import { Component, computed, effect, inject, input, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCalendarRange } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -16,7 +18,7 @@ import type {
   WhatIfResult,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur } from '../../shared';
+import { EurPipe, formatEur, PageHeader } from '../../shared';
 import { DEFAULT_BASE } from './planner.model';
 import { PlannerService } from './planner.service';
 import {
@@ -51,6 +53,8 @@ const DEFAULT_HORIZONS = '20, 30, 40';
   selector: 'app-scenario-compare-page',
   imports: [
     RouterLink,
+    NgIcon,
+    PageHeader,
     HlmAlertImports,
     HlmBadgeImports,
     HlmButtonImports,
@@ -62,6 +66,7 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     HlmTableImports,
     EurPipe,
   ],
+  providers: [provideIcons({ lucideCalendarRange })],
   templateUrl: './scenario-compare-page.html',
 })
 export class ScenarioComparePage {
@@ -126,6 +131,15 @@ export class ScenarioComparePage {
       .map((point) => `${point.x},${point.y}`)
       .join(' '),
   );
+
+  /** The curve closed down to the baseline, for the shaded area under it. */
+  protected readonly areaPath = computed(() => {
+    const points = this.curve();
+    if (!points.length) return '';
+    const first = points[0];
+    const last = points[points.length - 1];
+    return `${first.x},${this.chart.height} ${this.curvePath()} ${last.x},${this.chart.height}`;
+  });
 
   constructor() {
     effect(() => {

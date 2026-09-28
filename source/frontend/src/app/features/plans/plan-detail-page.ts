@@ -1,5 +1,7 @@
 import { Component, computed, inject, input, resource, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCalendarRange, lucideDownload, lucideEuro, lucideMapPin, lucideRoute } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -7,7 +9,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, KpiCard } from '../../shared';
+import { EurPipe, formatEur, KpiCard, PageHeader } from '../../shared';
 import { agentLabel, calendarWeeks, exportUrl, planAgents, visitStops } from './plan.model';
 import { PlansService } from './plans.service';
 
@@ -31,6 +33,10 @@ function formatDate(date: string, format: Intl.DateTimeFormat): string {
   return format.format(new Date(`${date}T00:00:00Z`));
 }
 
+function visitCountLabel(count: number): string {
+  return count === 1 ? '1 visit' : `${count} visits`;
+}
+
 /**
  * Agent plan (US-28..US-30): the visits of a saved plan day by day, one week per row from Monday to Friday, with
  * OpenStreetMap directions from the previous stop and the Excel export of the whole plan or of one agent.
@@ -45,8 +51,11 @@ function formatDate(date: string, format: Intl.DateTimeFormat): string {
     HlmLabelImports,
     HlmNativeSelectImports,
     KpiCard,
+    NgIcon,
+    PageHeader,
     EurPipe,
   ],
+  providers: [provideIcons({ lucideCalendarRange, lucideDownload, lucideEuro, lucideMapPin, lucideRoute })],
   templateUrl: './plan-detail-page.html',
 })
 export class PlanDetailPage {
@@ -126,6 +135,7 @@ export class PlanDetailPage {
         date: day.date,
         title: formatDate(day.date, DAY),
         afterDeadline: !!deadline && day.date > deadline,
+        visits: visitCountLabel(day.entries.reduce((sum, entry) => sum + entry.visits.length, 0)),
         entries: day.entries.map((entry) => ({
           agent: agentLabel(entry.agent, planningMode),
           km: `${KM.format(entry.km)} km`,

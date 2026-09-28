@@ -9,10 +9,22 @@ import {
   signal,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideCalendarRange,
+  lucideEuro,
+  lucideGitCompare,
+  lucideMap,
+  lucideMapPin,
+  lucideRoute,
+  lucideSparkles,
+} from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
+import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
@@ -29,7 +41,7 @@ import type {
   StartingBase,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, KpiCard, MapView } from '../../shared';
+import { EurPipe, KpiCard, MapView, PageHeader } from '../../shared';
 import {
   DEFAULT_BASE,
   baseMarker,
@@ -61,10 +73,13 @@ function dateLabel(value: string | null): string {
   selector: 'app-planner-page',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
+    NgIcon,
     HlmAlertImports,
     HlmButtonImports,
     HlmCardImports,
     HlmCheckboxImports,
+    HlmEmptyImports,
     HlmFieldImports,
     HlmInputImports,
     HlmNativeSelectImports,
@@ -73,6 +88,10 @@ function dateLabel(value: string | null): string {
     EurPipe,
     KpiCard,
     MapView,
+    PageHeader,
+  ],
+  providers: [
+    provideIcons({ lucideCalendarRange, lucideEuro, lucideGitCompare, lucideMap, lucideMapPin, lucideRoute, lucideSparkles }),
   ],
   templateUrl: './planner-page.html',
 })

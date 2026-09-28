@@ -1,5 +1,7 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideCheck, lucideDownload, lucideFileSpreadsheet } from '@ng-icons/lucide';
 import { applyEach, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -13,6 +15,7 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { ImportPreview, ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
 import { requiredText } from '../auth/text-rules';
+import { PageHeader } from '../../shared';
 import { uploadProblem } from './import-file';
 import {
   draftFromPreview,
@@ -82,26 +85,45 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
     HlmNativeSelectImports,
     HlmSpinnerImports,
     HlmTableImports,
+    NgIcon,
+    PageHeader,
   ],
+  providers: [provideIcons({ lucideCheck, lucideDownload, lucideFileSpreadsheet })],
   template: `
-    <h1 class="text-2xl font-semibold">New import</h1>
+    <app-page-header title="New import" [trail]="[{ label: 'Imports', link: '/imports' }]">
+      <p>Three short steps: upload the ERP export, map its columns, then name the enterprises.</p>
+    </app-page-header>
 
     @if (step() !== 'done') {
-      <ol aria-label="Import steps" class="mt-4 flex flex-wrap gap-2 text-sm">
+      <ol aria-label="Import steps" class="mb-6 grid gap-3 sm:grid-cols-3">
         @for (item of steps; track item.id; let i = $index) {
           <li
-            class="rounded-full border px-3 py-1"
-            [class.bg-primary]="item.id === step()"
-            [class.text-primary-foreground]="item.id === step()"
+            class="bg-card flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ring-1 ring-border shadow-card"
+            [class.border-brand]="item.id === step()"
+            [class.ring-brand]="item.id === step()"
             [attr.aria-current]="item.id === step() ? 'step' : null"
           >
-            {{ i + 1 }}. {{ item.label }}
+            <span
+              class="grid size-8 shrink-0 place-items-center rounded-full text-sm font-semibold"
+              [class]="stepIndex(item.id) < stepIndex(step()) ? 'bg-success text-success-foreground' : item.id === step() ? 'bg-brand text-white' : 'bg-muted text-muted-foreground'"
+              aria-hidden="true"
+            >
+              @if (stepIndex(item.id) < stepIndex(step())) {
+                <ng-icon name="lucideCheck" />
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            <span class="flex flex-col">
+              <span class="eyebrow">Step {{ i + 1 }}</span>
+              <span class="font-medium" [class.text-muted-foreground]="stepIndex(item.id) > stepIndex(step())">{{ item.label }}</span>
+            </span>
           </li>
         }
       </ol>
     }
 
-    <section hlmCard class="mt-6 max-w-5xl" aria-labelledby="import-step-title">
+    <section hlmCard aria-labelledby="import-step-title">
       <div hlmCardHeader>
         <h2 hlmCardTitle id="import-step-title" tabindex="-1" #stepTitle class="outline-none">{{ title() }}</h2>
       </div>
@@ -109,35 +131,41 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
       <div hlmCardContent class="flex flex-col gap-6">
         @switch (step()) {
           @case ('upload') {
-            <p class="text-muted-foreground text-sm">
-              Upload the yearly ERP export (.xlsx, up to 20 MB). Columns can have any name and order: you map them
-              in the next step. The file is read and discarded, never stored.
-            </p>
-            <p class="text-sm">
-              Not sure about the format?
-              <a class="text-primary underline underline-offset-4" [href]="templateUrl" download>
-                Download the import template
-              </a>
-            </p>
-            <label
-              for="import-file"
-              class="border-input hover:bg-muted/50 focus-within:ring-ring/30 flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-8 text-center focus-within:ring-3"
-              [class.bg-muted]="dragging()"
-              (dragover)="onDragOver($event)"
-              (dragleave)="dragging.set(false)"
-              (drop)="onDrop($event)"
-            >
-              <span class="font-medium">Drop the Excel file here, or choose it</span>
-              <span class="text-muted-foreground text-sm">Only .xlsx workbooks</span>
-              <input
-                id="import-file"
-                type="file"
-                class="sr-only"
-                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                [disabled]="loading()"
-                (change)="onFileInput($event)"
-              />
-            </label>
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+              <label
+                for="import-file"
+                class="border-input hover:bg-muted/40 focus-within:ring-ring/30 flex min-h-64 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition-colors focus-within:ring-3"
+                [class.bg-brand-soft]="dragging()"
+                [class.border-brand]="dragging()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="dragging.set(false)"
+                (drop)="onDrop($event)"
+              >
+                <span class="bg-brand-soft text-brand grid size-14 place-items-center rounded-2xl" aria-hidden="true">
+                  <ng-icon name="lucideFileSpreadsheet" class="text-2xl" />
+                </span>
+                <span class="text-lg font-medium">Drop the Excel file here, or choose it</span>
+                <span class="text-muted-foreground text-sm">Only .xlsx workbooks, up to 20 MB</span>
+                <input
+                  id="import-file"
+                  type="file"
+                  class="sr-only"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  [disabled]="loading()"
+                  (change)="onFileInput($event)"
+                />
+              </label>
+              <aside class="bg-muted/40 flex flex-col gap-4 rounded-2xl p-5 text-sm">
+                <h3 class="font-semibold">How it works</h3>
+                <p class="text-muted-foreground">
+                  Upload the yearly ERP export. Columns can have any name and order: you map them in the next step.
+                  The file is read and discarded, never stored.
+                </p>
+                <a hlmBtn variant="outline" size="sm" class="self-start" [href]="templateUrl" download>
+                  <ng-icon name="lucideDownload" aria-hidden="true" /> Download the import template
+                </a>
+              </aside>
+            </div>
             @if (loading()) {
               <p role="status" class="flex items-center gap-2 text-sm"><hlm-spinner /> Reading {{ file()?.name }}…</p>
             }
@@ -175,7 +203,7 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
                 </table>
               </div>
 
-              <fieldset class="grid gap-4 md:grid-cols-2">
+              <fieldset class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <legend class="mb-2 text-sm font-medium">Which column holds each field? Required fields are marked *</legend>
                 @for (item of fields; track item.key) {
                   <div hlmField>
@@ -212,7 +240,8 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
                 @for (item of wizard.enterprises; track $index; let i = $index) {
                   @if (isCandidate(item().value().sourceColumn)) {
                     <div
-                      class="grid items-start gap-3 rounded-xl border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+                      class="bg-muted/30 grid items-start gap-3 rounded-2xl border p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+                      [class.border-brand]="item().value().selected"
                       [attr.data-column]="item().value().sourceColumn"
                     >
                       <div class="flex items-center gap-2 pt-2">
@@ -272,21 +301,26 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
 
           @case ('done') {
             @if (summary(); as s) {
-              <p>
-                <span class="font-medium">{{ s.name }}</span> was imported from {{ s.sourceFileName }}.
-              </p>
-              <dl class="grid max-w-md grid-cols-3 gap-4">
-                <div class="rounded-xl border p-3">
+              <div class="bg-success/10 text-success flex items-center gap-3 rounded-2xl p-4">
+                <span class="bg-success text-success-foreground grid size-10 shrink-0 place-items-center rounded-full" aria-hidden="true">
+                  <ng-icon name="lucideCheck" class="text-xl" />
+                </span>
+                <p class="text-foreground">
+                  <span class="font-medium">{{ s.name }}</span> was imported from {{ s.sourceFileName }}.
+                </p>
+              </div>
+              <dl class="grid grid-cols-3 gap-4">
+                <div class="bg-muted/40 rounded-2xl p-5">
                   <dt class="text-muted-foreground text-sm">Rows in the file</dt>
-                  <dd class="text-2xl font-semibold">{{ s.totalRows }}</dd>
+                  <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ s.totalRows }}</dd>
                 </div>
-                <div class="rounded-xl border p-3">
+                <div class="bg-muted/40 rounded-2xl p-5">
                   <dt class="text-muted-foreground text-sm">Imported</dt>
-                  <dd class="text-2xl font-semibold">{{ s.importedRows }}</dd>
+                  <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums text-success">{{ s.importedRows }}</dd>
                 </div>
-                <div class="rounded-xl border p-3">
+                <div class="bg-muted/40 rounded-2xl p-5">
                   <dt class="text-muted-foreground text-sm">Skipped</dt>
-                  <dd class="text-2xl font-semibold">{{ s.skippedRows }}</dd>
+                  <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{{ s.skippedRows }}</dd>
                 </div>
               </dl>
               <p class="text-muted-foreground text-sm">
@@ -321,6 +355,10 @@ export class ImportWizardPage {
   protected readonly templateUrl = IMPORT_TEMPLATE_URL;
   protected readonly steps = STEPS;
   protected readonly fields = FIELDS;
+
+  protected stepIndex(step: Step): number {
+    return step === 'done' ? STEPS.length : STEPS.findIndex((item) => item.id === step);
+  }
 
   protected readonly step = signal<Step>('upload');
   protected readonly file = signal<File | null>(null);

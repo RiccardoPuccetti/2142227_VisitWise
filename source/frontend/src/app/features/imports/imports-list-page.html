@@ -10,10 +10,10 @@
       (valueChange)="setView($event)"
       aria-label="View"
     >
-      <button hlmToggleGroupItem value="cards">Cards</button>
-      <button hlmToggleGroupItem value="table">Table</button>
+      <button hlmToggleGroupItem value="cards"><ng-icon name="lucideLayoutGrid" aria-hidden="true" /> Cards</button>
+      <button hlmToggleGroupItem value="table"><ng-icon name="lucideList" aria-hidden="true" /> Table</button>
     </div>
-    <a hlmBtn routerLink="/imports/new">New import</a>
+    <a hlmBtn routerLink="/imports/new"><ng-icon name="lucideUpload" aria-hidden="true" /> New import</a>
   </div>
 </app-page-header>
 
@@ -35,8 +35,11 @@
       <p hlmAlertDescription>{{ error }}</p>
     </div>
   } @else if (items().length === 0) {
-    <div hlmEmpty class="border">
+    <div hlmEmpty class="border-dashed">
       <div hlmEmptyHeader>
+        <span class="bg-brand-soft text-brand mx-auto grid size-14 place-items-center rounded-2xl" aria-hidden="true">
+          <ng-icon name="lucideUpload" class="text-2xl" />
+        </span>
         <h2 hlmEmptyTitle>No imports yet</h2>
         <p hlmEmptyDescription>Import the yearly ERP Excel file to see your customers on the map and plan visits.</p>
       </div>
@@ -44,80 +47,112 @@
         <a hlmBtn routerLink="/imports/new">Import a file</a>
       </div>
     </div>
-  } @else if (view() === 'cards') {
-    <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4" aria-label="Imports">
-      @for (item of items(); track item.id) {
-        <li hlmCard data-testid="import-card">
-          <div hlmCardHeader>
-            <h2 hlmCardTitle class="text-lg">
-              <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
-            </h2>
-            <p hlmCardDescription>
-              <time [attr.datetime]="item.createdAt">{{ item.created }}</time> · {{ item.sourceFileName }}
-            </p>
-          </div>
-          <div hlmCardContent class="flex flex-col gap-3">
-            <p class="flex flex-wrap items-center gap-2 text-sm">
-              <span class="font-medium">{{ item.importedRows }} points</span>
-              <span hlmBadge [variant]="item.status === 'FAILED' ? 'destructive' : item.status === 'READY' ? 'outline' : 'secondary'">
-                {{ item.statusLabel }}
-              </span>
-            </p>
-            <ul class="flex flex-wrap gap-3 text-sm" aria-label="Enterprises">
-              @for (enterprise of item.enterprises; track enterprise.id) {
-                <li class="flex items-center gap-2">
-                  <span class="size-3 rounded-full" [style.background-color]="enterprise.color" aria-hidden="true"></span>
-                  {{ enterprise.name }}
-                </li>
-              }
-            </ul>
-          </div>
-          <div hlmCardFooter class="flex flex-wrap gap-2">
-            <a hlmBtn size="sm" [routerLink]="['/imports', item.id, 'map']" [attr.aria-label]="'Map of ' + item.name">Map</a>
-            <ng-container *ngTemplateOutlet="deleteDialog; context: { $implicit: item }" />
-          </div>
-        </li>
-      }
-    </ul>
   } @else {
-    <div hlmTableContainer>
-      <table hlmTable>
-        <caption class="sr-only">Imports, newest first</caption>
-        <thead hlmTHead>
-          <tr hlmTr>
-            <th hlmTh scope="col">Name</th>
-            <th hlmTh scope="col">Created</th>
-            <th hlmTh scope="col">File</th>
-            <th hlmTh scope="col" class="text-right">Points</th>
-            <th hlmTh scope="col">Status</th>
-            <th hlmTh scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody hlmTBody>
-          @for (item of items(); track item.id) {
-            <tr hlmTr>
-              <td hlmTd class="font-medium">
-                <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
-              </td>
-              <td hlmTd><time [attr.datetime]="item.createdAt">{{ item.created }}</time></td>
-              <td hlmTd>{{ item.sourceFileName }}</td>
-              <td hlmTd class="text-right tabular-nums">{{ item.importedRows }}</td>
-              <td hlmTd>
+    <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <app-kpi-card label="Imports" icon="lucideFolderOpen" tone="brand" [value]="'' + items().length" />
+      <app-kpi-card label="Delivery points" icon="lucideMapPin" tone="chart-2" [value]="'' + totals().points" hint="across all imports" />
+      <app-kpi-card label="Ready to plan" icon="lucideCircleCheck" tone="chart-3" [value]="'' + totals().ready" [hint]="totals().pending > 0 ? totals().pending + ' still processing' : 'all imports ready'" />
+      <app-kpi-card label="Enterprises" icon="lucideBuilding2" tone="chart-5" [value]="'' + totals().enterprises" hint="distinct names" />
+    </div>
+
+    @if (view() === 'cards') {
+      <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4" aria-label="Imports">
+        @for (item of items(); track item.id) {
+          <li hlmCard data-testid="import-card" class="group relative">
+            <div class="absolute inset-x-0 top-0 flex h-1" aria-hidden="true">
+              @for (enterprise of item.enterprises; track enterprise.id) {
+                <span class="flex-1" [style.background-color]="enterprise.color"></span>
+              }
+            </div>
+            <div hlmCardHeader>
+              <div class="flex items-start justify-between gap-3">
+                <h2 hlmCardTitle class="text-lg">
+                  <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
+                </h2>
                 <span hlmBadge [variant]="item.status === 'FAILED' ? 'destructive' : item.status === 'READY' ? 'outline' : 'secondary'">
                   {{ item.statusLabel }}
                 </span>
-              </td>
-              <td hlmTd>
-                <div class="flex gap-2">
-                  <a hlmBtn size="sm" variant="outline" [routerLink]="['/imports', item.id, 'map']" [attr.aria-label]="'Map of ' + item.name">Map</a>
-                  <ng-container *ngTemplateOutlet="deleteDialog; context: { $implicit: item }" />
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+              </div>
+              <p hlmCardDescription class="flex items-center gap-1.5">
+                <ng-icon name="lucideCalendar" class="shrink-0" aria-hidden="true" />
+                <time [attr.datetime]="item.createdAt">{{ item.created }}</time>
+                <span aria-hidden="true">·</span>
+                <span class="truncate">{{ item.sourceFileName }}</span>
+              </p>
+            </div>
+            <div hlmCardContent class="flex flex-col gap-4">
+              <p class="flex items-baseline gap-2">
+                <span class="text-3xl font-semibold tracking-tight tabular-nums">{{ item.importedRows }}</span>
+                <span class="text-muted-foreground text-sm"> points</span>
+              </p>
+              <ul class="flex flex-wrap gap-x-3 gap-y-1.5 text-sm" aria-label="Enterprises">
+                @for (enterprise of item.enterprises; track enterprise.id) {
+                  <li class="flex items-center gap-2">
+                    <span class="size-2.5 rounded-full" [style.background-color]="enterprise.color" aria-hidden="true"></span>
+                    {{ enterprise.name }}
+                  </li>
+                }
+              </ul>
+            </div>
+            <div hlmCardFooter class="flex flex-wrap gap-2 border-t pt-4">
+              <a hlmBtn size="sm" [routerLink]="['/imports', item.id]" [attr.aria-label]="'Open ' + item.name">Open</a>
+              <a hlmBtn size="sm" variant="outline" [routerLink]="['/imports', item.id, 'map']" [attr.aria-label]="'Map of ' + item.name">
+                <ng-icon name="lucideMap" aria-hidden="true" /> Map
+              </a>
+              <span class="ml-auto"><ng-container *ngTemplateOutlet="deleteDialog; context: { $implicit: item }" /></span>
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <section hlmCard size="sm">
+        <div hlmCardContent class="px-0">
+          <div hlmTableContainer>
+            <table hlmTable>
+              <caption class="sr-only">Imports, newest first</caption>
+              <thead hlmTHead>
+                <tr hlmTr>
+                  <th hlmTh scope="col" class="pl-6">Name</th>
+                  <th hlmTh scope="col">Created</th>
+                  <th hlmTh scope="col">File</th>
+                  <th hlmTh scope="col" class="text-right">Points</th>
+                  <th hlmTh scope="col">Status</th>
+                  <th hlmTh scope="col" class="pr-6">Actions</th>
+                </tr>
+              </thead>
+              <tbody hlmTBody>
+                @for (item of items(); track item.id) {
+                  <tr hlmTr>
+                    <td hlmTd class="pl-6 font-medium">
+                      <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
+                      <span class="mt-1 flex gap-1" aria-hidden="true">
+                        @for (enterprise of item.enterprises; track enterprise.id) {
+                          <span class="size-2 rounded-full" [style.background-color]="enterprise.color"></span>
+                        }
+                      </span>
+                    </td>
+                    <td hlmTd><time [attr.datetime]="item.createdAt">{{ item.created }}</time></td>
+                    <td hlmTd class="text-muted-foreground">{{ item.sourceFileName }}</td>
+                    <td hlmTd class="text-right tabular-nums">{{ item.importedRows }}</td>
+                    <td hlmTd>
+                      <span hlmBadge [variant]="item.status === 'FAILED' ? 'destructive' : item.status === 'READY' ? 'outline' : 'secondary'">
+                        {{ item.statusLabel }}
+                      </span>
+                    </td>
+                    <td hlmTd class="pr-6">
+                      <div class="flex gap-2">
+                        <a hlmBtn size="sm" variant="outline" [routerLink]="['/imports', item.id, 'map']" [attr.aria-label]="'Map of ' + item.name">Map</a>
+                        <ng-container *ngTemplateOutlet="deleteDialog; context: { $implicit: item }" />
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    }
   }
 </section>
 
@@ -127,11 +162,12 @@
       hlmAlertDialogTrigger
       hlmBtn
       size="sm"
-      variant="outline"
+      variant="ghost"
+      class="text-muted-foreground hover:text-destructive"
       [attr.aria-label]="'Delete ' + item.name"
       [disabled]="deleting() === item.id"
     >
-      Delete
+      <ng-icon name="lucideTrash2" aria-hidden="true" /> Delete
     </button>
     <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
       <hlm-alert-dialog-header>
