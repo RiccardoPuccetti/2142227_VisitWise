@@ -22,8 +22,14 @@ Conventions
 | 5 | GET | `/api/imports/{id}` | `ImportDetail` (poll it every 3 s while `status = GEOCODING`) | 7, 8, 11 |
 | 6 | DELETE | `/api/imports/{id}` | Deletes import, points, plans. `204` | 12 |
 | 7 | GET | `/api/imports/{id}/points?geocodeStatus=NOT_FOUND` | `DeliveryPoint[]` (filter optional). Used by map, detail table, planner. **Owner: Rivera** (`analytics` package) | 9, 11, 13 |
-| 8 | PATCH | `/api/imports/{id}/points/{pointId}/location` | body `{ "latitude": 41.9, "longitude": 12.5 }` -> status `MANUAL`. Returns `DeliveryPoint` | 9 |
-| 9 | POST | `/api/imports/{id}/geocoding/retry` | Re-queues `NOT_FOUND`/`PENDING` points. `202` | 9 |
+| 8 | PATCH | `/api/imports/{id}/points/{pointId}/location` | body `{ "latitude": 41.9, "longitude": 12.5 }` (lat -90..90, lon -180..180, else `400`) -> status `MANUAL`. Returns `DeliveryPoint` | 9 |
+| 9 | POST | `/api/imports/{id}/geocoding/retry` | Re-queues `NOT_FOUND`/`PENDING` points (cached misses are asked to the provider again). `202` | 9 |
+| 9b | GET | `/api/imports/{id}/geocoding` | `GeocodingProgress`: the planner polls it every 3 s while `status = GEOCODING` or `pending > 0` | 8, 9 |
+
+**GeocodingProgress** `{ "status": "GEOCODING", "total": 73, "located": 40, "pending": 31, "notFound": 2, "errorMessage": null }`
+
+- `located` counts `OK`, `FROM_FILE` and `MANUAL` points. `errorMessage` is set when the job stopped because the geocoder was unavailable ("Geocoding interrupted: ... Retry later.").
+- Geocoding runs in the background right after `POST /api/imports` commits (one request per second to Nominatim, results cached in `geocode_cache`); imports left in `GEOCODING` by a restart are resumed at startup.
 
 **POST /api/imports/preview** -> 200
 
@@ -125,6 +131,20 @@ Parsing rules (both preview and import):
 | 16 | GET | `/api/plans/{planId}` | `PlanResult` of a saved plan | 27, 28 |
 | 17 | DELETE | `/api/plans/{planId}` | `204` | 27 |
 | 18 | GET | `/api/plans/{planId}/export?agent=AGENT%20NORTH` | `.xlsx` of the plan (optional agent filter). **Owner: Rivera** (`planning.export` package) | 29 |
+| 18b | POST | `/api/imports/{id}/plans/route` | body `RouteRequest` -> `RouteResponse`: real road route of one day (OSRM) or the straight-line estimate when the road service is down. `400` without stops or with more than 30 | 24 |
+
+**RouteRequest** `{ "base": GeoPoint, "stops": [GeoPoint, "..."], "averageSpeedKmh": 25, "roadFactor": 1.3 }` - the ordered stops of one day, base excluded (it is added at both ends).
+
+**RouteResponse**
+
+```json
+{
+  "source": "OSRM",                      // "ESTIMATE" when OSRM is disabled/unreachable: same Haversine model as the plan KPIs
+  "km": 18.7, "minutes": 46.2,
+  "legs": [{ "km": 2.4, "minutes": 6.1 }, { "km": 3.1, "minutes": 7.5 }],   // base->stop1, stop1->stop2, ..., last->base
+  "geometry": [{ "latitude": 41.896, "longitude": 12.4823 }, "..."]        // polyline to draw; base/stops/base for ESTIMATE
+}
+```
 
 **CampaignPreset**
 
