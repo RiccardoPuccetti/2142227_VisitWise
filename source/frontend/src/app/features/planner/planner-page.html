@@ -365,27 +365,6 @@
                   />
                 </div>
                 <div hlmField>
-                  <label hlmFieldLabel for="planner-speed">Average speed (km/h)</label
-                  ><input
-                    hlmInput
-                    id="planner-speed"
-                    type="number"
-                    min="1"
-                    formControlName="averageSpeedKmh"
-                  />
-                </div>
-                <div hlmField>
-                  <label hlmFieldLabel for="planner-road-factor">Road factor</label
-                  ><input
-                    hlmInput
-                    id="planner-road-factor"
-                    type="number"
-                    min="1"
-                    step="0.1"
-                    formControlName="roadFactor"
-                  />
-                </div>
-                <div hlmField>
                   <label hlmFieldLabel for="planner-travel-cost">Travel cost (€/km)</label
                   ><input
                     hlmInput
@@ -397,6 +376,39 @@
                   />
                 </div>
               </div>
+              <!-- The planner measures distances and times on the road network (OSRM); these two only feed the
+                   straight-line estimate used when it is off, unreachable or has no road between two points. -->
+              <fieldset class="mt-5 border-t pt-4">
+                <legend class="float-left mb-1 w-full pt-0 text-sm font-medium">If the road network is unavailable</legend>
+                <p id="planner-estimate-hint" class="text-muted-foreground clear-both text-sm">
+                  Used only to estimate distances and driving times when the road network cannot measure them.
+                </p>
+                <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-speed">Average speed (km/h)</label
+                    ><input
+                      hlmInput
+                      id="planner-speed"
+                      type="number"
+                      min="1"
+                      aria-describedby="planner-estimate-hint"
+                      formControlName="averageSpeedKmh"
+                    />
+                  </div>
+                  <div hlmField>
+                    <label hlmFieldLabel for="planner-road-factor">Road factor</label
+                    ><input
+                      hlmInput
+                      id="planner-road-factor"
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      aria-describedby="planner-estimate-hint"
+                      formControlName="roadFactor"
+                    />
+                  </div>
+                </div>
+              </fieldset>
             </details>
 
             @if (validationErrors().length) {
