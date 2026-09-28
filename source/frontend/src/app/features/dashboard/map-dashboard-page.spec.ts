@@ -271,6 +271,39 @@ describe('MapDashboardPage', () => {
       expect(scrollTo).toHaveBeenCalledOnce();
     });
 
+    it('recenters the map on a point clicked on the map', async () => {
+      await open('/imports/42/map', MANY);
+      const map = harness.fixture.debugElement.query(By.directive(MapView)).componentInstance as MapView;
+      const centerOn = vi.spyOn(map, 'centerOn');
+
+      map.markerClick.emit(map.markers().find((marker) => marker.id === 75)!);
+      await harness.fixture.whenStable();
+
+      expect(centerOn).toHaveBeenCalledOnce();
+      expect(centerOn.mock.calls[0][0]).toBe(75);
+    });
+
+    it('on wide screens shows the selected point in a popup anchored to its marker', async () => {
+      const wide = { matches: true, addEventListener() {}, removeEventListener() {} };
+      // jsdom has no matchMedia: give it one to spy on.
+      window.matchMedia ??= (() => ({ ...wide, matches: false })) as never;
+      const matchMedia = vi.spyOn(window, 'matchMedia').mockReturnValue(wide as unknown as MediaQueryList);
+      try {
+        await open('/imports/42/map', MANY);
+        const map = harness.fixture.debugElement.query(By.directive(MapView)).componentInstance as MapView;
+
+        map.markerClick.emit(map.markers().find((marker) => marker.id === 75)!);
+        await harness.fixture.whenStable();
+
+        expect(map.popupId()).toBe(75);
+        const popup = page().querySelector('app-map-view [data-map-popup]');
+        expect(popup?.textContent).toContain('CUSTOMER 75');
+        expect(page().querySelector('[aria-label="Selected point"] app-point-details')).toBeNull();
+      } finally {
+        matchMedia.mockRestore();
+      }
+    });
+
     it('starts again from the first page when a filter changes', async () => {
       await open('/imports/42/map', MANY);
       button('Next page').click();

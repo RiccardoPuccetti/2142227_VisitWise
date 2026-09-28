@@ -2,6 +2,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   Injector,
@@ -43,6 +44,7 @@ import {
   KpiCard,
   MapView,
   PageHeader,
+  POPUP_GAP,
 } from '../../shared';
 import { AmountBars, BarItem } from './amount-bars';
 import {
@@ -57,6 +59,11 @@ import {
 } from './dashboard.model';
 import { DashboardService, SummaryFilter } from './dashboard.service';
 import { PointDetails } from './point-details';
+
+/** From this width (Tailwind xl) the selected point opens in a popup on the map instead of a card below it. */
+const WIDE_QUERY = '(min-width: 80rem)';
+/** Width of the popup (w-80) plus its gap to the marker and a margin to the map edge, in pixels. */
+const POPUP_SPACE = 320 + POPUP_GAP + 16;
 
 /** Rows per page of the points list; the map shows all the points. */
 export const PAGE_SIZES = [25, 50, 100] as const;
@@ -120,6 +127,10 @@ export class MapDashboardPage {
   private readonly route = inject(ActivatedRoute);
   private readonly injector = inject(Injector);
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
+  private readonly mapView = viewChild(MapView);
+
+  /** Wide screen: the selected point opens in a popup anchored to its marker. */
+  protected readonly wide = signal(globalThis.matchMedia?.(WIDE_QUERY).matches ?? false);
 
   protected readonly id = computed(() => Number(this.importId()));
 
@@ -209,6 +220,10 @@ export class MapDashboardPage {
 
   protected readonly selected = computed(
     () => this.filteredPoints().find((point) => point.id === this.selectedId()) ?? null,
+  );
+  /** The selected point is shown in the map popup (wide screen and a marker to anchor it to). */
+  protected readonly popupOnMap = computed(
+    () => this.wide() && this.selected() !== null && this.markers().some((marker) => marker.id === this.selectedId()),
   );
 
   protected readonly topShare = computed(() => {
@@ -331,8 +346,17 @@ export class MapDashboardPage {
     }
   }
 
+  constructor() {
+    const query = globalThis.matchMedia?.(WIDE_QUERY);
+    const update = (event: MediaQueryListEvent) => this.wide.set(event.matches);
+    query?.addEventListener('change', update);
+    inject(DestroyRef).onDestroy(() => query?.removeEventListener('change', update));
+  }
+
+  /** Selects a point and brings its marker to the middle of the map (left of the popup on wide screens). */
   protected select(id: number | string): void {
     this.selectedId.set(Number(id));
+    this.mapView()?.centerOn(Number(id), this.wide() ? [0, POPUP_SPACE, 0, 0] : [0, 0, 0, 0]);
   }
 
   /** A marker was clicked: select its point, turn the list to its page and scroll the list (not the page) to its row. */
