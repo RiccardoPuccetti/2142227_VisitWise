@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import MouseWheelZoom from 'ol/interaction/MouseWheelZoom';
 import { fromLonLat } from 'ol/proj';
 import { MapView } from './map-view';
 
@@ -25,6 +26,20 @@ describe('MapView', () => {
     expect(region?.getAttribute('tabindex')).toBe('0');
     // OpenLayers attached its viewport to the target.
     expect(region?.querySelector('.ol-viewport')).not.toBeNull();
+    fixture.destroy();
+  });
+
+  it('zooms with the mouse wheel without taking the focus first', async () => {
+    const fixture = TestBed.createComponent(MapView);
+    await fixture.whenStable();
+    const map = fixture.componentInstance['map']!;
+    // The map region has a tabindex (keyboard access) and does not have the focus.
+    expect(document.activeElement).not.toBe(map.getTargetElement());
+    const wheel = map.getInteractions().getArray().find((candidate) => candidate instanceof MouseWheelZoom)!;
+    // OpenLayers keeps the condition private: read it to check the focus is not required.
+    const condition = (wheel as unknown as { condition_: (event: unknown) => boolean }).condition_;
+
+    expect(condition({ map, type: 'wheel', originalEvent: new WheelEvent('wheel') })).toBe(true);
     fixture.destroy();
   });
 

@@ -15,6 +15,7 @@ import OlMap from 'ol/Map';
 import Overlay from 'ol/Overlay';
 import View from 'ol/View';
 import { createEmpty, extend, isEmpty } from 'ol/extent';
+import { defaults as defaultInteractions } from 'ol/interaction/defaults';
 import type LineString from 'ol/geom/LineString';
 import type Point from 'ol/geom/Point';
 import TileLayer from 'ol/layer/Tile';
@@ -104,6 +105,9 @@ export class MapView {
       this.map = new OlMap({
         target,
         keyboardEventTarget: target,
+        // OpenLayers' own default is onFocusOnly: true, which, because the target has a tabindex (keyboard access),
+        // makes wheel zoom and drag pan wait for a click on the map first. Keyboard pan/zoom still need the focus.
+        interactions: defaultInteractions({ onFocusOnly: false }),
         layers: [
           new TileLayer({ source: new OSM() }),
           new VectorLayer({ source: this.routeSource }),
