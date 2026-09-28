@@ -1,0 +1,141 @@
+<!-- Agent plan (owner: Rivera, task RIV-4, US-28..US-30). -->
+<div class="flex flex-col gap-6">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-2xl font-semibold">{{ plan()?.name ?? 'Agent plan' }}</h1>
+    @if (subtitle()) {
+      <p class="text-muted-foreground text-sm">{{ subtitle() }}</p>
+    }
+  </header>
+
+  @if (error(); as message) {
+    <div hlmAlert variant="destructive" role="alert">
+      <h2 hlmAlertTitle>The plan cannot be loaded</h2>
+      <p hlmAlertDescription>{{ message }}</p>
+    </div>
+  }
+
+  @if (plan(); as plan) {
+    @if (plan.warnings.length) {
+      <div hlmAlert role="status">
+        <h2 hlmAlertTitle>Notes on this plan</h2>
+        <ul hlmAlertDescription class="list-disc ps-4">
+          @for (warning of plan.warnings; track $index) {
+            <li>{{ warning }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (indicators(); as kpis) {
+      <section aria-labelledby="plan-indicators-title">
+        <h2 id="plan-indicators-title" class="sr-only">Indicators</h2>
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <app-kpi-card label="Planned visits" [value]="kpis.visits" [hint]="kpis.customers" />
+          <app-kpi-card label="Covered revenue" [value]="kpis.revenue" [hint]="kpis.coverage" />
+          <app-kpi-card label="Working days used" [value]="kpis.days" />
+          <app-kpi-card label="Distance" [value]="kpis.km" [hint]="kpis.travel" />
+        </div>
+      </section>
+    }
+
+    <div class="flex flex-wrap items-end gap-3">
+      @if (agents().length) {
+        <div class="flex min-w-56 flex-col gap-1.5">
+          <label hlmLabel for="plan-agent">Agent</label>
+          <hlm-native-select
+            selectId="plan-agent"
+            [value]="agent() ?? ''"
+            (valueChange)="setAgent($event)"
+          >
+            <option hlmNativeSelectOption value="">All agents</option>
+            @for (name of agents(); track name) {
+              <option hlmNativeSelectOption [value]="name">{{ name }}</option>
+            }
+          </hlm-native-select>
+        </div>
+      }
+      <a hlmBtn variant="outline" [href]="exportHref()" download>
+        Export to Excel
+        <span class="sr-only">{{ agent() ? '(' + agent() + ')' : '(every agent)' }}</span>
+      </a>
+    </div>
+
+    <section aria-labelledby="calendar-title" class="flex flex-col gap-4">
+      <h2 id="calendar-title" class="text-lg font-semibold">Calendar</h2>
+      @for (week of weeks(); track week.monday) {
+        <section
+          data-testid="calendar-week"
+          [attr.aria-labelledby]="'week-' + week.monday"
+          class="flex flex-col gap-2"
+        >
+          <h3 [id]="'week-' + week.monday" class="text-muted-foreground text-sm font-medium">
+            {{ week.title }}
+          </h3>
+          <ol class="grid gap-3 md:grid-cols-5">
+            @for (day of week.days; track day.date) {
+              <li data-testid="calendar-day">
+                <section hlmCard size="sm" class="h-full">
+                  <div hlmCardHeader>
+                    <h4 hlmCardTitle class="flex flex-wrap items-center gap-2 text-sm">
+                      {{ day.title }}
+                      @if (day.afterDeadline) {
+                        <span hlmBadge variant="destructive">After the deadline</span>
+                      }
+                    </h4>
+                  </div>
+                  <div hlmCardContent class="flex flex-col gap-3 text-sm">
+                    @for (entry of day.entries; track entry.agent) {
+                      <div class="flex flex-col gap-2">
+                        @if (showAgentNames()) {
+                          <p class="text-xs font-medium">{{ entry.agent }}</p>
+                        }
+                        <ol class="flex flex-col gap-3">
+                          @for (stop of entry.stops; track stop.visit.slot) {
+                            <li class="flex flex-col gap-0.5">
+                              <span class="font-medium">
+                                <span class="text-muted-foreground tabular-nums"
+                                  >{{ stop.visit.slot }}.</span
+                                >
+                                {{ stop.visit.pointName }}
+                              </span>
+                              <span class="text-muted-foreground text-xs">{{
+                                stop.visit.customerName
+                              }}</span>
+                              <span class="text-xs"
+                                >{{ stop.visit.address }}, {{ stop.visit.city }}</span
+                              >
+                              <span class="text-xs tabular-nums">{{
+                                stop.visit.expectedRevenue | eur
+                              }}</span>
+                              <a
+                                class="text-xs underline underline-offset-4"
+                                [href]="stop.directions"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Directions<span class="sr-only">
+                                  to {{ stop.visit.pointName }} (opens in a new tab)</span
+                                >
+                              </a>
+                            </li>
+                          }
+                        </ol>
+                        <p class="text-muted-foreground text-xs">{{ entry.km }} in the day</p>
+                      </div>
+                    } @empty {
+                      <p class="text-muted-foreground">No visits</p>
+                    }
+                  </div>
+                </section>
+              </li>
+            }
+          </ol>
+        </section>
+      } @empty {
+        <p class="text-muted-foreground text-sm">No visits planned for this selection.</p>
+      }
+    </section>
+  } @else if (!error()) {
+    <p class="text-muted-foreground text-sm" aria-live="polite">Loading the plan…</p>
+  }
+</div>
