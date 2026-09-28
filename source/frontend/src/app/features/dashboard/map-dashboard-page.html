@@ -295,7 +295,7 @@
             </tr>
           </thead>
           <tbody hlmTBody>
-            @for (row of listedRows(); track row.point.id) {
+            @for (row of paging.rows(); track row.point.id) {
               <tr hlmTr [attr.data-point-id]="row.point.id" [attr.aria-current]="row.point.id === selectedId() ? 'true' : null" [class.bg-accent]="row.point.id === selectedId()">
                 <td hlmTd class="pl-6 whitespace-normal">
                   <button hlmBtn variant="link" size="sm" type="button" class="h-auto p-0 text-left font-medium whitespace-normal" (click)="select(row.point.id)">
@@ -311,34 +311,7 @@
           </tbody>
         </table>
       </div>
-      <nav aria-label="Pages of points" class="flex flex-wrap items-center justify-between gap-3 border-t px-6 pt-3 text-sm">
-        <div class="flex items-center gap-2">
-          <label hlmLabel for="points-page-size" class="font-normal">Rows per page</label>
-          <hlm-native-select selectId="points-page-size" size="sm" [value]="'' + pageSize()" (valueChange)="setPageSize($event); scroller.scrollTop = 0">
-            @for (size of pageSizes; track size) {
-              <option hlmNativeSelectOption [value]="'' + size">{{ size }}</option>
-            }
-          </hlm-native-select>
-        </div>
-        <p class="text-muted-foreground tabular-nums" aria-live="polite">Showing {{ listedRange() }} of {{ rows().length }}</p>
-        <div class="flex items-center gap-2">
-          <button hlmBtn size="sm" variant="outline" type="button" [disabled]="page() === 1" (click)="goToPage(page() - 1); scroller.scrollTop = 0">
-            Previous<span class="max-sm:sr-only"> page</span>
-          </button>
-          <label hlmLabel for="points-page" class="sr-only">Page</label>
-          <span class="flex items-center gap-2">
-            <hlm-native-select selectId="points-page" size="sm" class="shrink-0" [value]="'' + page()" (valueChange)="goToPage($event); scroller.scrollTop = 0">
-              @for (number of pageNumbers(); track number) {
-                <option hlmNativeSelectOption [value]="'' + number">{{ number }}</option>
-              }
-            </hlm-native-select>
-            <span class="text-muted-foreground tabular-nums whitespace-nowrap">of {{ pages() }}</span>
-          </span>
-          <button hlmBtn size="sm" variant="outline" type="button" [disabled]="page() === pages()" (click)="goToPage(page() + 1); scroller.scrollTop = 0">
-            Next<span class="max-sm:sr-only"> page</span>
-          </button>
-        </div>
-      </nav>
+      <app-table-pager [paging]="paging" idPrefix="points" label="Pages of points" [scroller]="scroller" />
     </div>
   </section>
 </div>
