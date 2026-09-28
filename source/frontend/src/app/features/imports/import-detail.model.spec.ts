@@ -1,4 +1,4 @@
-import type { ColumnMapping, GeocodingProgress } from '../../core/models/api.models';
+import type { ColumnMapping, DeliveryPoint, Enterprise, GeocodingProgress } from '../../core/models/api.models';
 import {
   geocodeStatusLabel,
   geocodingRunning,
@@ -9,6 +9,7 @@ import {
   pageCount,
   pageOf,
   parseCoordinate,
+  territoryMarkers,
 } from './import-detail.model';
 
 const PROGRESS: GeocodingProgress = {
@@ -114,6 +115,51 @@ describe('import detail model', () => {
     expect(mappingRows({ ...mapping, agent: 'Agente', latitude: 'Lat', longitude: 'Lon' })).toContainEqual({
       field: 'Latitude',
       column: 'Lat',
+    });
+  });
+  describe('territoryMarkers (US-11, US-38)', () => {
+    const ENTERPRISES: Enterprise[] = [
+      { id: 21, name: 'Wine', color: '#0072B2', sourceColumn: 'ENTERPRISE A' },
+      { id: 22, name: 'Beer', color: '#009E73', sourceColumn: 'ENTERPRISE B' },
+    ];
+    const point = (id: number, located: boolean, revenues: DeliveryPoint['revenues']): DeliveryPoint => ({
+      id,
+      sourceRow: id,
+      customerName: 'ACME SRL',
+      pointName: `POINT ${id}`,
+      address: 'VIA DEL CORSO 1',
+      city: 'ROMA',
+      agent: null,
+      latitude: located ? 41.9 : null,
+      longitude: located ? 12.5 : null,
+      geocodeStatus: located ? 'OK' : 'NOT_FOUND',
+      totalRevenue: revenues.reduce((sum, line) => sum + line.amount, 0),
+      revenues,
+    });
+
+    it('places the located points, colored by the enterprise that sells most there', () => {
+      const markers = territoryMarkers(
+        [
+          point(1, true, [
+            { enterpriseId: 21, amount: 100 },
+            { enterpriseId: 22, amount: 300 },
+          ]),
+          point(2, false, [{ enterpriseId: 21, amount: 50 }]),
+          point(3, true, [{ enterpriseId: 21, amount: 80 }]),
+        ],
+        ENTERPRISES,
+      );
+
+      expect(markers).toEqual([
+        { id: 1, latitude: 41.9, longitude: 12.5, color: '#009E73', radius: 5, title: 'POINT 1' },
+        { id: 3, latitude: 41.9, longitude: 12.5, color: '#0072B2', radius: 5, title: 'POINT 3' },
+      ]);
+    });
+
+    it('draws points without positive revenue in grey', () => {
+      const [marker] = territoryMarkers([point(4, true, [{ enterpriseId: 21, amount: -20 }])], ENTERPRISES);
+
+      expect(marker.color).toBe('#8a9099');
     });
   });
 });

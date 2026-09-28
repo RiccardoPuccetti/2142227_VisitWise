@@ -25,7 +25,7 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { DeliveryPoint, GeocodingProgress } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe } from '../../shared';
+import { EurPipe, MapView, PageHeader } from '../../shared';
 import {
   geocodeStatusLabel,
   geocodingRunning,
@@ -35,6 +35,7 @@ import {
   needsLocation,
   pageCount,
   pageOf,
+  territoryMarkers,
 } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsService } from './imports.service';
@@ -68,6 +69,8 @@ type PointFilter = 'all' | 'missing';
     HlmTableImports,
     HlmToggleGroupImports,
     EurPipe,
+    MapView,
+    PageHeader,
     PointLocationForm,
   ],
   templateUrl: './import-detail-page.html',
@@ -111,6 +114,19 @@ export class ImportDetailPage {
   protected readonly statusLabel = computed(() => {
     const detail = this.detail();
     return detail ? importStatusLabel(detail.status) : '';
+  });
+  /** The report figures shown as one strip (US-07, US-11). */
+  protected readonly figures = computed(() => {
+    const detail = this.detail();
+    return detail
+      ? [
+          { label: 'Rows in the file', value: detail.totalRows },
+          { label: 'Imported', value: detail.importedRows },
+          { label: 'Skipped', value: detail.skippedRows },
+          { label: 'Agents', value: detail.agents.length },
+          { label: 'Cities', value: detail.cities.length },
+        ]
+      : [];
   });
   protected readonly mapping = computed(() => {
     const mapping = this.detail()?.mapping;
@@ -160,6 +176,10 @@ export class ImportDetailPage {
     const error = this.pointsResource.error();
     return error ? problemDetail(error) : null;
   });
+
+  /** Territory preview: the located points on a small map (US-11, US-38). */
+  protected readonly territory = computed(() => territoryMarkers(this.points(), this.detail()?.enterprises ?? []));
+  protected readonly pointTotal = computed(() => this.points().length);
 
   protected readonly editing = signal<DeliveryPoint | null>(null);
   protected readonly message = signal('');
