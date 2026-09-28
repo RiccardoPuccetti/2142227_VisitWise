@@ -173,6 +173,33 @@ class GreedyVisitPlannerTest {
     }
 
     @Test
+    void usesRoadDistancesForTheRangeAndRoadTimesForTheWorkday() {
+        var near = located(1, .01, 100);
+        var other = located(2, -.01, 90);
+        var far = located(3, .02, 300);
+        List<GeoPoint> points = List.of(base, near.location(), other.location(), far.location());
+        // Straight-line estimate: all within 3 km and 8 minutes. By road: 90 km to "far", 20 minutes to each
+        // of the others and 30 minutes between them.
+        double[][] km = {{0, 5, 6, 90}, {5, 0, 8, 90}, {6, 8, 0, 90}, {90, 90, 90, 0}};
+        double[][] minutes = {{0, 20, 20, 70}, {20, 0, 30, 70}, {20, 30, 0, 70}, {70, 70, 70, 0}};
+        var estimate = custom(210, 480, 1, 0, 0, Map.of(1L, 1.0), Set.of());
+        var roads = new PlannerParameters(estimate.startDate(), estimate.deadline(), estimate.workingDays(),
+                estimate.enterpriseWeights(), estimate.agents(), estimate.planningMode(), base,
+                estimate.constraints(), estimate.travel(), estimate.travelCostPerKm(), estimate.minRevenue(),
+                new RoadMatrix(points, km, minutes).over(estimate.travel()));
+
+        assertThat(planner.plan(List.of(near, other, far), estimate).kpis().plannedVisits()).isEqualTo(2);
+        var result = planner.plan(List.of(near, other, far), roads);
+        assertThat(result.kpis().excludedOutOfRange()).isEqualTo(1);
+        // Two visits (420 min) leave 60 minutes; the round through both takes 70 minutes by road.
+        assertThat(result.days().getFirst().targets()).extracting(VisitTarget::id).containsExactly(1L);
+        assertThat(result.days().getFirst().km()).isEqualTo(10);
+        assertThat(result.days().getFirst().travelMinutes()).isEqualTo(40);
+        assertThat(result.kpis().totalKm()).isEqualTo(10);
+        assertThat(result.kpis().travelHours()).isCloseTo(40 / 60.0, within(1e-12));
+    }
+
+    @Test
     void rejectsDuplicatePointIds() {
         var a = point(1, "One", "A", 100);
         assertThatThrownBy(() -> planner.plan(List.of(a, a), parameters(PlanningMode.PER_AGENT, 1)))

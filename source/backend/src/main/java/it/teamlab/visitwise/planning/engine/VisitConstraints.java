@@ -19,8 +19,8 @@ public record VisitConstraints(int visitDurationMinutes, int workdayMinutes, dou
         }
     }
 
-    /** The inclusive range limit applies to one-way estimated road distance from the base. */
-    public boolean isWithinRange(GeoPoint base, GeoPoint target, TravelModel travel) {
+    /** The inclusive range limit applies to the one-way road distance from the base (estimated or measured). */
+    public boolean isWithinRange(GeoPoint base, GeoPoint target, Travel travel) {
         requireTravel(travel);
         return travel.roadDistanceKm(base, target) <= maxDistanceKm;
     }
@@ -36,7 +36,7 @@ public record VisitConstraints(int visitDurationMinutes, int workdayMinutes, dou
         return travelMinutes + (double) stops.size() * visitDurationMinutes <= workdayMinutes;
     }
 
-    private static void requireTravel(TravelModel travel) {
+    private static void requireTravel(Travel travel) {
         if (travel == null) {
             throw new IllegalArgumentException("Travel model is required");
         }

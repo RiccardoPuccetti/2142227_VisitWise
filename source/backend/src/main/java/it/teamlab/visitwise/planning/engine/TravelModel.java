@@ -3,7 +3,7 @@ package it.teamlab.visitwise.planning.engine;
 import java.util.List;
 
 /** Local travel estimates: great-circle distance times road factor, at a constant speed. */
-public record TravelModel(double averageSpeedKmh, double roadFactor) {
+public record TravelModel(double averageSpeedKmh, double roadFactor) implements Travel {
 
     public static final TravelModel DEFAULT = new TravelModel(25, 1.3);
     private static final double EARTH_RADIUS_KM = 6371.0088;
@@ -18,6 +18,7 @@ public record TravelModel(double averageSpeedKmh, double roadFactor) {
     }
 
     /** Haversine distance on a sphere, scaled to estimate road distance in kilometres. */
+    @Override
     public double roadDistanceKm(GeoPoint from, GeoPoint to) {
         requirePoint(from);
         requirePoint(to);
@@ -33,6 +34,7 @@ public record TravelModel(double averageSpeedKmh, double roadFactor) {
     }
 
     /** Fractional minutes are retained for feasibility checks. */
+    @Override
     public double travelMinutes(GeoPoint from, GeoPoint to) {
         return roadDistanceKm(from, to) / averageSpeedKmh * 60;
     }

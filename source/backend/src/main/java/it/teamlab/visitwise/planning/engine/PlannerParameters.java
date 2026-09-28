@@ -4,12 +4,27 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 
-/** Weights omitted from the map are excluded; an empty agent set selects all agents. */
+/**
+ * Weights omitted from the map are excluded; an empty agent set selects all agents. {@code roads} gives the distances
+ * and times used for range, workday and route length: the {@code travel} estimate unless road figures are supplied.
+ */
 public record PlannerParameters(LocalDate startDate, LocalDate deadline, int workingDays,
                                 Map<Long, Double> enterpriseWeights, Set<String> agents,
                                 PlanningMode planningMode, GeoPoint base, VisitConstraints constraints,
-                                TravelModel travel, double travelCostPerKm, double minRevenue) {
+                                TravelModel travel, double travelCostPerKm, double minRevenue, Travel roads) {
+
+    public PlannerParameters(LocalDate startDate, LocalDate deadline, int workingDays,
+                             Map<Long, Double> enterpriseWeights, Set<String> agents,
+                             PlanningMode planningMode, GeoPoint base, VisitConstraints constraints,
+                             TravelModel travel, double travelCostPerKm, double minRevenue) {
+        this(startDate, deadline, workingDays, enterpriseWeights, agents, planningMode, base, constraints, travel,
+                travelCostPerKm, minRevenue, travel);
+    }
+
     public PlannerParameters {
+        if (roads == null) {
+            roads = travel;
+        }
         if (startDate == null || startDate.getYear() < 1 || deadline == null || deadline.getYear() < 1
                 || workingDays < 1 || workingDays > 260 || enterpriseWeights == null || agents == null
                 || planningMode == null || base == null || constraints == null || travel == null) {
