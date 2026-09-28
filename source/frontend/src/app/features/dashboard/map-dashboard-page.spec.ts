@@ -167,6 +167,22 @@ describe('MapDashboardPage', () => {
     expect(text()).toContain('1 of 2 points on the map');
   });
 
+  it('keeps the indicators and charts on screen while the filtered ones load', async () => {
+    await open();
+
+    button('Enterprise B').click();
+    TestBed.tick();
+
+    // The filtered summary has not arrived yet: the previous figures stay instead of emptying the charts.
+    expect(text()).toContain(`2780,50${NBSP}€`);
+    expect(page().querySelector('[aria-labelledby="charts-title"]')?.getAttribute('aria-busy')).toBe('true');
+
+    summaryRequests()[0].flush(summary({ totalRevenue: 1130 }));
+    await harness.fixture.whenStable();
+    expect(text()).toContain(`1130,00${NBSP}€`);
+    expect(page().querySelector('[aria-labelledby="charts-title"]')?.getAttribute('aria-busy')).toBe('false');
+  });
+
   it('applies the filters found in the URL', async () => {
     await harness.navigateByUrl('/imports/42/map?agent=AGENT%20SOUTH&minRevenue=100');
     http.expectOne('/api/imports/42/points').flush(POINTS);

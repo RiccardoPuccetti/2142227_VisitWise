@@ -58,7 +58,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="charts-title" class="flex flex-col gap-4">
+  <section aria-labelledby="charts-title" class="flex flex-col gap-4" [attr.aria-busy]="refreshing()">
     <h2 id="charts-title" class="sr-only">Revenue breakdown</h2>
     <div class="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4">
       <section hlmCard size="sm" aria-labelledby="chart-enterprise-title">

@@ -32,6 +32,7 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { problemDetail } from '../../core/auth/problem-detail';
+import type { AnalyticsSummary } from '../../core/models/api.models';
 import { pageCount, pageOf } from '../imports/import-detail.model';
 import {
   AreaChart,
@@ -167,12 +168,16 @@ export class MapDashboardPage {
     loader: ({ params }) => this.api.summary(params.id, params.filter),
   });
 
-  protected readonly summary = computed(() => {
-    const filter = this.summaryFilter();
-    const source =
-      filter.enterpriseIds.length || filter.agent ? this.filteredSummary : this.baseSummary;
-    return valueOf(source);
+  /** The summary for the current filter, or the previous one while it loads, so the charts do not empty and refill. */
+  protected readonly summary = linkedSignal<AnalyticsSummary | undefined, AnalyticsSummary | undefined>({
+    source: () => {
+      const filter = this.summaryFilter();
+      return valueOf(filter.enterpriseIds.length || filter.agent ? this.filteredSummary : this.baseSummary);
+    },
+    computation: (next, previous) => next ?? previous?.value,
   });
+  /** A filtered summary is loading while the previous figures stay on screen. */
+  protected readonly refreshing = computed(() => this.filteredSummary.isLoading());
 
   protected readonly loading = computed(() => this.pointsResource.isLoading() || !this.summary());
 
