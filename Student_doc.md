@@ -80,7 +80,7 @@ The browser downloads map tiles from the OpenStreetMap tile servers (attribution
 - TECHNOLOGICAL SPECIFICATION:
 Angular 22 (standalone components, signals, lazy routes), TypeScript in strict mode, spartan-ng (brain/helm) UI components, Tailwind CSS 4, OpenLayers with OpenStreetMap tiles for maps, Vitest for unit tests, nginx for serving.
 - SERVICE ARCHITECTURE: 
-`core/` holds the API models (mirror of the API contract) and shared services, `features/<feature>/` holds one folder per functional area (imports, dashboard, planner) with its pages and API service, `shared/` holds reusable presentational components.
+`core/` holds the API models (mirror of the API contract) and shared services, `features/<feature>/` holds one folder per functional area (imports, dashboard, planner, plans) with its pages and API service, `shared/` holds reusable presentational components.
 
 - PAGES:
 
@@ -95,7 +95,7 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 	| Map dashboard | OpenStreetMap map of delivery points with filters and summary indicators | visitwise-backend | 13, 14, 15, 16, 17, 18 |
 	| Visit planner | Starting base by address, campaign and parameters, geocoding progress, proposed plan (calendar, real road itinerary of the selected day on the map, indicators), scenario save | visitwise-backend | 8, 9, 19, 20, 21, 22, 23, 24, 25, 27, 35 |
 	| What-if and scenarios | Coverage over different horizons, saved scenarios compared side by side | visitwise-backend | 26, 27 |
-	| Plan detail | Day-by-day calendar per agent, Excel export, directions links | visitwise-backend | 28, 29, 30 |
+	| Plan detail | Saved plan week by week (Monday to Friday) with the visits of each day in order, filter by agent, OpenStreetMap directions from the previous stop, Excel export of the whole plan or of one agent | visitwise-backend | 28, 29, 30 |
 
 ## CONTAINER_NAME: visitwise-backend
 
