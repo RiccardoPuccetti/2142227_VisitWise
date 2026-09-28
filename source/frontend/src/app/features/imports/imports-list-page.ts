@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, inject, linkedSignal, resource, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, linkedSignal, resource, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
@@ -12,6 +12,7 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
+import { PageHeader } from '../../shared';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
 import { ImportsService } from './imports.service';
@@ -34,13 +35,14 @@ import { ImportsService } from './imports.service';
     HlmSpinnerImports,
     HlmTableImports,
     HlmToggleGroupImports,
+    PageHeader,
   ],
   templateUrl: './imports-list-page.html',
 })
 export class ImportsListPage {
   private readonly api = inject(ImportsService);
   private readonly preference = inject(ImportsViewPreference);
-  private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+  private readonly header = viewChild.required(PageHeader);
 
   protected readonly view = this.preference.view;
 
@@ -84,7 +86,7 @@ export class ImportsListPage {
       this.imports.update((imports) => imports.filter((candidate) => candidate.id !== item.id));
       this.message.set(`${item.name} was deleted.`);
       // The button that opened the dialog is gone: keep the keyboard focus on the page.
-      this.heading().nativeElement.focus();
+      this.header().focusTitle();
     } catch (error) {
       this.deleteError.set(problemDetail(error));
     } finally {

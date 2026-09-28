@@ -136,19 +136,21 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
     const page = root(fixture);
 
     expect(text(page.querySelector('h1'))).toBe('Sample 2025');
+    expect(page.querySelector('nav[aria-label="Breadcrumb"] a[href="/imports"]')).not.toBeNull();
     expect(text(page)).toContain('sample-erp-layout.xlsx');
     expect(page.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-28T10:15:00+02:00');
     expect(pairs(page.querySelector('[data-testid="report"] dl'))).toEqual([
       'Rows in the file 129',
       'Imported 73',
       'Skipped 56',
+      'Agents 2',
+      'Cities 2',
     ]);
     expect(text(page.querySelector('[aria-label="Enterprises"]'))).toBe('Wine Beer');
     const mapping = pairs(page.querySelector('[data-testid="mapping"] dl'));
     expect(mapping).toContain('Customer Ragione Sociale');
     expect(mapping).toContain('Wine ENTERPRISE A');
-    expect(text(page)).toContain('2 agents');
-    expect(text(page)).toContain('2 cities');
+    expect(text(page.querySelector('[data-testid="territory"]'))).toContain('1 of 2 points on the map');
   });
 
   it('shows the server message when the import cannot be loaded', async () => {

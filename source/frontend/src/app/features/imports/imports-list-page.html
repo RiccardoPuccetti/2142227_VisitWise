@@ -1,26 +1,23 @@
-<section class="flex flex-col gap-6" aria-labelledby="imports-title">
-  <header class="flex flex-wrap items-end justify-between gap-4">
-    <div class="flex flex-col gap-1">
-      <h1 id="imports-title" #heading tabindex="-1" class="text-2xl font-semibold outline-none">Imports</h1>
-      <p class="text-muted-foreground">Every Excel file your federation imported. Open one to see its customers.</p>
+<app-page-header title="Imports">
+  <p>Every Excel file your federation imported. Open one to see its customers and plan visits.</p>
+  <div actions class="flex flex-wrap items-center gap-3">
+    <div
+      hlmToggleGroup
+      type="single"
+      variant="outline"
+      [nullable]="false"
+      [value]="view()"
+      (valueChange)="setView($event)"
+      aria-label="View"
+    >
+      <button hlmToggleGroupItem value="cards">Cards</button>
+      <button hlmToggleGroupItem value="table">Table</button>
     </div>
-    <div class="flex flex-wrap items-center gap-3">
-      <div
-        hlmToggleGroup
-        type="single"
-        variant="outline"
-        [nullable]="false"
-        [value]="view()"
-        (valueChange)="setView($event)"
-        aria-label="View"
-      >
-        <button hlmToggleGroupItem value="cards">Cards</button>
-        <button hlmToggleGroupItem value="table">Table</button>
-      </div>
-      <a hlmBtn routerLink="/imports/new">New import</a>
-    </div>
-  </header>
+    <a hlmBtn routerLink="/imports/new">New import</a>
+  </div>
+</app-page-header>
 
+<section class="flex flex-col gap-6" aria-label="Imports list">
   <p role="status" class="empty:hidden text-sm">{{ message() }}</p>
 
   @if (deleteError(); as error) {
@@ -48,7 +45,7 @@
       </div>
     </div>
   } @else if (view() === 'cards') {
-    <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Imports">
+    <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,19rem),1fr))] gap-4" aria-label="Imports">
       @for (item of items(); track item.id) {
         <li hlmCard data-testid="import-card">
           <div hlmCardHeader>

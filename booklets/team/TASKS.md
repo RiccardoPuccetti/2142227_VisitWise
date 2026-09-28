@@ -48,6 +48,7 @@ PUC-8 and PUC-9 follow the steps in `booklets/architecture/AUTHENTICATION.md`.
 | PUC-10 | Tenant starting base: columns on `tenant`, get / save API geocoding address + city, `StartingBaseField` component for the planner form | 35 | PUC-8, PUC-4 |
 | PUC-12 | "Keep me logged in": persistent remember-me tokens (`persistent_logins`, changeset 005), checkbox on the login page, logout forgets this device, password change forgets all | 37 | PUC-8, PUC-9 |
 | PUC-11 | Dark mode: `ThemeService` (system preference until the user chooses, choice kept in the browser), theme applied before first paint (`theme-init.js`, allowed by the CSP), toggle in the header | 36 | RIV-1 |
+| PUC-13 | Visual revamp (reference: dark investment dashboard): theme tokens for both themes, brand accent, pill navigation in the header, then every page (key figures, cards, tables, charts) step by step | 38 | RIV-1, PUC-11 |
 
 ## Marzella - Planning
 

@@ -7,6 +7,68 @@ against what is planned. Newest check first: add a new dated section on top, do 
 
 Legend: ✅ done (merged in `develop`) · 🟡 partly done · ❌ not started · ⏭️ skipped by decision · ❓ not visible in the repo
 
+## 2026-09-28 - PUC-13 on `feat/PUC-13-visual-revamp` (base `develop` at `b707798`)
+
+This section records the first part of PUC-13 (visual revamp, US-38), merged into `develop` with this branch.
+MAR-6 was merged into `develop` in `b707798`; PUC-3 and PUC-6 in `d4ced7d` and `03d683a`. Other task statuses are
+carried forward from the previous checks.
+
+### Summary
+
+| Member | Done | Partly done | Not started | Skipped / unknown |
+|---|---|---|---|---|
+| Puccetti (PUC) | 10 (PUC-2, 3, 4, 5, 6, 8, 9, 10, 11, 12) | 2 (PUC-7, 13) | - | 1 skipped (PUC-1) |
+| Marzella (MAR) | 6 (MAR-1, 2, 3, 4, 5, 6) | - | - | - |
+| Rivera (RIV) | 4 (RIV-1, 2, 3, 4) | - | - | 1 unknown (RIV-5) |
+
+### Puccetti - Import, tenants and login
+
+| Task | Status | Evidence / what is missing |
+|---|---|---|
+| PUC-1 Dev seed with the synthetic sample | ⏭️ Skipped | Decided 2026-09-28: log in with the demo tenant and import `source/sample-data/sample-erp-layout.xlsx` with the wizard |
+| PUC-2 Template + preview API | ✅ Done | `GET /api/imports/template`, `POST /api/imports/preview` (`4ab1702`, `1963428`, `080375b`) |
+| PUC-3 Import API | ✅ Done | Merged in `develop` (`d4ced7d`): create, `GET /api/imports`, `GET /api/imports/{id}` (`ImportDetail`), `DELETE /api/imports/{id}` (database cascade to enterprises, points, revenues, plans) (`afaaa5e`) |
+| PUC-4 Background geocoding | ✅ Done | Merged with PR #6 (`ad28426`): Nominatim client + cache, async job, `GET /api/imports/{id}/geocoding`, retry, manual location |
+| PUC-5 Import wizard page | ✅ Done | Upload, columns, enterprises and name, report (`10421c7`, `6217f07`) |
+| PUC-6 Imports list + import detail pages | ✅ Done | Merged into `develop` with `feat/PUC-6-imports-pages`. **Imports list** `/imports` (US-10, US-12): cards or table, choice kept in `localStorage`, empty state, delete after an alert dialog (`366075e`). **Import detail** `/imports/:importId` (US-07..US-09, US-11, US-12): report and column mapping, geocoding progress polled every 3 s while the import is `GEOCODING` (detail and points reloaded at the end), retry of the addresses not found or never tried, points table with a not-located filter and 50 points per page, manual location form (decimal comma accepted), delete (`657f28d`). Tests: 58 new (imports folder 89 in total) |
+| PUC-7 Student_doc, mockups S1-S5/S12/S13, real file on the demo laptop | 🟡 Partly done | `Student_doc.md` up to date. No mockup images; real file not imported yet |
+| PUC-8 Tenants and login (backend) | ✅ Done | Registration, login, lockout, rate limit, profile API, tenant guard, demo tenant |
+| PUC-9 Login, register and profile pages | ✅ Done | Pages, route guards, 401 handling, tenant menu |
+| PUC-10 Tenant starting base | ✅ Done | Merged with PR #6 (`ad28426`): changeset 006, `GET/PUT /api/profile/base`; the base field lives in the planner page |
+| PUC-11 Dark mode | ✅ Done | Header toggle, system theme until chosen (`93ec023`) |
+| PUC-12 Keep me logged in | ✅ Done | Persistent remember-me tokens, login checkbox (`95b8c52`, `0e74b73`) |
+| PUC-13 Visual revamp | 🟡 Partly done | Merged into `develop` with `feat/PUC-13-visual-revamp`: theme tokens for both themes (app frame, page panel, raised surfaces, brand orange for logo, progress and focus only); app shell as a Linear/Vercel inset layout with a sidebar from 1024 px, collapsible to icons (choice in `localStorage`), open import name and account initials, top bar with pill groups below 1024 px (`27e3538`); shared `PageHeader` (breadcrumb, title, description, actions) and the import detail as a Material Design 3 supporting-pane layout with a territory map (`2145ba0`); US-38 and PUC-13 recorded (`6c7c5e8`). Missing: imports list as list-detail, wizard, login, register, profile, map dashboard, planner, what-if and scenarios, agent plan pages |
+
+### Marzella - Planning
+
+| Task | Status | Evidence / what is missing |
+|---|---|---|
+| MAR-1 Engine basics | ✅ Done | Working calendar, campaign windows, travel model, visit constraints, 76 unit tests (`836bd21`) |
+| MAR-2 Planner algorithm | ✅ Done | Deterministic greedy planner, bounded local search, routes and KPIs (`376eaa2`) |
+| MAR-3 Planning API | ✅ Done | Campaigns, simulate, what-if, save/list/get/delete plans (`3cd7e04`); road route endpoint 18b merged with PR #6 |
+| MAR-4 Planner page | ✅ Done | Merged in `develop` (`fe22836`, rework in `ad28426`): starting point by address, campaign, KPIs, day timeline, real road route, scenario save |
+| MAR-5 What-if + scenarios compare pages | ✅ Done | Merged with PR #7 (`fe7180a`): what-if page (coverage curve and table over up to 5 horizons) and saved scenarios side by side, with a link to the agent plan page and delete |
+| MAR-6 Mockups S7-S10 | ✅ Done | Merged into `develop` (`b707798`): `booklets/user-stories/mockups/S7-planner-parameters.png`, `S8-planner-result.png`, `S9-what-if.png`, `S10-scenarios-compare.png`, grayscale 1280 x 900 with synthetic sample names, generated by `booklets/user-stories/mockups/tools/GenerateMockups.java` (Java2D, no `.bmpr`); mockups README updated. Scope reduced to the mockups: no "measured results" section |
+
+### Rivera - Platform and map
+
+| Task | Status | Evidence / what is missing |
+|---|---|---|
+| RIV-1 App shell, UI kit, shared components, `MapView` | ✅ Done | `58ee3a9`, `4469107`, `a69d56f`, `7d214db` |
+| RIV-2 Points list + analytics summary API | ✅ Done | `GET /api/imports/{id}/points`, `GET /api/imports/{id}/analytics/summary` (`57aad60`) |
+| RIV-3 Map dashboard | ✅ Done | Markers, filters, point details, indicators (`853de59`, `15c41aa`) |
+| RIV-4 Agent plan page + Excel export | ✅ Done | Merged with PR #8 (`b8745e0`): `GET /api/plans/{planId}/export` (one sheet per agent, `?agent=` filter) and the agent plan page `imports/:importId/plans/:planId` (calendar Mon-Fri, directions links, agent filter, Excel export) |
+| RIV-5 Architecture booklet, stories spreadsheet, mockups, slides, demo script | ❓ Unknown | Booklets and spreadsheet exist; no S6/S11 mockup images or slides in the repo yet |
+
+### Blockers and next steps
+
+- **Planner geocoding polling**: the planner page treats `pending > 0` as running, so on a `READY` import with points left `PENDING` (geocoder unavailable, or imported before PUC-4) it polls every 3 s without end. The import detail page polls only while the status is `GEOCODING` and offers a retry. To be agreed with Marzella.
+- **Visual revamp (PUC-13)**: the next steps restyle pages of Rivera (map dashboard, agent plan) and Marzella (planner, what-if, scenarios); agreed through Puccetti.
+- **Saved plan vs. export**: `GET /api/plans/{planId}` recomputes the plan from its saved parameters, the Excel export reads the saved visits. They differ if the points of the import change after the plan is saved (geocoding, manual location): to be agreed between Marzella and Rivera.
+- **Data sent outside**: the directions links (US-30) open openstreetmap.org with the coordinates of the stops, like the OSRM road route of the planner; `source/AGENTS.md` section 8 names only Nominatim. To be confirmed by the team.
+- **Bundle budget**: the initial bundle is 570.78 kB (budget 500 kB): the alert dialog of PUC-6 brings `@angular/cdk` to the startup bundle, the revamp adds the shell icons and styles. `app.css` is 5.50 kB, over the 4 kB component style warning (`angular.json`). To be decided.
+- **Mockups S1-S6, S11-S13** (Puccetti, Rivera) are still missing from the repo.
+
 ## 2026-09-28 - MAR-6 on `matteomarzella-feat/MAR-6-strategy-results-mockups` (base `develop` at `b8745e0`)
 
 This section records local MAR-6 work awaiting review and merge. Other task statuses are carried forward from the

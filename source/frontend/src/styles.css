@@ -15,74 +15,102 @@
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  /*
+   * US-38 visual revamp. Shell = app frame and sidebar; background = the page panel set into it; card/muted = raised
+   * surfaces inside the panel. Route orange (--brand) marks the logo, progress and focus, never data.
+   * Contrast (WCAG AA): secondary text >= 6:1 on every surface, white on --brand 4.8:1.
+   */
+  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: #121417;
+  --card: #ffffff;
+  --card-foreground: #121417;
+  --popover: #ffffff;
+  --popover-foreground: #121417;
+  --primary: #121417;
+  --primary-foreground: #fafafa;
+  --secondary: #eef0f2;
+  --secondary-foreground: #121417;
+  --muted: #f5f6f8;
+  --muted-foreground: #5a6169;
+  --accent: #eef0f2;
+  --accent-foreground: #121417;
+  --destructive: #dc2626;
+  --border: #e2e5e9;
+  --input: #d7dbe0;
+  --ring: #d33a15;
+  /* Highlight color of key figures and the logo; never used for data (enterprise colors are). */
+  --brand: #d33a15;
+  --brand-foreground: #ffffff;
+  /* Positive change pills. */
+  --success: #dcfce7;
+  --success-foreground: #14532d;
+
+  --chart-1: #d33a15;
+  --chart-2: #ca8a04;
+  --chart-3: #0b0b0d;
+  --chart-4: #16a34a;
+  --chart-5: #2563eb;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0b0b0d;
+  --sidebar-primary: #0b0b0d;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #ededef;
+  --sidebar-accent-foreground: #0b0b0d;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #d33a15;
+  --shell: #e9ebee;
 }
 
 :root.dark {
   color-scheme: dark;
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.984 0.003 247.858);
-  --sidebar-primary-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: #131619;
+  --foreground: #eceef0;
+  --card: #1b1f23;
+  --card-foreground: #eceef0;
+  --popover: #1f2327;
+  --popover-foreground: #eceef0;
+  --primary: #eceef0;
+  --primary-foreground: #121417;
+  --secondary: #252a2f;
+  --secondary-foreground: #eceef0;
+  --muted: #1b1f23;
+  --muted-foreground: #9aa1a9;
+  --accent: #252a2f;
+  --accent-foreground: #eceef0;
+  --destructive: #f87171;
+  --border: rgb(255 255 255 / 7%);
+  --input: rgb(255 255 255 / 12%);
+  --ring: #ff7a50;
+  --brand: #d33a15;
+  --brand-foreground: #ffffff;
+  --success: #4ade80;
+  --success-foreground: #052e16;
+
+  --chart-1: #ff6a3d;
+  --chart-2: #facc15;
+  --chart-3: #f4f4f5;
+  --chart-4: #4ade80;
+  --chart-5: #60a5fa;
+  --sidebar: #161619;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #f4f4f5;
+  --sidebar-primary-foreground: #0b0b0d;
+  --sidebar-accent: #26262b;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: rgb(255 255 255 / 8%);
+  --sidebar-ring: #ff7a50;
+  --shell: #0c0e10;
+}
+
+/* Tailwind classes for the tokens added by the revamp: bg-brand, text-brand-foreground, bg-success, ... */
+@theme inline {
+  --color-shell: var(--shell);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
 }
 
 @layer base {
