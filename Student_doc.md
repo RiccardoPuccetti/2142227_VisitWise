@@ -48,6 +48,7 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 36) As a User, I want to switch the interface between light and dark mode, so that I can work comfortably in any light
 37) As a User, I want to stay logged in on my own device, so that I do not have to type my credentials every day
 38) As a User, I want a modern and consistent interface where the key figures stand out, so that I can read the data at a glance
+39) As an Analyst, I want the planner to use real road distances and driving times, so that every planned day can really be driven within the working hours
 
 
 # CONTAINERS:
@@ -104,7 +105,7 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 REST API that registers and logs in the tenants (federations), imports the Excel files, stores and geolocates the data, computes the analytics and the visit plans. Each tenant sees only its own data.
 
 ### USER STORIES:
-1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 31, 32, 33, 34, 35
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 31, 32, 33, 34, 35, 39
 
 ### PORTS: 
 127.0.0.1:8080:8080 (published only on the host itself: users reach the API through the frontend container)
@@ -118,7 +119,7 @@ Every tenant, import, delivery point, revenue, geocoding result and saved plan i
 ### EXTERNAL SERVICES CONNECTIONS
 Nominatim (OpenStreetMap geocoding, https://nominatim.openstreetmap.org) to turn addresses into coordinates: at most 1 request per second with an identifying User-Agent, as required by its usage policy. Every result is cached in the database, so an address is geocoded only once. Only address and city are sent: customer names and revenues never leave the system.
 
-OSRM (OpenStreetMap routing, https://router.project-osrm.org) to compute the real road route of the day selected in the planner (a few requests per session, never a full distance matrix). When it is disabled (`ROUTING_ENABLED=false`) or unreachable the backend falls back to the straight-line estimate used by the planning engine. Only coordinates are sent.
+OSRM (OpenStreetMap routing) to compute the real road route of the day selected in the planner. By default this is the public demo server https://router.project-osrm.org (a few requests per session, never a full distance matrix). With the optional `osrm` Docker Compose profile the backend uses the visitwise-osrm container instead, and also asks it for the road distances and driving times between the base and all the located points of an import, which the planner uses to choose and order the visits (US-39); no coordinate then leaves the machine. When routing is disabled (`ROUTING_ENABLED=false`) or unreachable the backend falls back to the straight-line estimate used by the planning engine. Only coordinates are sent.
 
 ### MICROSERVICES:
 
@@ -215,3 +216,34 @@ Single database `visitwise`, schema `public`.
 	**_visit_plan_** :	| **_id_** | import_id | name | created_at | parameters | kpis |
 
 	**_planned_visit_** :	| **_id_** | plan_id | delivery_point_id | agent | visit_date | day_index | slot | expected_revenue | travel_km |
+
+## CONTAINER_NAME: visitwise-osrm
+
+### DESCRIPTION:
+Optional road routing server (Docker Compose profile `osrm`) that gives the planner real road distances and driving times.
+
+### USER STORIES:
+24, 39
+
+### PORTS:
+127.0.0.1:5000:5000 (published only on the host itself)
+
+### DESCRIPTION:
+OSRM v6 (`osrm-routed`, contraction hierarchies, car profile) on the OpenStreetMap extract of central Italy. A one-off companion container, visitwise-osrm-data, downloads the extract from Geofabrik and prepares the road network the first time; the server starts when it has finished. The backend calls its route service (road route of one day) and its table service (distances and times between many points, in blocks of 500 x 500).
+
+### PERSISTENCE EVALUATION
+The prepared road network (about 1 GB) is kept in the named Docker volume `visitwise-osrm-data`, so it is downloaded and prepared only once; it is prepared again only when `OSRM_PBF_URL` changes. The server itself keeps no state.
+
+### EXTERNAL SERVICES CONNECTIONS
+Geofabrik (https://download.geofabrik.de), only from visitwise-osrm-data and only the first time, to download the OpenStreetMap extract. No application data is sent.
+
+### MICROSERVICES:
+
+#### MICROSERVICE: visitwise-osrm
+- TYPE: backend
+- DESCRIPTION: Road routing server used by visitwise-backend for day routes and distance tables.
+- PORTS: 5000
+- TECHNOLOGICAL SPECIFICATION:
+OSRM v6.0.0 (official image `ghcr.io/project-osrm/osrm-backend`), car profile, contraction hierarchies, `--max-table-size 500`.
+- SERVICE ARCHITECTURE:
+Stateless HTTP server that reads the prepared road network from the `visitwise-osrm-data` volume.
