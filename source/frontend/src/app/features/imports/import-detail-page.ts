@@ -16,11 +16,9 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  lucideBuilding2,
   lucideCalendarRange,
   lucideCircleCheck,
   lucideCircleSlash,
-  lucideFileSpreadsheet,
   lucideMap,
   lucideMapPin,
   lucideMapPinned,
@@ -38,7 +36,16 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { DeliveryPoint, GeocodingProgress } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { createPaging, EurPipe, MapView, PageHeader, TablePager } from '../../shared';
+import {
+  createPaging,
+  EnterpriseLegend,
+  EurPipe,
+  KpiCard,
+  KpiTone,
+  MapView,
+  PageHeader,
+  TablePager,
+} from '../../shared';
 import {
   geocodeStatusLabel,
   geocodingRunning,
@@ -82,15 +89,15 @@ type PointFilter = 'all' | 'missing';
     MapView,
     PageHeader,
     TablePager,
+    KpiCard,
+    EnterpriseLegend,
     PointLocationForm,
   ],
   providers: [
     provideIcons({
-      lucideBuilding2,
       lucideCalendarRange,
       lucideCircleCheck,
       lucideCircleSlash,
-      lucideFileSpreadsheet,
       lucideMap,
       lucideMapPin,
       lucideMapPinned,
@@ -140,19 +147,32 @@ export class ImportDetailPage {
     const detail = this.detail();
     return detail ? importStatusLabel(detail.status) : '';
   });
-  /** The report figures shown as one strip (US-07, US-11). */
-  protected readonly figures = computed(() => {
-    const detail = this.detail();
-    return detail
-      ? [
-          { label: 'Rows in the file', value: detail.totalRows, icon: 'lucideFileSpreadsheet', tone: 'bg-muted text-muted-foreground' },
-          { label: 'Imported', value: detail.importedRows, icon: 'lucideCircleCheck', tone: 'bg-success/15 text-success' },
-          { label: 'Skipped', value: detail.skippedRows, icon: 'lucideCircleSlash', tone: 'bg-warning/15 text-warning' },
-          { label: 'Agents', value: detail.agents.length, icon: 'lucideUsers', tone: 'bg-info/15 text-info' },
-          { label: 'Cities', value: detail.cities.length, icon: 'lucideMapPin', tone: 'bg-brand-soft text-brand' },
-        ]
-      : [];
-  });
+  /** The report figures, as key figure cards like the map dashboard (US-07, US-11). */
+  protected readonly figures = computed<{ label: string; value: string; hint: string | null; icon: string; tone: KpiTone }[]>(
+    () => {
+      const detail = this.detail();
+      return detail
+        ? [
+            {
+              label: 'Imported',
+              value: String(detail.importedRows),
+              hint: `of ${detail.totalRows} rows in the file`,
+              icon: 'lucideCircleCheck',
+              tone: 'brand',
+            },
+            {
+              label: 'Skipped',
+              value: String(detail.skippedRows),
+              hint: 'subtotals, totals and incomplete rows',
+              icon: 'lucideCircleSlash',
+              tone: 'neutral',
+            },
+            { label: 'Agents', value: String(detail.agents.length), hint: null, icon: 'lucideUsers', tone: 'chart-2' },
+            { label: 'Cities', value: String(detail.cities.length), hint: null, icon: 'lucideMapPin', tone: 'chart-3' },
+          ]
+        : [];
+    },
+  );
   protected readonly mapping = computed(() => {
     const mapping = this.detail()?.mapping;
     return mapping ? mappingRows(mapping) : [];

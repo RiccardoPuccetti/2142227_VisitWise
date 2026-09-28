@@ -110,6 +110,15 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
   /** Waits for the (shortened) geocoding poll to fire. */
   const nextPoll = () => new Promise((resolve) => setTimeout(resolve, 30));
 
+  beforeAll(() => {
+    // jsdom has no ResizeObserver; OpenLayers needs one for the territory map.
+    globalThis.ResizeObserver ??= class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    };
+  });
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [ImportDetailPage],
@@ -139,14 +148,21 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
     expect(page.querySelector('nav[aria-label="Breadcrumb"] a[href="/imports"]')).not.toBeNull();
     expect(text(page)).toContain('sample-erp-layout.xlsx');
     expect(page.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-28T10:15:00+02:00');
-    expect(pairs(page.querySelector('[data-testid="report"] dl'))).toEqual([
-      'Rows in the file 129',
-      'Imported 73',
-      'Skipped 56',
+    // Same key figure cards as the map dashboard; the rows of the file and what "skipped" means are hints.
+    const figures = Array.from(page.querySelectorAll('[data-testid="report"] app-kpi-card')).map((card) =>
+      Array.from(card.querySelectorAll('h3, p'))
+        .map((part) => text(part))
+        .join(' '),
+    );
+    expect(figures).toEqual([
+      'Imported 73 of 129 rows in the file',
+      'Skipped 56 subtotals, totals and incomplete rows',
       'Agents 2',
       'Cities 2',
     ]);
-    expect(text(page.querySelector('[aria-label="Enterprises"]'))).toBe('Wine Beer');
+    // The enterprise colors are the legend of the territory map, as on the map dashboard.
+    const legend = page.querySelectorAll('[data-testid="territory"] [aria-label="Enterprises"] li');
+    expect(Array.from(legend).map((entry) => text(entry))).toEqual(['Wine', 'Beer']);
     const mapping = pairs(page.querySelector('[data-testid="mapping"] dl'));
     expect(mapping).toContain('Customer Ragione Sociale');
     expect(mapping).toContain('Wine ENTERPRISE A');

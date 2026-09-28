@@ -45,247 +45,210 @@
     </div>
   }
 
-  <!--
-    Supporting-pane layout (Material Design 3): the customers lead, the facts about the file support them. From 1536 px
-    the supporting pane is a column on the right; below, it sits between the figures and the table.
-  -->
-  <div
-    class="grid gap-8 [grid-template-areas:'figures'_'aside'_'points'] 2xl:grid-cols-[minmax(0,1fr)_21rem] 2xl:grid-rows-[auto_1fr] 2xl:gap-x-0 2xl:[grid-template-areas:'figures_aside'_'points_aside']"
-  >
-      <section data-testid="report" aria-labelledby="report-title" class="min-w-0 [grid-area:figures] 2xl:pr-8">
-        <h2 id="report-title" class="sr-only">Import report</h2>
-        <dl class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
-          @for (figure of figures(); track figure.label) {
-            <div hlmCard size="sm" class="flex flex-col gap-2 p-5">
-              <dt class="text-muted-foreground flex items-center justify-between gap-2 text-sm font-medium">
-                {{ figure.label }}
-                <span class="grid size-8 place-items-center rounded-lg text-base" [class]="figure.tone" aria-hidden="true">
-                  <ng-icon [name]="figure.icon" />
-                </span>
-              </dt>
-              <dd class="text-3xl leading-none font-semibold tracking-tight tabular-nums">{{ figure.value }}</dd>
-            </div>
-          }
-        </dl>
-        <p class="text-muted-foreground mt-3 text-xs">
-          Skipped rows are subtotals, totals and rows with a missing customer, delivery point, address or city, or with
-          a revenue that is not a number.
-        </p>
-      </section>
-
-    <div class="flex min-w-0 flex-col gap-8 [grid-area:points] 2xl:pr-8">
-      <p role="status" class="empty:hidden text-sm">{{ message() }}</p>
-
-      <section data-testid="points" aria-labelledby="points-title" hlmCard class="flex flex-col gap-0 py-0">
-        <div class="flex flex-wrap items-center justify-between gap-4 border-b px-6 py-4">
-          <div class="flex flex-col gap-0.5">
-            <h2 id="points-title" #pointsTitle tabindex="-1" class="panel-title outline-none">Delivery points</h2>
-            <p class="panel-subtitle">{{ pointTotal() }} points, newest first. Set the location of the ones the geocoder missed.</p>
-          </div>
-          <div
-            hlmToggleGroup
-            type="single"
-            variant="outline"
-            [nullable]="false"
-            [value]="filter()"
-            (valueChange)="setFilter($event)"
-            aria-label="Points shown"
-          >
-            <button hlmToggleGroupItem value="all">All points</button>
-            <button hlmToggleGroupItem value="missing">Not located ({{ missingCount() }})</button>
-          </div>
-        </div>
-
-        @if (pointsError(); as error) {
-          <div hlmAlert variant="destructive" role="alert" class="m-6">
-            <p hlmAlertDescription>{{ error }}</p>
-          </div>
-        } @else {
-          <!-- Scrolls inside the card (the header stays visible) so a long page does not push the pager off screen. -->
-          <div
-            hlmTableContainer
-            #scroller
-            class="max-h-[28rem] overflow-y-auto rounded-none border-0"
-            tabindex="0"
-            role="region"
-            aria-label="Delivery points of the import"
-          >
-            <table hlmTable>
-              <caption class="sr-only">Delivery points of the import</caption>
-              <thead hlmTHead class="bg-card sticky top-0 z-10 shadow-[inset_0_-1px_0_var(--border)]">
-                <tr hlmTr class="hover:bg-transparent">
-                  <th hlmTh scope="col" class="pl-6">Delivery point</th>
-                  <th hlmTh scope="col">Address</th>
-                  <th hlmTh scope="col">Agent</th>
-                  <th hlmTh scope="col" class="text-right">Revenue</th>
-                  <th hlmTh scope="col">Location</th>
-                  <th hlmTh scope="col" class="pr-6">Actions</th>
-                </tr>
-              </thead>
-              <tbody hlmTBody>
-                @for (row of rows(); track row.point.id) {
-                  <tr hlmTr>
-                    <td hlmTd class="pl-6 whitespace-normal">
-                      <span class="font-medium">{{ row.point.pointName }}</span>
-                      <span class="text-muted-foreground block text-xs">{{ row.point.customerName }}</span>
-                    </td>
-                    <td hlmTd class="whitespace-normal">{{ row.point.address }}, {{ row.point.city }}</td>
-                    <td hlmTd>{{ row.point.agent ?? '–' }}</td>
-                    <td hlmTd class="text-right tabular-nums">{{ row.point.totalRevenue | eur }}</td>
-                    <td hlmTd>
-                      <span hlmBadge [variant]="row.canLocate ? 'destructive' : 'outline'">{{ row.location }}</span>
-                    </td>
-                    <td hlmTd class="pr-6">
-                      @if (row.canLocate) {
-                        <button
-                          hlmBtn
-                          size="sm"
-                          variant="outline"
-                          [attr.aria-label]="'Set the location of ' + row.point.pointName"
-                          (click)="edit(row.point, $event.currentTarget)"
-                        >
-                          Set location
-                        </button>
-                      }
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr hlmTr>
-                    <td hlmTd colspan="6" class="text-muted-foreground text-center">No points to show.</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-          <app-table-pager class="pb-3" [paging]="paging" idPrefix="points" label="Pages of points" [scroller]="scroller" />
+  <div class="flex flex-col gap-6">
+    <!-- Same order as the map dashboard: key figures, then the map with a rail beside it, then the table. -->
+    <section data-testid="report" aria-labelledby="report-title">
+      <h2 id="report-title" class="sr-only">Import report</h2>
+      <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        @for (figure of figures(); track figure.label) {
+          <app-kpi-card [label]="figure.label" [value]="figure.value" [hint]="figure.hint" [icon]="figure.icon" [tone]="figure.tone" />
         }
+      </div>
+    </section>
+
+    <!-- Small screens: the map, then the two cards side by side. From xl: the cards in a left rail, the map beside it
+         as tall as the rail. -->
+    <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
+      <section data-testid="territory" aria-labelledby="territory-title" hlmCard size="sm" class="xl:col-start-2 xl:row-start-1">
+        <div hlmCardContent class="flex h-full flex-col gap-3">
+          <h2 id="territory-title" class="sr-only">Territory</h2>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <app-enterprise-legend [enterprises]="import.enterprises" />
+            <p class="text-muted-foreground text-sm">
+              {{ territory().length }} of {{ pointTotal() }} points on the map ·
+              <a [routerLink]="['/imports', import.id, 'map']" class="text-foreground underline underline-offset-4">Open the map</a>
+            </p>
+          </div>
+          <app-map-view
+            class="block h-80 overflow-hidden rounded-xl border xl:h-auto xl:min-h-80 xl:flex-1"
+            [markers]="territory()"
+            ariaLabel="Located delivery points of the import"
+          />
+        </div>
       </section>
 
-      @if (editing(); as point) {
-        <section
-          #locationPanel
-          tabindex="-1"
-          data-testid="location-form"
-          hlmCard
-          class="outline-none"
-          aria-label="Set a location by hand"
-        >
-          <div hlmCardContent>
-            <app-point-location-form
-              [importId]="import.id"
-              [point]="point"
-              (saved)="located($event)"
-              (cancelled)="closeLocation()"
-            />
+      <aside class="grid content-start gap-6 md:grid-cols-2 xl:col-start-1 xl:row-start-1 xl:grid-cols-1" aria-label="About this import">
+        <section data-testid="geocoding" aria-labelledby="geocoding-title" hlmCard size="sm">
+          <div hlmCardContent class="flex flex-col gap-3">
+            <h2 id="geocoding-title" class="panel-title flex items-center gap-2">
+              <ng-icon name="lucideMapPinned" class="text-muted-foreground" aria-hidden="true" /> Addresses on the map
+            </h2>
+            @if (progress(); as progress) {
+              @if (running()) {
+                <hlm-progress [value]="percent()" aria-label="Addresses located">
+                  <hlm-progress-indicator />
+                </hlm-progress>
+              }
+              <p class="text-sm">
+                <span class="font-medium">{{ progress.located }} of {{ progress.total }} addresses located</span>
+                @if (running()) {
+                  · {{ progress.pending }} still to locate
+                }
+              </p>
+              @if (progress.notFound > 0) {
+                <p class="text-sm">
+                  {{ progress.notFound }} {{ progress.notFound === 1 ? 'address' : 'addresses' }} not found: retry them,
+                  or set their location in the table below.
+                </p>
+              }
+              @if (!running() && progress.pending > 0) {
+                <p class="text-sm">
+                  {{ progress.pending }} {{ progress.pending === 1 ? 'address' : 'addresses' }} not located yet: the
+                  geocoding stopped before reaching them.
+                </p>
+              }
+              @if (!running() && missing() > 0) {
+                <button hlmBtn variant="outline" size="sm" class="self-start" [disabled]="retrying()" (click)="retry()">
+                  Retry the missing addresses
+                </button>
+              }
+              @if (progress.errorMessage; as error) {
+                <div hlmAlert variant="destructive" role="alert">
+                  <p hlmAlertDescription>{{ error }}</p>
+                </div>
+              }
+              @if (retryError(); as error) {
+                <div hlmAlert variant="destructive" role="alert">
+                  <p hlmAlertDescription>{{ error }}</p>
+                </div>
+              }
+            } @else {
+              <p class="text-muted-foreground text-sm">The geocoding progress is not available.</p>
+            }
           </div>
         </section>
-      }
+
+        <section data-testid="mapping" aria-labelledby="mapping-title" hlmCard size="sm">
+          <div hlmCardContent class="flex flex-col gap-3">
+            <h2 id="mapping-title" class="panel-title flex items-center gap-2">
+              <ng-icon name="lucideTableProperties" class="text-muted-foreground" aria-hidden="true" /> Columns of the file
+            </h2>
+            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+              @for (row of mapping(); track row.field) {
+                <dt class="text-muted-foreground">{{ row.field }}</dt>
+                <dd class="font-medium break-words">{{ row.column }}</dd>
+              }
+            </dl>
+          </div>
+        </section>
+      </aside>
     </div>
 
-    <aside
-      class="grid content-start gap-6 [grid-area:aside] md:grid-cols-2 2xl:grid-cols-1"
-      aria-label="About this import"
-    >
-      <section data-testid="territory" aria-labelledby="territory-title" hlmCard class="gap-3 md:row-span-3 2xl:row-span-1">
-        <div hlmCardHeader>
-          <h2 id="territory-title" hlmCardTitle class="flex items-center gap-2">
-            <ng-icon name="lucideMap" class="text-brand" aria-hidden="true" /> Territory
-          </h2>
-        </div>
-        <div hlmCardContent class="flex flex-col gap-3">
-          <app-map-view class="h-56 overflow-hidden rounded-xl md:h-full md:min-h-56 2xl:h-56" [markers]="territory()" ariaLabel="Located delivery points of the import" />
-          <p class="text-muted-foreground text-xs">
-            {{ territory().length }} of {{ pointTotal() }} points on the map. The color is the enterprise that sells most
-            at the point.
-          </p>
-        </div>
-      </section>
+    <p role="status" class="empty:hidden text-sm">{{ message() }}</p>
 
-      <section data-testid="geocoding" aria-labelledby="geocoding-title" hlmCard class="gap-3">
-        <div hlmCardHeader>
-          <h2 id="geocoding-title" hlmCardTitle class="flex items-center gap-2">
-            <ng-icon name="lucideMapPinned" class="text-brand" aria-hidden="true" /> Addresses on the map
-          </h2>
+    <section data-testid="points" aria-labelledby="points-title" hlmCard class="flex flex-col gap-0 py-0">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b px-6 py-4">
+        <div class="flex flex-col gap-0.5">
+          <h2 id="points-title" #pointsTitle tabindex="-1" class="panel-title outline-none">Delivery points</h2>
+          <p class="panel-subtitle">{{ pointTotal() }} points, newest first. Set the location of the ones the geocoder missed.</p>
         </div>
-        <div hlmCardContent class="flex flex-col gap-3">
-        @if (progress(); as progress) {
-          @if (running()) {
-            <hlm-progress [value]="percent()" aria-label="Addresses located">
-              <hlm-progress-indicator />
-            </hlm-progress>
-          }
-          <p class="text-sm">
-            <span class="font-medium">{{ progress.located }} of {{ progress.total }} addresses located</span>
-            @if (running()) {
-              · {{ progress.pending }} still to locate
-            }
-          </p>
-          @if (progress.notFound > 0) {
-            <p class="text-sm">
-              {{ progress.notFound }} {{ progress.notFound === 1 ? 'address' : 'addresses' }} not found: retry them,
-              or set their location in the table below.
-            </p>
-          }
-          @if (!running() && progress.pending > 0) {
-            <p class="text-sm">
-              {{ progress.pending }} {{ progress.pending === 1 ? 'address' : 'addresses' }} not located yet: the
-              geocoding stopped before reaching them.
-            </p>
-          }
-          @if (!running() && missing() > 0) {
-            <button hlmBtn variant="outline" size="sm" class="self-start" [disabled]="retrying()" (click)="retry()">
-              Retry the missing addresses
-            </button>
-          }
-          @if (progress.errorMessage; as error) {
-            <div hlmAlert variant="destructive" role="alert">
-              <p hlmAlertDescription>{{ error }}</p>
-            </div>
-          }
-          @if (retryError(); as error) {
-            <div hlmAlert variant="destructive" role="alert">
-              <p hlmAlertDescription>{{ error }}</p>
-            </div>
-          }
-        } @else {
-          <p class="text-muted-foreground text-sm">The geocoding progress is not available.</p>
-        }
+        <div
+          hlmToggleGroup
+          type="single"
+          variant="outline"
+          [nullable]="false"
+          [value]="filter()"
+          (valueChange)="setFilter($event)"
+          aria-label="Points shown"
+        >
+          <button hlmToggleGroupItem value="all">All points</button>
+          <button hlmToggleGroupItem value="missing">Not located ({{ missingCount() }})</button>
         </div>
-      </section>
+      </div>
 
-      <section aria-labelledby="enterprises-title" hlmCard class="gap-3">
-        <div hlmCardHeader>
-          <h2 id="enterprises-title" hlmCardTitle class="flex items-center gap-2">
-            <ng-icon name="lucideBuilding2" class="text-brand" aria-hidden="true" /> Enterprises
-          </h2>
+      @if (pointsError(); as error) {
+        <div hlmAlert variant="destructive" role="alert" class="m-6">
+          <p hlmAlertDescription>{{ error }}</p>
         </div>
+      } @else {
+        <!-- Scrolls inside the card (the header stays visible) so a long page does not push the pager off screen. -->
+        <div
+          hlmTableContainer
+          #scroller
+          class="max-h-[28rem] overflow-y-auto rounded-none border-0"
+          tabindex="0"
+          role="region"
+          aria-label="Delivery points of the import"
+        >
+          <table hlmTable>
+            <caption class="sr-only">Delivery points of the import</caption>
+            <thead hlmTHead class="bg-card sticky top-0 z-10 shadow-[inset_0_-1px_0_var(--border)]">
+              <tr hlmTr class="hover:bg-transparent">
+                <th hlmTh scope="col" class="pl-6">Delivery point</th>
+                <th hlmTh scope="col">Address</th>
+                <th hlmTh scope="col">Agent</th>
+                <th hlmTh scope="col" class="text-right">Revenue</th>
+                <th hlmTh scope="col">Location</th>
+                <th hlmTh scope="col" class="pr-6">Actions</th>
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (row of rows(); track row.point.id) {
+                <tr hlmTr>
+                  <td hlmTd class="pl-6 whitespace-normal">
+                    <span class="font-medium">{{ row.point.pointName }}</span>
+                    <span class="text-muted-foreground block text-xs">{{ row.point.customerName }}</span>
+                  </td>
+                  <td hlmTd class="whitespace-normal">{{ row.point.address }}, {{ row.point.city }}</td>
+                  <td hlmTd>{{ row.point.agent ?? '–' }}</td>
+                  <td hlmTd class="text-right tabular-nums">{{ row.point.totalRevenue | eur }}</td>
+                  <td hlmTd>
+                    <span hlmBadge [variant]="row.canLocate ? 'destructive' : 'outline'">{{ row.location }}</span>
+                  </td>
+                  <td hlmTd class="pr-6">
+                    @if (row.canLocate) {
+                      <button
+                        hlmBtn
+                        size="sm"
+                        variant="outline"
+                        [attr.aria-label]="'Set the location of ' + row.point.pointName"
+                        (click)="edit(row.point, $event.currentTarget)"
+                      >
+                        Set location
+                      </button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr hlmTr>
+                  <td hlmTd colspan="6" class="text-muted-foreground text-center">No points to show.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-table-pager class="pb-3" [paging]="paging" idPrefix="points" label="Pages of points" [scroller]="scroller" />
+      }
+    </section>
+
+    @if (editing(); as point) {
+      <section
+        #locationPanel
+        tabindex="-1"
+        data-testid="location-form"
+        hlmCard
+        class="outline-none"
+        aria-label="Set a location by hand"
+      >
         <div hlmCardContent>
-          <ul class="flex flex-col gap-2 text-sm" aria-label="Enterprises">
-            @for (enterprise of import.enterprises; track enterprise.id) {
-              <li class="flex items-center gap-2.5">
-                <span class="size-2.5 rounded-full" [style.background-color]="enterprise.color" aria-hidden="true"></span>
-                {{ enterprise.name }}
-              </li>
-            }
-          </ul>
+          <app-point-location-form
+            [importId]="import.id"
+            [point]="point"
+            (saved)="located($event)"
+            (cancelled)="closeLocation()"
+          />
         </div>
       </section>
-
-      <section data-testid="mapping" aria-labelledby="mapping-title" hlmCard class="gap-3">
-        <div hlmCardHeader>
-          <h2 id="mapping-title" hlmCardTitle class="flex items-center gap-2">
-            <ng-icon name="lucideTableProperties" class="text-brand" aria-hidden="true" /> Columns of the file
-          </h2>
-        </div>
-        <div hlmCardContent>
-          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-            @for (row of mapping(); track row.field) {
-              <dt class="text-muted-foreground">{{ row.field }}</dt>
-              <dd class="font-medium break-words">{{ row.column }}</dd>
-            }
-          </dl>
-        </div>
-      </section>
-    </aside>
+    }
   </div>
 }
