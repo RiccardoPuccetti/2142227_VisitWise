@@ -14,6 +14,10 @@ import it.teamlab.visitwise.planning.PlanningDtos.PlanParameters;
 import it.teamlab.visitwise.planning.PlanningDtos.PlanResult;
 import it.teamlab.visitwise.planning.PlanningDtos.PlanSummary;
 import it.teamlab.visitwise.planning.PlanningDtos.PlannedVisitResponse;
+import it.teamlab.visitwise.planning.PlanningDtos.RouteLeg;
+import it.teamlab.visitwise.planning.PlanningDtos.RouteRequest;
+import it.teamlab.visitwise.planning.PlanningDtos.RouteResponse;
+import it.teamlab.visitwise.planning.PlanningDtos.RouteSource;
 import it.teamlab.visitwise.planning.PlanningDtos.WhatIfRequest;
 import it.teamlab.visitwise.planning.PlanningDtos.WhatIfResult;
 import it.teamlab.visitwise.planning.PlanningDtos.WhatIfRow;
@@ -43,23 +47,79 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 public class PlanningService {
 
+    private static final int MAX_ROUTE_STOPS = 30;
+
     private final ImportBatchRepository imports;
     private final EnterpriseRepository enterprises;
     private final DeliveryPointRepository points;
     private final VisitPlanRepository plans;
     private final PlannedVisitRepository visits;
     private final JsonMapper json;
+    private final RouteProvider routes;
     private final VisitPlanner planner = new GreedyVisitPlanner();
 
     PlanningService(ImportBatchRepository imports, EnterpriseRepository enterprises,
             DeliveryPointRepository points, VisitPlanRepository plans, PlannedVisitRepository visits,
-            JsonMapper json) {
+            JsonMapper json, RouteProvider routes) {
         this.imports = imports;
         this.enterprises = enterprises;
         this.points = points;
         this.plans = plans;
         this.visits = visits;
         this.json = json;
+        this.routes = routes;
+    }
+
+    /**
+     * Endpoint 18: real road route of one day when the provider answers, otherwise the same straight-line estimate
+     * used by the planner, so the two never disagree on the fallback. Max 30 stops to respect public OSRM limits.
+     */
+    public RouteResponse route(RouteRequest request) {
+        if (request == null || request.base() == null || request.stops() == null || request.stops().isEmpty()) {
+            throw new IllegalArgumentException("A base and at least one stop are required");
+        }
+        if (request.stops().size() > MAX_ROUTE_STOPS) {
+            throw new IllegalArgumentException("A route can have at most " + MAX_ROUTE_STOPS + " stops");
+        }
+        TravelModel travel = new TravelModel(request.averageSpeedKmh() > 0 ? request.averageSpeedKmh() : 25,
+                request.roadFactor() >= 1 ? request.roadFactor() : 1.3);
+        List<GeoPoint> path = new ArrayList<>(request.stops().size() + 2);
+        path.add(toEngine(request.base()));
+        request.stops().forEach(stop -> path.add(toEngine(stop)));
+        path.add(toEngine(request.base()));
+        return routes.route(path)
+                .filter(routed -> !routed.geometry().isEmpty())
+                .map(routed -> new RouteResponse(RouteSource.OSRM, round1(routed.km()), round1(routed.minutes()),
+                        routed.legs().stream().map(leg -> new RouteLeg(round1(leg.km()), round1(leg.minutes())))
+                                .toList(), toDto(routed.geometry())))
+                .orElseGet(() -> estimate(travel, path));
+    }
+
+    private static GeoPoint toEngine(PlanningDtos.GeoPoint point) {
+        if (point == null) {
+            throw new IllegalArgumentException("Every stop needs coordinates");
+        }
+        return new GeoPoint(point.latitude(), point.longitude());
+    }
+
+    private static List<PlanningDtos.GeoPoint> toDto(List<GeoPoint> points) {
+        return points.stream().map(p -> new PlanningDtos.GeoPoint(p.latitude(), p.longitude())).toList();
+    }
+
+    private static RouteResponse estimate(TravelModel travel, List<GeoPoint> path) {
+        List<RouteLeg> legs = new ArrayList<>();
+        double km = 0;
+        for (int i = 1; i < path.size(); i++) {
+            double legKm = travel.roadDistanceKm(path.get(i - 1), path.get(i));
+            km += legKm;
+            legs.add(new RouteLeg(round1(legKm), round1(legKm / travel.averageSpeedKmh() * 60)));
+        }
+        return new RouteResponse(RouteSource.ESTIMATE, round1(km), round1(km / travel.averageSpeedKmh() * 60),
+                legs, toDto(path));
+    }
+
+    private static double round1(double value) {
+        return Math.round(value * 10) / 10.0;
     }
 
     @Transactional(readOnly = true)

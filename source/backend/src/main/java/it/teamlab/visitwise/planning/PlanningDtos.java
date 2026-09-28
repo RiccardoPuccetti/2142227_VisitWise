@@ -89,4 +89,15 @@ public final class PlanningDtos {
     public record WhatIfResult(List<WhatIfRow> rows) { }
 
     public record CreatePlanRequest(String name, PlanParameters parameters) { }
+
+    /** Endpoint 18: the ordered stops of one day (base excluded), plus the travel model for the estimate fallback. */
+    public record RouteRequest(GeoPoint base, List<GeoPoint> stops, double averageSpeedKmh, double roadFactor) { }
+
+    public enum RouteSource { OSRM, ESTIMATE }
+
+    public record RouteLeg(double km, double minutes) { }
+
+    /** Base -> stops -> base: real road figures when {@code source = OSRM}, straight-line estimate otherwise. */
+    public record RouteResponse(RouteSource source, double km, double minutes, List<RouteLeg> legs,
+                                List<GeoPoint> geometry) { }
 }
