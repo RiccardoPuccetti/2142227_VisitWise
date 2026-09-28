@@ -47,7 +47,10 @@ public final class PlanningDtos {
             int workingDaysUsed,
             LocalDate lastVisitDate,
             int visitsAfterDeadline,
-            int excludedOutOfRange) { }
+            int excludedOutOfRange,
+            // OSRM: km and hours measured on the road network (US-39); ESTIMATE: straight line x road factor at the
+            // average speed. Null in plans saved before this field existed.
+            RouteSource travelSource) { }
 
     public record PlannedVisitResponse(
             Long deliveryPointId,

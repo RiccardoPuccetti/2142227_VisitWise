@@ -86,6 +86,13 @@ visitwise:
     base-url: ${ROUTING_BASE_URL:https://router.project-osrm.org}
     user-agent: ${GEOCODING_USER_AGENT:VisitWise-hackathon/0.1}
     timeout-ms: 8000
+    matrix:
+      # Road distances and times for the planner (US-39). Only with a self-hosted OSRM (docker compose profile
+      # "osrm"): the public demo server forbids tables this large. Off = straight-line estimate.
+      enabled: ${ROUTING_MATRIX_ENABLED:false}
+      # Sources (and destinations) per request, at most the --max-table-size of osrm-routed (500 in docker compose).
+      block-size: 500
+      cache-size: 4
   planning:
     # Default starting point of every working day (Rome, Piazza Venezia). Overridable per plan.
     default-base-latitude: 41.8960
