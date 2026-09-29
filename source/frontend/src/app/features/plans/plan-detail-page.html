@@ -1,6 +1,6 @@
 <!-- Agent plan (owner: Rivera, task RIV-4, US-28..US-30). -->
 <div class="flex flex-col gap-7">
-  <app-page-header [title]="plan()?.name ?? 'Agent plan'">
+  <app-page-header [title]="plan()?.name ?? 'Agent plan'" [loading]="!plan() && !error()">
     <!-- Where the page comes from: a scenario saved in the planner and opened from the scenarios page. -->
     <ul class="page-facts">
       <li><span hlmBadge variant="outline"><ng-icon name="lucideBookmark" aria-hidden="true" /> Saved scenario</span></li>
@@ -108,8 +108,10 @@
             }
           </div>
 
-          <ol class="grid grid-cols-5 gap-2 max-sm:gap-1" aria-label="Days of the week">
-            @for (day of week.days; track day.date) {
+          <!-- One pass per week: the strip is created again on each week, and slides in from the side it comes from. -->
+          @for (shown of [week]; track shown.monday) {
+          <ol class="grid grid-cols-5 gap-2 max-sm:gap-1" [class]="weekMotion()" aria-label="Days of the week">
+            @for (day of shown.days; track day.date) {
               <li>
                 <button
                   type="button"
@@ -131,14 +133,16 @@
               </li>
             }
           </ol>
+          }
 
-          @if (selectedDay(); as day) {
+          <!-- One pass per day, so the stops fade in when another day is chosen. -->
+          @for (day of selectedDays(); track day.date) {
             <section
               hlmCard
               size="sm"
               data-testid="calendar-selected-day"
               [attr.aria-label]="day.title"
-              class="gap-4"
+              class="motion-fade gap-4"
             >
               <div hlmCardHeader class="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h4 hlmCardTitle>{{ day.title }}</h4>
@@ -213,6 +217,40 @@
       }
     </section>
   } @else if (!error()) {
-    <p class="text-muted-foreground text-sm" aria-live="polite">Loading the plan…</p>
+    <!-- The shape of the page while the plan loads: key figures, the week toolbar, its days and a day card. -->
+    <p role="status" class="sr-only">Loading the plan…</p>
+    <div class="flex flex-col gap-7" aria-hidden="true">
+      <app-kpi-summary label="Covered revenue" [loading]="true" [details]="loadingDetails" />
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+          <hlm-skeleton class="size-8 rounded-full" />
+          <hlm-skeleton class="h-4 w-56" />
+          <hlm-skeleton class="size-8 rounded-full" />
+        </div>
+        <ol class="grid grid-cols-5 gap-2 max-sm:gap-1">
+          @for (day of [1, 2, 3, 4, 5]; track day) {
+            <li data-testid="calendar-day-placeholder" class="flex flex-col gap-1.5 rounded-xl border px-3 py-2">
+              <hlm-skeleton class="h-4 w-16 max-w-full" />
+              <hlm-skeleton class="h-3 w-12 max-w-full" />
+            </li>
+          }
+        </ol>
+        <div hlmCard size="sm" class="gap-4">
+          <div hlmCardHeader><hlm-skeleton class="h-5 w-40" /></div>
+          <div hlmCardContent class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+            @for (stop of [1, 2]; track stop) {
+              <div class="bg-muted/30 flex gap-3 rounded-xl border p-3">
+                <hlm-skeleton class="size-7 shrink-0 rounded-full" />
+                <div class="flex flex-1 flex-col gap-2">
+                  <hlm-skeleton class="h-4 w-3/4" />
+                  <hlm-skeleton class="h-3 w-1/2" />
+                  <hlm-skeleton class="mt-2 h-3 w-full" />
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
   }
 </div>

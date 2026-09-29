@@ -23,8 +23,9 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, KpiSummary, PageHeader } from '../../shared';
+import { EurPipe, formatEur, type KpiDetail, KpiSummary, PageHeader } from '../../shared';
 import { agentLabel, calendarWeeks, exportUrl, planAgents, readableName, visitStops } from './plan.model';
 import { PlansService } from './plans.service';
 
@@ -65,6 +66,7 @@ function visitCountLabel(count: number): string {
     HlmCardImports,
     HlmLabelImports,
     HlmNativeSelectImports,
+    HlmSkeletonImports,
     KpiSummary,
     NgIcon,
     PageHeader,
@@ -203,6 +205,20 @@ export class PlanDetailPage {
     () => this.week()?.days.find((day) => day.date === this.selectedDate()) ?? null,
   );
 
+  /** The selected day as a list of one, so the template creates its card again (and fades it in) on each day. */
+  protected readonly selectedDays = computed(() => {
+    const day = this.selectedDay();
+    return day ? [day] : [];
+  });
+  /** How the day strip enters: from the side of the week it comes from; nothing on the first render. */
+  protected readonly weekMotion = signal('');
+  /** The detail labels of the key figures, shown with placeholders while the plan loads. */
+  protected readonly loadingDetails: KpiDetail[] = [
+    { label: 'Visits', value: '', icon: 'lucideMapPin' },
+    { label: 'Working days', value: '', icon: 'lucideCalendarRange' },
+    { label: 'Distance', value: '', icon: 'lucideRoute' },
+  ];
+
   protected selectDay(date: string): void {
     this.selectedDate.set(date);
   }
@@ -211,6 +227,7 @@ export class PlanDetailPage {
   protected moveWeek(offset: number): void {
     const week = this.weeks()[this.weekIndex() + offset];
     if (week) {
+      this.weekMotion.set(offset > 0 ? 'motion-from-end' : 'motion-from-start');
       this.selectedDate.set((week.days.find((day) => day.entries.length) ?? week.days[0]).date);
     }
   }
