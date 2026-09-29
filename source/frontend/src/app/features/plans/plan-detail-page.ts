@@ -1,7 +1,18 @@
 import { Component, computed, inject, input, resource, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCalendarRange, lucideDownload, lucideEuro, lucideMapPin, lucideRoute } from '@ng-icons/lucide';
+import {
+  lucideArrowLeft,
+  lucideArrowUpRight,
+  lucideBookmark,
+  lucideCalendarRange,
+  lucideDownload,
+  lucideEuro,
+  lucideInfo,
+  lucideMapPin,
+  lucideRoute,
+  lucideUser,
+} from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -38,7 +49,7 @@ function visitCountLabel(count: number): string {
 }
 
 /**
- * Agent plan (US-28..US-30): the visits of a saved plan day by day, one week per row from Monday to Friday, with
+ * Agent plan (US-28..US-30): the visits of a saved plan week by week, one row per working day, with
  * OpenStreetMap directions from the previous stop and the Excel export of the whole plan or of one agent.
  */
 @Component({
@@ -53,9 +64,23 @@ function visitCountLabel(count: number): string {
     KpiCard,
     NgIcon,
     PageHeader,
+    RouterLink,
     EurPipe,
   ],
-  providers: [provideIcons({ lucideCalendarRange, lucideDownload, lucideEuro, lucideMapPin, lucideRoute })],
+  providers: [
+    provideIcons({
+      lucideArrowLeft,
+      lucideArrowUpRight,
+      lucideBookmark,
+      lucideCalendarRange,
+      lucideDownload,
+      lucideEuro,
+      lucideInfo,
+      lucideMapPin,
+      lucideRoute,
+      lucideUser,
+    }),
+  ],
   templateUrl: './plan-detail-page.html',
 })
 export class PlanDetailPage {

@@ -122,6 +122,16 @@ describe('PlanDetailPage', () => {
     );
   });
 
+  it('says it is a saved scenario and links back to the scenarios it was opened from', async () => {
+    await open();
+
+    expect(text()).toContain('Saved scenario');
+    const back = Array.from(page().querySelectorAll<HTMLAnchorElement>('a[href="/imports/42/scenarios"]')).find(
+      (link) => link.textContent?.includes('Back to the scenarios'),
+    );
+    expect(back).toBeDefined();
+  });
+
   it('shows the visits week by week, from Monday to Friday, in their order', async () => {
     await open();
 
