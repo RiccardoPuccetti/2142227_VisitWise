@@ -72,8 +72,8 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
  */
 @Component({
   selector: 'app-import-wizard-page',
-  // Same rhythm as every page: the header and the sections 2rem apart.
-  host: { class: 'flex flex-col gap-8' },
+  // Same rhythm as every page: the header and the sections 1.75rem apart.
+  host: { class: 'flex flex-col gap-7' },
   imports: [
     RouterLink,
     FormRoot,

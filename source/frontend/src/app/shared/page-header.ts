@@ -61,7 +61,7 @@ export interface Crumb {
     /* Bleeds to the edges of the page panel (--page-pad-x/y set by the app shell), so the divider joins the frame. */
     :host {
       display: block;
-      /* No bottom margin: every page puts the header in its 2rem column (flex gap-8). */
+      /* No bottom margin: every page puts the header in its 1.75rem column (flex gap-7). */
       margin: calc(var(--page-pad-y, 1.5rem) * -1) calc(var(--page-pad-x, 1rem) * -1) 0;
       padding: var(--page-pad-y, 1.5rem) var(--page-pad-x, 1rem) 1.5rem;
       border-bottom: 1px solid var(--border);
