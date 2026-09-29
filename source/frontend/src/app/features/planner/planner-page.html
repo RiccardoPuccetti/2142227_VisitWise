@@ -246,15 +246,29 @@
                 ><input hlmInput id="planner-deadline" type="date" formControlName="deadline" />
               </div>
               <div hlmField>
-                <label hlmFieldLabel for="planner-working-days">Working days available</label
-                ><input
-                  hlmInput
+                <div class="flex items-baseline justify-between gap-3">
+                  <span hlmFieldLabel id="planner-working-days-label">Working days</span>
+                  <output class="text-sm tabular-nums" aria-live="polite">
+                    @if (availableDays() === null) {
+                      {{ workingDays() }}
+                    } @else {
+                      {{ workingDays() }} of {{ availableDays() }}
+                    }
+                  </output>
+                </div>
+                <hlm-slider
                   id="planner-working-days"
-                  type="number"
-                  min="1"
-                  max="260"
-                  formControlName="workingDays"
+                  class="py-3.5"
+                  aria-labelledby="planner-working-days-label"
+                  [min]="1"
+                  [max]="maxWorkingDays() || 1"
+                  [value]="[workingDays()]"
+                  [disabled]="availableDays() === 0"
+                  (valueChange)="setWorkingDays($event)"
                 />
+                @if (availableDays() === 0) {
+                  <p hlmFieldDescription class="text-destructive">{{ noWorkingDays }}</p>
+                }
               </div>
               <div hlmField>
                 <label hlmFieldLabel for="planner-mode">Who visits</label>
