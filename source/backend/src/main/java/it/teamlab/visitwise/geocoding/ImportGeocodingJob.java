@@ -110,8 +110,9 @@ public class ImportGeocodingJob {
         });
     }
 
+    /** Skips a point that got a position meanwhile, e.g. placed by hand (endpoint 8) while the job waited. */
     private void apply(Long pointId, Optional<GeocodedLocation> location) {
-        points.findById(pointId).ifPresent(point -> {
+        points.findById(pointId).filter(ImportGeocodingJob::stillMissing).ifPresent(point -> {
             if (location.isPresent()) {
                 point.setCoordinates(location.get().latitude(), location.get().longitude(), GeocodeStatus.OK);
                 ImportBatch batch = point.getImportBatch();
@@ -120,6 +121,10 @@ public class ImportGeocodingJob {
                 point.setCoordinates(null, null, GeocodeStatus.NOT_FOUND);
             }
         });
+    }
+
+    private static boolean stillMissing(DeliveryPoint point) {
+        return point.getGeocodeStatus() == GeocodeStatus.PENDING || point.getGeocodeStatus() == GeocodeStatus.NOT_FOUND;
     }
 
     private void finish(Long importId, boolean interrupted) {

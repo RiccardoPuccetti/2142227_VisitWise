@@ -102,6 +102,30 @@ class ImportGeocodingJobTest {
     }
 
     @Test
+    void keepsThePositionsPlacedByHandWhileTheJobRuns() {
+        FakeGeocoder.knows("Via Nota " + suffix, "Roma", 41.9, 12.5);
+        // The analyst places both points by hand (endpoint 8) while the job waits for the first answer.
+        FakeGeocoder.beforeNextAnswer(() -> {
+            for (DeliveryPoint point : points.findByImportBatchId(importId)) {
+                point.setCoordinates(40.0, 10.0, GeocodeStatus.MANUAL);
+                points.saveAndFlush(point);
+            }
+            ImportBatch batch = imports.findById(importId).orElseThrow();
+            batch.setGeocodedRows(2);
+            imports.saveAndFlush(batch);
+        });
+
+        job.run(importId, false);
+
+        assertThat(points.findByImportBatchId(importId)).allSatisfy(point -> {
+            assertThat(point.getGeocodeStatus()).isEqualTo(GeocodeStatus.MANUAL);
+            assertThat(point.getLatitude()).isEqualTo(40.0);
+            assertThat(point.getLongitude()).isEqualTo(10.0);
+        });
+        assertThat(imports.findById(importId).orElseThrow().getGeocodedRows()).isEqualTo(2);
+    }
+
+    @Test
     void providerOutageLeavesTheImportUsableWithAnExplanation() {
         FakeGeocoder.unavailable(true);
 
