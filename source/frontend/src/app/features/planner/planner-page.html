@@ -206,7 +206,7 @@
           </form>
           <!-- Where the starting point was placed. Fixed height: step 1 matches step 2 with its accordions closed. -->
           <app-map-view
-            class="block h-52 overflow-hidden rounded-xl border lg:h-60"
+            class="h-52 lg:h-60"
             [markers]="baseMarkers()"
             ariaLabel="Starting point"
           />
@@ -300,7 +300,7 @@
                   (valueChange)="setPlanningMode($event)"
                 >
                   <option hlmNativeSelectOption value="PER_AGENT">Each agent, own route</option>
-                  <option hlmNativeSelectOption value="SINGLE_VISITOR">One visitor</option>
+                  <option hlmNativeSelectOption value="SINGLE_VISITOR">Single visitor</option>
                 </hlm-native-select>
               </div>
             </div>
@@ -702,7 +702,7 @@
                     </div>
                     <div hlmCardContent class="flex flex-col gap-4">
                     <app-map-view
-                      class="block h-[26rem] overflow-hidden rounded-xl border xl:h-[32rem]"
+                      class="h-[26rem] xl:h-[32rem]"
                       [markers]="markers()"
                       [routes]="routes()"
                       [ariaLabel]="'Itinerary for ' + date(day.date)"

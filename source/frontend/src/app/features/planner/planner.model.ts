@@ -10,14 +10,16 @@ import { formatDay, type MapMarker, type MapRoute } from '../../shared';
 
 export const DEFAULT_BASE = { latitude: 41.896, longitude: 12.4823 } as const;
 export const BASE_MARKER_ID = 'base';
+/** The planning API's upper bound on working days (a plan, a what-if horizon). */
+export const MAX_WORKING_DAYS = 260;
 const ROUTE_COLOR = '#2563eb';
 const BASE_COLOR = '#dc2626';
 
 /** Client-side feedback mirroring the planning API validation rules. */
 export function validateParameters(parameters: PlanParameters): string[] {
   const errors: string[] = [];
-  if (parameters.workingDays < 1 || parameters.workingDays > 260) {
-    errors.push('Working days must be between 1 and 260.');
+  if (parameters.workingDays < 1 || parameters.workingDays > MAX_WORKING_DAYS) {
+    errors.push(`Working days must be between 1 and ${MAX_WORKING_DAYS}.`);
   }
   if (parameters.visitDurationMinutes < 30 || parameters.visitDurationMinutes > 480) {
     errors.push('Visit duration must be between 30 and 480 minutes.');
@@ -145,7 +147,7 @@ export function groupDays(days: readonly PlanDay[]): DayGroup[] {
   const best = Math.max(0, ...days.map(dayRevenue));
   const groups: DayGroup[] = [];
   days.forEach((day, index) => {
-    const agent = day.agent ?? 'One visitor';
+    const agent = day.agent ?? 'Single visitor';
     if (!agents.includes(agent)) {
       agents.push(agent);
     }

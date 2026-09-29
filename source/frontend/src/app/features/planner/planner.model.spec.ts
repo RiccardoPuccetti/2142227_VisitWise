@@ -118,7 +118,7 @@ describe('groupDays', () => {
     expect(groups[0].routes[1]).toMatchObject({ agent: 'AGENT NORTH', stops: 2, km: 10, revenue: 200 });
   });
 
-  it('gives every agent its own color, the same on every day, and one visitor a single color', () => {
+  it('gives every agent its own color, the same on every day, and the single visitor one color', () => {
     const groups = groupDays([
       day('2026-11-02', 'AGENT EAST', [1]),
       day('2026-11-02', 'AGENT NORTH', [1]),
@@ -129,7 +129,7 @@ describe('groupDays', () => {
     expect(groups[1].routes[0].color).toBe(east.color);
 
     const alone = groupDays([day('2026-11-02', null, [1])])[0].routes[0];
-    expect(alone.agent).toBe('One visitor');
+    expect(alone.agent).toBe('Single visitor');
   });
 
   it('measures each route against the most valuable route of the plan', () => {

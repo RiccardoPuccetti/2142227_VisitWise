@@ -69,13 +69,12 @@ import {
   revealDelay,
   travelBasis,
   validateParameters,
+  MAX_WORKING_DAYS,
 } from './planner.model';
 import { PlannerService } from './planner.service';
 import { workingDaysBetween } from './working-calendar';
 
 const GEOCODING_POLL_MS = 3000;
-/** The planning API's upper bound, used as the horizon when there is no deadline. */
-const MAX_WORKING_DAYS = 260;
 const NO_WORKING_DAYS = 'No working days between the start date and the deadline.';
 
 /** Minimum time the "planning" view stays up, so the switch to the plan reads as a transition (0 in tests). */

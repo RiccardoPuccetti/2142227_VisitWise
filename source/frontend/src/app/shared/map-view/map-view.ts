@@ -12,6 +12,7 @@ import {
 import { classes } from '@spartan-ng/helm/utils';
 import type Feature from 'ol/Feature';
 import OlMap from 'ol/Map';
+import type { Pixel } from 'ol/pixel';
 import Overlay from 'ol/Overlay';
 import View from 'ol/View';
 import { createEmpty, extend, isEmpty } from 'ol/extent';
@@ -120,19 +121,13 @@ export class MapView {
         overlays: [this.popup],
       });
       this.map.on('singleclick', (event) => {
-        const marker = this.map?.forEachFeatureAtPixel(
-          event.pixel,
-          (feature) => feature.get(MARKER_KEY) as MapMarker | undefined,
-        );
+        const marker = this.markerAt(event.pixel);
         if (marker) {
           this.markerClick.emit(marker);
         }
       });
       this.map.on('pointermove', (event) => {
-        const marker = this.map?.forEachFeatureAtPixel(
-          event.pixel,
-          (feature) => feature.get(MARKER_KEY) as MapMarker | undefined,
-        );
+        const marker = this.markerAt(event.pixel);
         target.style.cursor = marker ? 'pointer' : '';
         target.title = marker?.title ?? '';
       });
@@ -200,11 +195,11 @@ export class MapView {
   }
 
   private markerCoordinate(id: MapMarker['id']): number[] | undefined {
-    return this.markerSource
-      .getFeatures()
-      .find((feature) => (feature.get(MARKER_KEY) as MapMarker | undefined)?.id === id)
-      ?.getGeometry()
-      ?.getCoordinates();
+    return this.markerSource.getFeatureById(id)?.getGeometry()?.getCoordinates();
+  }
+
+  private markerAt(pixel: Pixel): MapMarker | undefined {
+    return this.map?.forEachFeatureAtPixel(pixel, (feature) => feature.get(MARKER_KEY) as MapMarker | undefined);
   }
 
   /**
