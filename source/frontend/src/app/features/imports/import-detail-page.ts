@@ -44,6 +44,7 @@ import {
   type KpiDetail,
   KpiSummary,
   MapView,
+  minimumLoading,
   PageHeader,
   TablePager,
 } from '../../shared';
@@ -137,7 +138,7 @@ export class ImportDetailPage {
   protected readonly detail = computed(() =>
     this.detailResource.hasValue() ? this.detailResource.value() : undefined,
   );
-  protected readonly loading = computed(() => this.detailResource.isLoading() && !this.detail());
+  protected readonly loading = minimumLoading(() => this.detailResource.isLoading() && !this.detail());
   protected readonly loadError = computed(() => {
     const error = this.detailResource.error();
     return error ? problemDetail(error) : null;

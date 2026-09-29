@@ -28,7 +28,7 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { type KpiDetail, KpiSummary, PageHeader } from '../../shared';
+import { type KpiDetail, KpiSummary, minimumLoading, PageHeader } from '../../shared';
 import { locatedPercent } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
@@ -97,7 +97,7 @@ export class ImportsListPage {
     this.importsResource.hasValue() ? this.importsResource.value() : [],
   );
 
-  protected readonly loading = this.importsResource.isLoading;
+  protected readonly loading = minimumLoading(this.importsResource.isLoading);
   protected readonly loadError = computed(() => {
     const error = this.importsResource.error();
     return error ? problemDetail(error) : null;

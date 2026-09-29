@@ -45,6 +45,7 @@ import {
   formatEur,
   KpiSummary,
   MapView,
+  minimumLoading,
   createPaging,
   PageHeader,
   POPUP_GAP,
@@ -184,7 +185,7 @@ export class MapDashboardPage {
   /** A filtered summary is loading while the previous figures stay on screen. */
   protected readonly refreshing = computed(() => this.filteredSummary.isLoading());
 
-  protected readonly loading = computed(() => this.pointsResource.isLoading() || !this.summary());
+  protected readonly loading = minimumLoading(() => this.pointsResource.isLoading() || !this.summary());
 
   protected readonly error = computed(() => {
     const error =

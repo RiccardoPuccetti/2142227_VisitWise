@@ -25,7 +25,7 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, type KpiDetail, KpiSummary, PageHeader } from '../../shared';
+import { EurPipe, formatEur, type KpiDetail, KpiSummary, minimumLoading, PageHeader } from '../../shared';
 import { agentLabel, calendarWeeks, exportUrl, planAgents, readableName, visitStops } from './plan.model';
 import { PlansService } from './plans.service';
 
@@ -121,6 +121,8 @@ export class PlanDetailPage {
     const error = this.planResource.error();
     return error ? problemDetail(error) : null;
   });
+  /** The placeholders until the plan or its error arrives, shown for a minimum time so they do not flash. */
+  protected readonly loading = minimumLoading(() => !this.plan() && !this.error());
 
   protected readonly agents = computed(() => planAgents(this.plan()?.days ?? []));
   protected readonly exportHref = computed(() => exportUrl(this.id(), this.agent()));
