@@ -38,6 +38,8 @@ class OsrmRouteProviderTest {
         server.expect(requestTo(Matchers.startsWith(
                         "https://osrm.test/route/v1/driving/12.482300,41.896000;12.480000,41.900900;12.482300,41.896000")))
                 .andExpect(header("User-Agent", "VisitWise-test"))
+                // A self-hosted osrm-routed answers "deflate" in a form the JDK client cannot read: ask for gzip.
+                .andExpect(header("Accept-Encoding", "gzip"))
                 .andRespond(withSuccess("""
                         {"code":"Ok","routes":[{"distance":1500.0,"duration":240.0,
                           "legs":[{"distance":800.0,"duration":130.0},{"distance":700.0,"duration":110.0}],

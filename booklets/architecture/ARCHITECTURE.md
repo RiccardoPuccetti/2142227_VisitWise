@@ -20,6 +20,7 @@ flowchart LR
   fe -->|/api/* reverse proxy :8080| be[visitwise-backend<br/>Spring Boot 4.1 / Java 21]
   be -->|JDBC :5432| db[(visitwise-db<br/>PostgreSQL 17)]
   be -->|HTTPS, 1 req/s| nom[Nominatim]
+  be -.->|profile osrm: route + table :5000| osrm[visitwise-osrm<br/>OSRM car road network]
   browser -->|tiles| osm[tile.openstreetmap.org]
 ```
 
@@ -28,6 +29,8 @@ flowchart LR
 | visitwise-frontend | `source/frontend/Dockerfile` (node build -> nginx) | 4200:80 | stateless |
 | visitwise-backend | `source/backend/Dockerfile` (maven build -> JRE) | 127.0.0.1:8080:8080 (this machine only) | login sessions in memory |
 | visitwise-db | `postgres:17-alpine` | 5432:5432 | volume `visitwise-db-data` |
+| visitwise-osrm-data (optional, profile `osrm`) | `ghcr.io/project-osrm/osrm-backend:v6.0.0`, runs once | - | downloads and prepares the Geofabrik extract into volume `visitwise-osrm-data` |
+| visitwise-osrm (optional, profile `osrm`) | `ghcr.io/project-osrm/osrm-backend:v6.0.0` (`osrm-routed`, CH) | 127.0.0.1:5000:5000 (this machine only) | reads volume `visitwise-osrm-data` |
 
 Infrastructure as Code: `source/docker-compose.yml` + Dockerfiles + Liquibase changelog + GitHub Actions CI (`.github/workflows/ci.yml`). A fresh machine needs only Docker.
 
@@ -52,7 +55,7 @@ flowchart TB
 Key flows
 
 1. **Import**: `POST /imports/preview` (parse headers, suggest mapping) -> `POST /imports` (parse with mapping, save rows, status `GEOCODING`) -> background geocoder fills coordinates 1 req/s (cache first) -> status `READY`. The UI polls the detail endpoint.
-2. **Plan**: `POST /plans/simulate` loads the import's points, builds visit targets, runs the engine, returns the plan (nothing saved). `POST /plans` does the same and persists `visit_plan` + `planned_visit`. `POST /plans/what-if` runs the engine for N horizons.
+2. **Plan**: `POST /plans/simulate` loads the import's points, builds visit targets, runs the engine, returns the plan (nothing saved). With the self-hosted OSRM the backend first asks the road distance and time table of the base and all located points (cached in memory) and hands it to the engine (US-39). `POST /plans` does the same and persists `visit_plan` + `planned_visit`. `POST /plans/what-if` runs the engine for N horizons.
 
 ## 4. Data model
 

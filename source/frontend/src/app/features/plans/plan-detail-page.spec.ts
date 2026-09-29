@@ -70,6 +70,7 @@ const PLAN: PlanResult = {
       visit(2, 'AGENT NORTH', '2026-11-02', 'BAR BETA'),
     ]),
     day('2026-11-03', 'AGENT SOUTH', [visit(1, 'AGENT SOUTH', '2026-11-03', 'CAFFE GAMMA')]),
+    day('2026-11-09', 'AGENT NORTH', [visit(1, 'AGENT NORTH', '2026-11-09', 'OSTERIA DELTA')]),
   ],
   notPlanned: [],
   warnings: ['1 delivery points without coordinates were excluded'],
@@ -117,23 +118,73 @@ describe('PlanDetailPage', () => {
     expect(page().querySelector('h1')?.textContent).toContain('Christmas 20 days');
     expect(text()).toContain(`3751,50${NBSP}€`);
     expect(text()).toContain('36,9 km');
+    // As in the planner: the covered revenue leads, with a bar for its share of the eligible revenue.
+    const headline = page().querySelector('[data-testid="kpi-headline"]')!;
+    expect(headline.querySelector('h3')?.textContent?.trim()).toBe('Covered revenue');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('75');
+    const details = [...page().querySelectorAll('[data-testid="kpi-details"] > div')].map(
+      (row) => `${row.querySelector('dt')?.textContent?.trim()}: ${row.querySelector('dd')?.textContent?.replace(/\s+/g, ' ').trim()}`,
+    );
+    expect(details).toEqual(['Visits: 3 3 customers', 'Working days: 2 of 20 available', 'Distance: 36,9 km 1,5 hours of travel']);
     expect(page().querySelector('[role="status"]')?.textContent).toContain(
       '1 delivery points without coordinates were excluded',
     );
   });
 
-  it('shows the visits week by week, from Monday to Friday, in their order', async () => {
+  it('says it is a saved scenario and links back to the scenarios it was opened from', async () => {
     await open();
 
-    const weeks = page().querySelectorAll('[data-testid="calendar-week"]');
-    expect(weeks).toHaveLength(1);
-    expect(weeks[0].querySelector('h3')?.textContent).toContain('Week of 2 Nov 2026');
-    const days = weeks[0].querySelectorAll('[data-testid="calendar-day"]');
-    expect(days).toHaveLength(5);
-    const monday = days[0].textContent?.replace(/[ \t\r\n]+/g, ' ') ?? '';
-    expect(monday).toContain('Mon 2 Nov');
-    expect(monday.indexOf('RISTORANTE ACME')).toBeLessThan(monday.indexOf('BAR BETA'));
-    expect(days[2].textContent).toContain('No visits');
+    expect(text()).toContain('Saved scenario');
+    const back = Array.from(page().querySelectorAll<HTMLAnchorElement>('a[href="/imports/42/scenarios"]')).find(
+      (link) => link.textContent?.includes('Back to the scenarios'),
+    );
+    expect(back).toBeDefined();
+  });
+
+  const dayButtons = () => Array.from(page().querySelectorAll<HTMLButtonElement>('[data-testid="calendar-day"]'));
+  const selectedDay = () =>
+    page().querySelector('[data-testid="calendar-selected-day"]')?.textContent?.replace(/[ \t\r\n]+/g, ' ') ?? '';
+  const pagerButton = (label: string) => page().querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+
+  it('shows one week at a time: its five days, and the stops of the selected day in their order', async () => {
+    await open();
+
+    const week = page().querySelector('[data-testid="calendar-week"]')!.textContent!.replace(/[ \t\r\n]+/g, ' ');
+    expect(week).toContain('Week of 2 Nov 2026');
+    expect(week).toContain('week 1 of 2');
+    const days = dayButtons();
+    expect(days.map((button) => button.textContent?.replace(/[ \t\r\n]+/g, ' ').trim())).toEqual([
+      'Mon 2 Nov 2 visits',
+      'Tue 3 Nov 1 visit',
+      'Wed 4 Nov No visits',
+      'Thu 5 Nov No visits',
+      'Fri 6 Nov No visits',
+    ]);
+    expect(days[0].getAttribute('aria-pressed')).toBe('true');
+    expect(selectedDay().indexOf('Ristorante Acme')).toBeGreaterThan(-1);
+    expect(selectedDay().indexOf('Ristorante Acme')).toBeLessThan(selectedDay().indexOf('Bar Beta'));
+    expect(selectedDay()).not.toContain('Caffe Gamma');
+
+    days[1].click();
+    await harness.fixture.whenStable();
+    expect(dayButtons()[1].getAttribute('aria-pressed')).toBe('true');
+    expect(selectedDay()).toContain('Caffe Gamma');
+    expect(selectedDay()).not.toContain('Ristorante Acme');
+  });
+
+  it('moves between the weeks with the pager, opening the first day with visits', async () => {
+    await open();
+    expect(pagerButton('Previous week').disabled).toBe(true);
+
+    pagerButton('Next week').click();
+    await harness.fixture.whenStable();
+
+    const week = page().querySelector('[data-testid="calendar-week"]')!.textContent!.replace(/[ \t\r\n]+/g, ' ');
+    expect(week).toContain('Week of 9 Nov 2026');
+    expect(week).toContain('week 2 of 2');
+    expect(selectedDay()).toContain('Osteria Delta');
+    expect(pagerButton('Next week').disabled).toBe(true);
+    expect(pagerButton('Previous week').disabled).toBe(false);
   });
 
   it('opens OpenStreetMap directions from the previous stop in a new tab', async () => {
@@ -163,8 +214,8 @@ describe('PlanDetailPage', () => {
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/imports/42/plans/3?agent=AGENT%20SOUTH');
-    expect(text()).toContain('CAFFE GAMMA');
-    expect(text()).not.toContain('RISTORANTE ACME');
+    expect(text()).toContain('Caffe Gamma');
+    expect(text()).not.toContain('Ristorante Acme');
     expect(exportLink()?.getAttribute('href')).toBe('/api/plans/3/export?agent=AGENT%20SOUTH');
   });
 
@@ -172,7 +223,7 @@ describe('PlanDetailPage', () => {
     await open('/imports/42/plans/3?agent=AGENT%20NORTH');
 
     expect(page().querySelector<HTMLSelectElement>('#plan-agent')?.value).toBe('AGENT NORTH');
-    expect(text()).not.toContain('CAFFE GAMMA');
+    expect(text()).not.toContain('Caffe Gamma');
   });
 
   it('shows the problem when the plan cannot be loaded', async () => {

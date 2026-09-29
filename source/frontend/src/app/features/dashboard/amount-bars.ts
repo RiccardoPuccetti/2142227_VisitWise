@@ -10,51 +10,59 @@ export interface BarItem {
   color?: string;
 }
 
+const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 });
+
 /**
- * Horizontal bars of revenue, largest first as received (US-18). Values are written next to each bar, so the chart
- * reads without the bars. Only the first `limit` items are shown.
+ * Ranked horizontal bars of revenue, largest first as received (US-18). Each row gives the rank, the label, the amount
+ * and the share of the total, so the chart reads without the bars. Only the first `limit` items are shown.
  */
 @Component({
   selector: 'app-amount-bars',
   imports: [EurPipe],
+  host: { class: 'block' },
   template: `
-    <h3 class="mb-2 text-sm font-semibold">{{ title() }}</h3>
     @if (items().length === 0) {
       <p class="text-muted-foreground text-sm">No revenue for these filters.</p>
     } @else {
-      <ol class="flex flex-col gap-2 text-sm">
-        @for (item of shown(); track item.key) {
-          <li class="flex flex-col gap-1">
-            <div class="flex items-baseline justify-between gap-2">
-              <span class="truncate">{{ item.label }}</span>
-              <span class="tabular-nums">{{ item.revenue | eur: 'rounded' }}</span>
+      <ol class="flex flex-col gap-3 text-sm">
+        @for (item of shown(); track item.key; let i = $index) {
+          <li class="flex flex-col gap-1.5">
+            <div class="flex items-baseline gap-2">
+              <span class="text-muted-foreground w-4 shrink-0 text-xs tabular-nums">{{ i + 1 }}</span>
+              <span class="min-w-0 flex-1 truncate font-medium">{{ item.label }}</span>
+              <span class="text-muted-foreground text-xs tabular-nums">{{ shareOf(item) }}</span>
+              <span class="w-24 text-right tabular-nums">{{ item.revenue | eur: 'rounded' }}</span>
             </div>
-            <div class="bg-muted h-2 rounded-full" aria-hidden="true">
+            <div class="bg-muted ml-6 h-2 overflow-hidden rounded-full" aria-hidden="true">
               <div
-                class="bg-primary h-2 rounded-full"
+                class="h-full rounded-full transition-[width] duration-500"
                 [style.width.%]="widthOf(item)"
-                [style.background-color]="item.color ?? null"
+                [style.background-color]="item.color ?? 'var(--chart-1)'"
               ></div>
             </div>
           </li>
         }
       </ol>
       @if (hidden() > 0) {
-        <p class="text-muted-foreground mt-2 text-xs">and {{ hidden() }} more</p>
+        <p class="text-muted-foreground mt-3 text-xs">and {{ hidden() }} more</p>
       }
     }
   `,
 })
 export class AmountBars {
-  readonly title = input.required<string>();
   readonly items = input.required<readonly BarItem[]>();
   readonly limit = input(5);
 
   protected readonly shown = computed(() => this.items().slice(0, this.limit()));
   protected readonly hidden = computed(() => Math.max(0, this.items().length - this.limit()));
   private readonly max = computed(() => Math.max(0, ...this.items().map((item) => item.revenue)));
+  private readonly total = computed(() => this.items().reduce((sum, item) => sum + item.revenue, 0));
 
   protected widthOf(item: BarItem): number {
     return this.max() > 0 ? Math.max(0, (item.revenue / this.max()) * 100) : 0;
+  }
+
+  protected shareOf(item: BarItem): string {
+    return this.total() > 0 ? PERCENT.format(item.revenue / this.total()) : '–';
   }
 }

@@ -162,7 +162,7 @@ class TenantIsolationTest {
         ImportBatch newer = imports.saveAndFlush(new ImportBatch(owner.getId(), "Owner 2027", "owner-2027.xlsx"));
         imports.saveAndFlush(new ImportBatch(other.getId(), "Other 2026", "other.xlsx"));
 
-        assertThat(imports.findAllByTenantIdOrderByCreatedAtDesc(owner.getId()))
+        assertThat(imports.findAllByTenantIdOrderByCreatedAtDescIdDesc(owner.getId()))
                 .extracting(ImportBatch::getName)
                 .containsExactly(newer.getName(), ownersImport.getName());
     }

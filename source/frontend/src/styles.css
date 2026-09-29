@@ -1,4 +1,4 @@
-@layer theme, base, components, utilities;
+﻿@layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/preflight.css' layer(base);
 @import 'tailwindcss/utilities.css';
@@ -6,91 +6,160 @@
 @import '@spartan-ng/brain/hlm-tailwind-preset.css';
 /* OpenLayers controls (zoom, attribution) used by the shared MapView. Not layered, so preflight cannot override it. */
 @import 'ol/ol.css';
-/* You can add global styles to this file, and also import other style files */
 
+/*
+ * VisitWise design tokens (feature/restyling-ui).
+ *
+ * Surfaces, from the back to the front: --shell (app frame behind the sidebar) -> --background (page panel) ->
+ * --card (raised cards) -> --popover (menus, dialogs). Route orange (--brand) marks the logo, the primary action,
+ * progress and focus; it is never used for data, which always takes the enterprise colors or the --chart-n series.
+ * Contrast (WCAG AA): body text >= 7:1, secondary text >= 4.5:1 on every surface, white on --brand 4.8:1.
+ */
 :root {
   color-scheme: light;
 
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --radius: 0.75rem;
+  --shell: #eef0f4;
+  --background: #ffffff;
+  --foreground: #101318;
+  --card: #ffffff;
+  --card-foreground: #101318;
+  --popover: #ffffff;
+  --popover-foreground: #101318;
+  --primary: #101318;
+  --primary-foreground: #fafafa;
+  --secondary: #eef0f4;
+  --secondary-foreground: #101318;
+  --muted: #f4f5f8;
+  --muted-foreground: #5b6371;
+  --accent: #f0f2f6;
+  --accent-foreground: #101318;
+  --destructive: #dc2626;
+  --border: #e3e6eb;
+  --input: #d5d9e0;
+  --ring: #d33a15;
+
+  --brand: #d33a15;
+  --brand-foreground: #ffffff;
+  --brand-soft: #fdece6;
+  --success: #dcfce7;
+  --success-foreground: #14532d;
+  --warning: #fef3c7;
+  --warning-foreground: #78350f;
+  --info: #dbeafe;
+  --info-foreground: #1e3a8a;
+
+  --chart-1: #d33a15;
+  --chart-2: #2563eb;
+  --chart-3: #16a34a;
+  --chart-4: #ca8a04;
+  --chart-5: #7c3aed;
+  --chart-grid: #e8ebf0;
+
+  --sidebar: transparent;
+  --sidebar-foreground: #101318;
+  --sidebar-primary: #101318;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #e4e7ec;
+  --sidebar-accent-foreground: #101318;
+  --sidebar-border: #dfe3e9;
+  --sidebar-ring: #d33a15;
+
+  --shadow-card: 0 1px 2px rgb(16 19 24 / 4%), 0 1px 3px rgb(16 19 24 / 6%);
+  --shadow-raised: 0 8px 24px -12px rgb(16 19 24 / 25%);
 }
 
 :root.dark {
   color-scheme: dark;
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.984 0.003 247.858);
-  --sidebar-primary-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --shell: #0a0c10;
+  --background: #12151b;
+  --foreground: #e8eaee;
+  --card: #181c23;
+  --card-foreground: #e8eaee;
+  --popover: #1d222a;
+  --popover-foreground: #e8eaee;
+  --primary: #e8eaee;
+  --primary-foreground: #12151b;
+  --secondary: #232932;
+  --secondary-foreground: #e8eaee;
+  --muted: #1b2028;
+  --muted-foreground: #9aa3b0;
+  --accent: #232932;
+  --accent-foreground: #e8eaee;
+  --destructive: #f87171;
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 14%);
+  --ring: #ff7a50;
+
+  --brand: #ea4a22;
+  --brand-foreground: #ffffff;
+  --brand-soft: rgb(234 74 34 / 16%);
+  --success: rgb(74 222 128 / 16%);
+  --success-foreground: #86efac;
+  --warning: rgb(250 204 21 / 16%);
+  --warning-foreground: #fde68a;
+  --info: rgb(96 165 250 / 16%);
+  --info-foreground: #bfdbfe;
+
+  --chart-1: #ff6a3d;
+  --chart-2: #60a5fa;
+  --chart-3: #4ade80;
+  --chart-4: #facc15;
+  --chart-5: #a78bfa;
+  --chart-grid: rgb(255 255 255 / 7%);
+
+  --sidebar-foreground: #e8eaee;
+  --sidebar-primary: #e8eaee;
+  --sidebar-primary-foreground: #12151b;
+  --sidebar-accent: #1d222a;
+  --sidebar-accent-foreground: #e8eaee;
+  --sidebar-border: rgb(255 255 255 / 8%);
+  --sidebar-ring: #ff7a50;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 0 0 1px rgb(255 255 255 / 4%);
+  --shadow-raised: 0 12px 32px -12px rgb(0 0 0 / 70%);
+}
+
+/* Tailwind classes for the extra tokens: bg-brand, text-brand-foreground, bg-brand-soft, bg-success, bg-warning... */
+@theme inline {
+  --color-shell: var(--shell);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-chart-grid: var(--chart-grid);
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
   }
   /* Native dropdown lists ignore Tailwind classes: without this they render white-on-white in dark mode. */
   select,
@@ -98,5 +167,66 @@
   select optgroup {
     background-color: var(--popover);
     color: var(--popover-foreground);
+  }
+  /* Thin, theme-aware scrollbars for the long tables and day lists. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--brand) 25%, transparent);
+  }
+}
+
+@layer components {
+  /* Panel header of a dashboard block: title on the left, tools on the right. */
+  .panel-title {
+    @apply text-sm font-semibold tracking-tight;
+  }
+  .panel-subtitle {
+    @apply text-muted-foreground text-xs;
+  }
+  /* Soft status pills used next to figures (positive / warning / neutral). */
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  /* Facts of a page, in the strip under its title (page header): icon and text items. */
+  .page-facts {
+    @apply flex flex-wrap items-center gap-x-5 gap-y-1.5;
+  }
+  .page-facts > li {
+    @apply inline-flex items-center gap-1.5;
+  }
+  .page-facts ng-icon {
+    @apply shrink-0 text-base;
+  }
+  /* Eyebrow label above a figure. */
+  .eyebrow {
+    @apply text-muted-foreground text-[0.6875rem] font-semibold tracking-[0.08em] uppercase;
+  }
+}
+
+/* OpenLayers: give the map the same rounded, bordered look as the cards, in both themes. */
+.ol-viewport {
+  border-radius: inherit;
+}
+.dark .ol-control button {
+  background-color: color-mix(in oklab, var(--card) 85%, transparent);
+  color: var(--foreground);
+}
+.dark .ol-attribution:not(.ol-collapsed) {
+  background: color-mix(in oklab, var(--card) 85%, transparent);
+  color: var(--muted-foreground);
+}
+.dark .ol-attribution a {
+  color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

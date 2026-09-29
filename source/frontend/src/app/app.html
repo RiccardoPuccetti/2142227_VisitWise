@@ -1,5 +1,6 @@
-<!-- App shell (owner: Rivera, task RIV-1): header with navigation + routed page + toaster.
-     Navigation and tenant menu (profile link, logout; Puccetti, PUC-9) only when logged in; dark mode toggle always. -->
+<!-- App shell (owner: Rivera, task RIV-1; layout revamp US-38, Puccetti PUC-13): navigation + routed page + toaster.
+     Logged in: a sidebar from 1024 px (collapsible to icons); below, a top bar whose menu button opens the same sidebar
+     as a drawer. Logged out: a top bar with the dark mode toggle only. Navigation and tenant menu (profile link, logout; Puccetti, PUC-9) only when logged in. -->
 <a
   href="#main"
   (click)="skipToMain($event)"
@@ -7,86 +8,168 @@
   >Skip to main content</a
 >
 
-<header class="bg-background border-b">
-  <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-    <a routerLink="/imports" class="text-lg font-bold tracking-tight">VisitWise</a>
+<div class="shell" [attr.data-layout]="auth.currentTenant() ? 'sidebar' : 'bar'">
+  @if (auth.currentTenant()) {
+    <!-- Below 1024 px: the top bar with the menu button, and the backdrop behind the open drawer. -->
+    <div class="topbar">
+      <button
+        #menuButton
+        hlmBtn
+        variant="ghost"
+        size="icon-sm"
+        type="button"
+        aria-label="Open menu"
+        aria-controls="app-sidebar"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="openMenu()"
+      >
+        <ng-icon name="lucideMenu" aria-hidden="true" />
+      </button>
+      <a routerLink="/imports" class="brand">
+        <span class="brand-mark" aria-hidden="true"><ng-icon name="lucideRoute" /></span>
+        VisitWise
+      </a>
+    </div>
+    <div class="drawer-backdrop" aria-hidden="true" [attr.data-open]="menuOpen()" (click)="closeMenu()"></div>
+  }
+
+  <header
+    id="app-sidebar"
+    class="sidebar"
+    [attr.data-collapsed]="sidebar.collapsed()"
+    [attr.data-open]="menuOpen()"
+    [attr.inert]="auth.currentTenant() && narrow() && !menuOpen() ? '' : null"
+    (keydown.escape)="closeMenu()"
+  >
+    @if (auth.currentTenant()) {
+      <button
+        #closeButton
+        hlmBtn
+        variant="ghost"
+        size="icon-sm"
+        type="button"
+        class="drawer-close rounded-full"
+        aria-label="Close menu"
+        (click)="closeMenu()"
+      >
+        <ng-icon name="lucideX" aria-hidden="true" />
+      </button>
+    }
+    <a routerLink="/imports" class="brand" [attr.title]="sidebar.collapsed() ? 'VisitWise' : null">
+      <span class="brand-mark" aria-hidden="true"><ng-icon name="lucideRoute" /></span>
+      <span class="brand-text">
+        <span class="label">VisitWise</span>
+        <span class="brand-sub" aria-hidden="true">Smart visit planning</span>
+      </span>
+    </a>
 
     @if (auth.currentTenant(); as tenant) {
-      <nav aria-label="Main" class="flex items-center gap-4 text-sm">
+      <nav aria-label="Main" class="nav-group">
+        <p class="nav-heading">Workspace</p>
         <a
           routerLink="/imports"
-          routerLinkActive="text-foreground font-semibold"
-          #importsLink="routerLinkActive"
-          [class.text-muted-foreground]="!importsLink.isActive"
+          routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: true }"
           ariaCurrentWhenActive="page"
-          class="hover:text-foreground"
-          >Imports</a
+          class="nav-item"
+          [attr.title]="sidebar.collapsed() ? 'Imports' : null"
+          ><ng-icon name="lucideFolderOpen" aria-hidden="true" /><span class="label">Imports</span></a
         >
         <a
           routerLink="/imports/new"
-          routerLinkActive="text-foreground font-semibold"
-          #newImportLink="routerLinkActive"
-          [class.text-muted-foreground]="!newImportLink.isActive"
+          routerLinkActive="active"
           ariaCurrentWhenActive="page"
-          class="hover:text-foreground"
-          >New import</a
+          class="nav-item"
+          [attr.title]="sidebar.collapsed() ? 'New import' : null"
+          ><ng-icon name="lucideUpload" aria-hidden="true" /><span class="label">New import</span></a
         >
       </nav>
 
       @if (importId() !== null) {
-        <nav
-          [attr.aria-label]="'Import ' + importId()"
-          class="flex items-center gap-4 text-sm sm:border-l sm:pl-6"
-        >
+        <nav [attr.aria-label]="'Import ' + importId()" class="nav-group">
+          <p class="nav-heading" data-testid="import-name">{{ importName() ?? 'Import' }}</p>
           @for (section of importSections(); track section.label) {
             <a
               [routerLink]="section.link"
-              routerLinkActive="text-foreground font-semibold"
-              #sectionLink="routerLinkActive"
-              [class.text-muted-foreground]="!sectionLink.isActive"
-              [routerLinkActiveOptions]="{ exact: section.exact }"
-              ariaCurrentWhenActive="page"
-              class="hover:text-foreground"
-              >{{ section.label }}</a
+              class="nav-item"
+              [class.active]="section.current"
+              [attr.aria-current]="section.current ? 'page' : null"
+              [attr.title]="sidebar.collapsed() ? section.label : null"
+              ><ng-icon [name]="section.icon" aria-hidden="true" /><span class="label">{{ section.label }}</span></a
             >
           }
         </nav>
       }
 
-      <div class="ml-auto flex items-center gap-2 text-sm">
+      <div class="sidebar-footer">
         <a
           routerLink="/profile"
-          routerLinkActive="text-foreground font-semibold"
-          #profileLink="routerLinkActive"
-          [class.text-muted-foreground]="!profileLink.isActive"
+          routerLinkActive="active"
           ariaCurrentWhenActive="page"
           [attr.aria-label]="'Profile of ' + tenant.name"
-          class="hover:text-foreground"
-          >{{ tenant.name }}</a
+          [attr.title]="sidebar.collapsed() ? tenant.name : null"
+          class="account"
         >
-        <button hlmBtn variant="ghost" size="sm" type="button" (click)="logout()">Log out</button>
+          <span data-testid="initials" aria-hidden="true" class="initials">{{ initials() }}</span>
+          <span class="account-text">
+            <span class="label account-name">{{ tenant.name }}</span>
+            <span class="account-role" aria-hidden="true">Federation account</span>
+          </span>
+        </a>
+        <div class="footer-actions">
+          <button hlmBtn variant="ghost" size="sm" type="button" class="logout" (click)="logout()">
+            <ng-icon name="lucideLogOut" aria-hidden="true" /><span class="label">Log out</span>
+          </button>
+          <!-- Dark mode (US-36, Puccetti PUC-11). -->
+          <button
+            hlmBtn
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            aria-label="Dark mode"
+            class="rounded-full"
+            [attr.aria-pressed]="theme.theme() === 'dark'"
+            (click)="theme.toggle()"
+          >
+            <ng-icon [name]="theme.theme() === 'dark' ? 'lucideSun' : 'lucideMoon'" aria-hidden="true" />
+          </button>
+          <button
+            hlmBtn
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            class="collapse-toggle rounded-full"
+            aria-controls="app-sidebar"
+            [attr.aria-label]="sidebar.collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+            [attr.aria-expanded]="!sidebar.collapsed()"
+            (click)="sidebar.toggle()"
+          >
+            <ng-icon [name]="sidebar.collapsed() ? 'lucidePanelLeftOpen' : 'lucidePanelLeftClose'" aria-hidden="true" />
+          </button>
+        </div>
       </div>
+    } @else {
+      <!-- Dark mode (US-36, Puccetti PUC-11): also before login. -->
+      <button
+        hlmBtn
+        variant="outline"
+        size="icon-sm"
+        type="button"
+        aria-label="Dark mode"
+        class="ml-auto rounded-full"
+        [attr.aria-pressed]="theme.theme() === 'dark'"
+        (click)="theme.toggle()"
+      >
+        <ng-icon [name]="theme.theme() === 'dark' ? 'lucideSun' : 'lucideMoon'" aria-hidden="true" />
+      </button>
     }
+  </header>
 
-    <!-- Dark mode (US-36, Puccetti PUC-11): on every page, logged in or not. -->
-    <button
-      hlmBtn
-      variant="ghost"
-      size="icon-sm"
-      type="button"
-      aria-label="Dark mode"
-      [attr.aria-pressed]="theme.theme() === 'dark'"
-      [class.ml-auto]="!auth.currentTenant()"
-      (click)="theme.toggle()"
-    >
-      <ng-icon [name]="theme.theme() === 'dark' ? 'lucideSun' : 'lucideMoon'" aria-hidden="true" />
-    </button>
-  </div>
-</header>
-
-<main id="main" tabindex="-1" class="mx-auto max-w-7xl px-4 py-6 outline-none">
-  <router-outlet />
-</main>
+  <main id="main" tabindex="-1" class="content outline-none" [attr.inert]="menuOpen() ? '' : null">
+    <div class="page">
+      <router-outlet />
+    </div>
+  </main>
+</div>
 
 <hlm-toaster />

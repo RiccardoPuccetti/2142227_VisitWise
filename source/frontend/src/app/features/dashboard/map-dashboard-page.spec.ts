@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -8,6 +9,7 @@ import {
 import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { AnalyticsSummary, DeliveryPoint } from '../../core/models/api.models';
+import { MapView } from '../../shared';
 import { MapDashboardPage } from './map-dashboard-page';
 
 const NBSP = ' ';
@@ -108,9 +110,9 @@ describe('MapDashboardPage', () => {
     http.match((r) => r.url === '/api/imports/42/analytics/summary');
 
   /** Opens the page and answers its first requests (points + unfiltered summary). */
-  async function open(url = '/imports/42/map'): Promise<void> {
+  async function open(url = '/imports/42/map', points: DeliveryPoint[] = POINTS): Promise<void> {
     await harness.navigateByUrl(url);
-    http.expectOne('/api/imports/42/points').flush(POINTS);
+    http.expectOne('/api/imports/42/points').flush(points);
     for (const request of summaryRequests()) {
       request.flush(summary());
     }
@@ -137,13 +139,19 @@ describe('MapDashboardPage', () => {
     expect(text()).toContain('1 point without position');
     // Top 34% of points (1 of 3) hold 74.8% of revenue.
     expect(text()).toContain('74,8%');
+    // The revenue leads; the other figures are listed beside it.
+    const headline = page().querySelector('[data-testid="kpi-headline"]')!;
+    expect(headline.querySelector('h3')?.textContent?.trim()).toBe('Revenue');
+    expect(headline.textContent).toContain(`2780,50${NBSP}€`);
+    const labels = [...page().querySelectorAll('[data-testid="kpi-details"] dt')].map((term) => term.textContent?.trim());
+    expect(labels).toEqual(['Delivery points', 'Customers', 'Top 20% of points']);
   });
 
   it('links to the import detail to place the points without position', async () => {
     await open();
 
-    const link = page().querySelector<HTMLAnchorElement>('a[href="/imports/42"]');
-    expect(link?.textContent).toContain('Fix positions');
+    const links = [...page().querySelectorAll<HTMLAnchorElement>('a[href="/imports/42"]')];
+    expect(links.some((link) => link.textContent?.includes('Fix positions'))).toBe(true);
   });
 
   it('filters by enterprise, keeps the filter in the URL and reloads the indicators', async () => {
@@ -163,6 +171,22 @@ describe('MapDashboardPage', () => {
     expect(TestBed.inject(Router).url).toBe('/imports/42/map?enterprise=22');
     expect(text()).toContain(`1130,00${NBSP}€`);
     expect(text()).toContain('1 of 2 points on the map');
+  });
+
+  it('keeps the indicators and charts on screen while the filtered ones load', async () => {
+    await open();
+
+    button('Enterprise B').click();
+    TestBed.tick();
+
+    // The filtered summary has not arrived yet: the previous figures stay instead of emptying the charts.
+    expect(text()).toContain(`2780,50${NBSP}€`);
+    expect(page().querySelector('[aria-labelledby="charts-title"]')?.getAttribute('aria-busy')).toBe('true');
+
+    summaryRequests()[0].flush(summary({ totalRevenue: 1130 }));
+    await harness.fixture.whenStable();
+    expect(text()).toContain(`1130,00${NBSP}€`);
+    expect(page().querySelector('[aria-labelledby="charts-title"]')?.getAttribute('aria-busy')).toBe('false');
   });
 
   it('applies the filters found in the URL', async () => {
@@ -190,6 +214,149 @@ describe('MapDashboardPage', () => {
     expect(detailsText).toContain(`Enterprise A 1250,50${NBSP}€`);
     expect(detailsText).toContain(`Enterprise B 830,00${NBSP}€`);
     expect(document.activeElement?.id).toBe('point-details-title');
+  });
+
+  describe('list of points', () => {
+    /** 120 points, POINT 1 with the largest revenue, POINT 120 with the smallest; 100 in ROMA, 20 in TIVOLI. */
+    const MANY = Array.from({ length: 120 }, (_, index) =>
+      point(index + 1, [[21, 10_000 - index]], { city: index < 100 ? 'ROMA' : 'TIVOLI' }),
+    );
+
+    const rows = () => [...page().querySelectorAll('[aria-labelledby="points-title"] tbody tr')];
+    const firstPoint = () => rows()[0]?.querySelector('button')?.textContent?.trim();
+    const pager = () => page().querySelector<HTMLElement>('nav[aria-label="Pages of points"]');
+    const pagerText = () => pager()?.textContent?.replace(/[ \t\r\n]+/g, ' ') ?? '';
+
+    async function choose(selector: string, value: string): Promise<void> {
+      const select = page().querySelector<HTMLSelectElement>(selector);
+      if (!select) {
+        throw new Error(`No select ${selector}`);
+      }
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      await harness.fixture.whenStable();
+    }
+
+    it('shows one page of 50 rows at a time, with previous and next', async () => {
+      await open('/imports/42/map', MANY);
+
+      expect(rows()).toHaveLength(50);
+      expect(firstPoint()).toBe('POINT 1');
+      expect(pagerText()).toContain('Showing 1–50 of 120');
+      expect(pagerText()).toContain('of 3');
+      expect(button('Previous page').disabled).toBe(true);
+
+      button('Next page').click();
+      await harness.fixture.whenStable();
+
+      expect(firstPoint()).toBe('POINT 51');
+      expect(pagerText()).toContain('Showing 51–100 of 120');
+      expect(button('Previous page').disabled).toBe(false);
+    });
+
+    it('jumps to a page chosen in the page selector', async () => {
+      await open('/imports/42/map', MANY);
+
+      await choose('#points-page', '3');
+
+      expect(rows()).toHaveLength(20);
+      expect(firstPoint()).toBe('POINT 101');
+      expect(button('Next page').disabled).toBe(true);
+    });
+
+    it('changes the rows per page and starts again from the first page', async () => {
+      await open('/imports/42/map', MANY);
+      button('Next page').click();
+      await harness.fixture.whenStable();
+
+      await choose('#points-page-size', '25');
+
+      expect(rows()).toHaveLength(25);
+      expect(firstPoint()).toBe('POINT 1');
+      expect(pagerText()).toContain('of 5');
+    });
+
+    it('turns to the page of a point clicked on the map and scrolls the list to its row', async () => {
+      await open('/imports/42/map', MANY);
+      const scroller = page().querySelector<HTMLElement>('[data-testid="points-scroller"]')!;
+      // jsdom has no layout: record the scroll instead of performing it.
+      const scrollTo = vi.fn();
+      scroller.scrollTo = scrollTo as typeof scroller.scrollTo;
+      const map = harness.fixture.debugElement.query(By.directive(MapView)).componentInstance as MapView;
+
+      map.markerClick.emit(map.markers().find((marker) => marker.id === 75)!);
+      await harness.fixture.whenStable();
+
+      expect(pagerText()).toContain('Showing 51–100 of 120');
+      const current = page().querySelector('[aria-labelledby="points-title"] tbody tr[aria-current="true"]');
+      expect(current?.querySelector('button')?.textContent?.trim()).toBe('POINT 75');
+      expect(scrollTo).toHaveBeenCalledOnce();
+    });
+
+    it('recenters the map on a point clicked on the map', async () => {
+      await open('/imports/42/map', MANY);
+      const map = harness.fixture.debugElement.query(By.directive(MapView)).componentInstance as MapView;
+      const centerOn = vi.spyOn(map, 'centerOn');
+
+      map.markerClick.emit(map.markers().find((marker) => marker.id === 75)!);
+      await harness.fixture.whenStable();
+
+      expect(centerOn).toHaveBeenCalledOnce();
+      expect(centerOn.mock.calls[0][0]).toBe(75);
+    });
+
+    it('from the desktop layout shows the selected point in a popup anchored to its marker', async () => {
+      const wide = { matches: true, addEventListener() {}, removeEventListener() {} };
+      // jsdom has no matchMedia: give it one to spy on.
+      window.matchMedia ??= (() => ({ ...wide, matches: false })) as never;
+      const matchMedia = vi.spyOn(window, 'matchMedia').mockReturnValue(wide as unknown as MediaQueryList);
+      try {
+        await open('/imports/42/map', MANY);
+        const map = harness.fixture.debugElement.query(By.directive(MapView)).componentInstance as MapView;
+
+        map.markerClick.emit(map.markers().find((marker) => marker.id === 75)!);
+        await harness.fixture.whenStable();
+
+        // Same breakpoint as the desktop sidebar of the app shell (1024 px).
+        expect(matchMedia).toHaveBeenCalledWith('(min-width: 64rem)');
+        expect(map.popupId()).toBe(75);
+        const popup = page().querySelector('app-map-view [data-map-popup]');
+        expect(popup?.textContent).toContain('CUSTOMER 75');
+        expect(page().querySelector('[aria-label="Selected point"] app-point-details')).toBeNull();
+      } finally {
+        matchMedia.mockRestore();
+      }
+    });
+
+    it('from the desktop layout shows a point without position over the map corner, not below the map', async () => {
+      const wide = { matches: true, addEventListener() {}, removeEventListener() {} };
+      window.matchMedia ??= (() => ({ ...wide, matches: false })) as never;
+      const matchMedia = vi.spyOn(window, 'matchMedia').mockReturnValue(wide as unknown as MediaQueryList);
+      try {
+        await open();
+
+        // POINT 3 has no coordinates: no marker to anchor a popup to.
+        button('POINT 3').click();
+        await harness.fixture.whenStable();
+
+        const corner = page().querySelector('app-map-view ~ [data-map-corner]');
+        expect(corner?.textContent).toContain('CUSTOMER 3');
+        expect(page().querySelector('[aria-label="Selected point"]')).toBeNull();
+      } finally {
+        matchMedia.mockRestore();
+      }
+    });
+
+    it('starts again from the first page when a filter changes', async () => {
+      await open('/imports/42/map', MANY);
+      button('Next page').click();
+      await harness.fixture.whenStable();
+
+      await choose('#dashboard-city', 'TIVOLI');
+
+      expect(firstPoint()).toBe('POINT 101');
+      expect(pagerText()).toContain('Showing 1–20 of 20');
+    });
   });
 
   it('shows the problem when the points cannot be loaded', async () => {

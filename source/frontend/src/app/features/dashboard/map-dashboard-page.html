@@ -1,13 +1,18 @@
 <!-- Map dashboard (owner: Rivera, task RIV-3, US-13..US-18). -->
-<div class="flex flex-col gap-6">
-  <header class="flex flex-col gap-1">
-    <h1 class="text-2xl font-semibold">Map</h1>
-    <p class="text-muted-foreground text-sm">
-      Delivery points of the import. Color: the enterprise with the largest revenue at the point.
-      Size: revenue.
-    </p>
-  </header>
+<app-page-header title="Map">
+  <ul class="page-facts">
+    <li><ng-icon name="lucideMapPin" aria-hidden="true" /> Delivery points of the import</li>
+    <li><ng-icon name="lucidePalette" aria-hidden="true" /> Color: the enterprise with the largest revenue</li>
+    <li><ng-icon name="lucideCircleDot" aria-hidden="true" /> Size: revenue</li>
+  </ul>
+  <div actions class="flex flex-wrap items-center gap-2">
+    <a hlmBtn variant="outline" [routerLink]="['/imports', id(), 'planner']">
+      <ng-icon name="lucideCalendarRange" aria-hidden="true" /> Plan visits
+    </a>
+  </div>
+</app-page-header>
 
+<div class="flex flex-col gap-7">
   @if (error(); as message) {
     <div hlmAlert variant="destructive" role="alert">
       <h2 hlmAlertTitle>The map cannot be loaded</h2>
@@ -15,190 +20,280 @@
     </div>
   }
 
-  <section aria-labelledby="filters-title" class="flex flex-col gap-3">
-    <h2 id="filters-title" class="sr-only">Filters</h2>
-    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Enterprises">
-      @for (enterprise of enterprises(); track enterprise.enterpriseId) {
-        <button
-          hlmBtn
-          type="button"
-          size="sm"
-          [variant]="isSelected(enterprise.enterpriseId) ? 'secondary' : 'outline'"
-          [attr.aria-pressed]="isSelected(enterprise.enterpriseId)"
-          (click)="toggleEnterprise(enterprise.enterpriseId)"
-        >
-          <span
-            class="border-foreground/20 size-2.5 rounded-full border"
-            [style.background-color]="enterprise.color"
-            aria-hidden="true"
-          ></span>
-          {{ enterprise.name }}
-        </button>
-      }
-    </div>
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel for="dashboard-agent">Agent</label>
-        <hlm-native-select
-          selectId="dashboard-agent"
-          [value]="filter().agent ?? ''"
-          (valueChange)="setAgent($event)"
-        >
-          <option hlmNativeSelectOption value="">All agents</option>
-          @for (agent of options().agents; track agent) {
-            <option hlmNativeSelectOption [value]="agent">{{ agent }}</option>
-          }
-        </hlm-native-select>
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel for="dashboard-city">City</label>
-        <hlm-native-select
-          selectId="dashboard-city"
-          [value]="filter().city ?? ''"
-          (valueChange)="setCity($event)"
-        >
-          <option hlmNativeSelectOption value="">All cities</option>
-          @for (city of options().cities; track city) {
-            <option hlmNativeSelectOption [value]="city">{{ city }}</option>
-          }
-        </hlm-native-select>
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel for="dashboard-min-revenue">Minimum revenue (€)</label>
-        <input
-          hlmInput
-          id="dashboard-min-revenue"
-          type="number"
-          min="0"
-          step="100"
-          inputmode="numeric"
-          [value]="filter().minRevenue || ''"
-          (change)="setMinRevenue($event)"
-        />
-      </div>
-      <div class="flex items-end">
-        <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset filters</button>
-      </div>
+  <section aria-labelledby="indicators-title" class="flex flex-col gap-3">
+    <h2 id="indicators-title" class="sr-only">Indicators</h2>
+    <app-kpi-summary
+      label="Revenue"
+      [loading]="loading()"
+      [value]="formatEur(summary()?.totalRevenue)"
+      [hint]="filterHint()"
+      [details]="[
+        {
+          label: 'Delivery points',
+          value: '' + (summary()?.pointCount ?? '–'),
+          hint: markers().length + ' on the map',
+          icon: 'lucideMapPin',
+        },
+        { label: 'Customers', value: '' + (summary()?.customerCount ?? '–'), icon: 'lucideUsers' },
+        { label: 'Top 20% of points', value: topShare(), hint: 'of the revenue', icon: 'lucideTrendingUp' },
+      ]"
+    />
+  </section>
+
+  <section aria-labelledby="charts-title" class="flex flex-col gap-4" [attr.aria-busy]="refreshing()">
+    <h2 id="charts-title" class="sr-only">Revenue breakdown</h2>
+    <div class="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4">
+      <section hlmCard size="sm" aria-labelledby="chart-enterprise-title">
+        <div hlmCardHeader>
+          <h3 hlmCardTitle id="chart-enterprise-title" class="panel-title">Revenue by enterprise</h3>
+          <p hlmCardDescription class="panel-subtitle">Share of the total held by each enterprise.</p>
+        </div>
+        <div hlmCardContent>
+          <app-donut-chart
+            [slices]="enterpriseSlices()"
+            [total]="formatEur(summary()?.totalRevenue, 'compact')"
+            totalLabel="total"
+            [format]="formatCompact"
+            ariaLabel="Share of revenue by enterprise"
+          />
+        </div>
+      </section>
+      <section hlmCard size="sm" aria-labelledby="chart-pareto-title">
+        <div hlmCardHeader>
+          <h3 hlmCardTitle id="chart-pareto-title" class="panel-title">Revenue concentration</h3>
+          <p hlmCardDescription class="panel-subtitle">Cumulative revenue held by the top share of points.</p>
+        </div>
+        <div hlmCardContent>
+          <app-area-chart
+            [points]="paretoCurve()"
+            [max]="1"
+            [format]="formatPercent"
+            [showValues]="false"
+            ariaLabel="Cumulative share of revenue by share of delivery points"
+          />
+        </div>
+      </section>
+      <section hlmCard size="sm" aria-labelledby="chart-agent-title">
+        <div hlmCardHeader>
+          <h3 hlmCardTitle id="chart-agent-title" class="panel-title">Revenue by agent</h3>
+          <p hlmCardDescription class="panel-subtitle">Largest first.</p>
+        </div>
+        <div hlmCardContent>
+          <app-amount-bars [items]="agentBars()" />
+        </div>
+      </section>
+      <section hlmCard size="sm" aria-labelledby="chart-city-title">
+        <div hlmCardHeader>
+          <h3 hlmCardTitle id="chart-city-title" class="panel-title">Revenue by city</h3>
+          <p hlmCardDescription class="panel-subtitle">Largest first.</p>
+        </div>
+        <div hlmCardContent>
+          <app-amount-bars [items]="cityBars()" />
+        </div>
+      </section>
     </div>
   </section>
 
-  <div class="grid gap-4 lg:grid-cols-3">
-    <div class="flex flex-col gap-2 lg:col-span-2">
-      <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
-      <app-map-view
-        class="h-[32rem]"
-        ariaLabel="Map of the delivery points"
-        [markers]="markers()"
-        [highlightedId]="selectedId()"
-        (markerClick)="select($event.id)"
-      />
-      <p class="text-muted-foreground text-sm" aria-live="polite">
-        {{ markers().length }} of {{ filteredPoints().length }} points on the map
-        @if (withoutPosition() > 0) {
-          · {{ withoutPosition() }} {{ withoutPosition() === 1 ? 'point' : 'points' }} without
-          position ·
-          <a [routerLink]="['/imports', id()]" class="text-foreground underline underline-offset-4"
-            >Fix positions</a
-          >
-        }
-      </p>
-    </div>
-
-    <aside class="flex flex-col gap-4" aria-label="Selected point">
-      @if (selected(); as point) {
-        <app-point-details
-          [point]="point"
-          [enterprises]="enterprises()"
-          (closed)="selectedId.set(null)"
-        />
-      } @else {
-        <section hlmCard size="sm">
-          <div hlmCardContent class="text-muted-foreground text-sm">
-            Select a marker, or a point in the list below, to see its customer, address and revenue
-            per enterprise.
+  <!-- Filters: a toolbar above the map, from xl a left rail as tall as the map. Selected point: a card below the map on
+       small screens, from lg (desktop sidebar) a popup anchored to its marker. -->
+  <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
+    <!-- Filters: a wrapping toolbar above the map on small screens, a rail beside the map from xl. -->
+    <section hlmCard size="sm" class="xl:col-start-1 xl:row-start-1" aria-labelledby="filters-title">
+      <div hlmCardContent class="flex flex-col gap-3 xl:flex-1 xl:gap-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <ng-icon name="lucideFilter" class="text-muted-foreground" aria-hidden="true" />
+            <h2 id="filters-title" class="panel-title">Filters</h2>
+            @if (activeFilters() > 0) {
+              <span class="pill bg-brand-soft text-brand">{{ activeFilters() }} active</span>
+            }
           </div>
-        </section>
-      }
-    </aside>
-  </div>
-
-  <section aria-labelledby="indicators-title" class="flex flex-col gap-4">
-    <div class="flex flex-col gap-1">
-      <h2 id="indicators-title" class="text-lg font-semibold">Indicators</h2>
-      <p class="text-muted-foreground text-sm">
-        Computed on the selected enterprises and agent. City and minimum revenue filter only the map
-        and the list.
-      </p>
-    </div>
-    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <app-kpi-card
-        label="Revenue"
-        [loading]="loading()"
-        [value]="formatEur(summary()?.totalRevenue)"
-      />
-      <app-kpi-card
-        label="Delivery points"
-        [loading]="loading()"
-        [value]="'' + (summary()?.pointCount ?? '–')"
-      />
-      <app-kpi-card
-        label="Customers"
-        [loading]="loading()"
-        [value]="'' + (summary()?.customerCount ?? '–')"
-      />
-      <app-kpi-card
-        label="Top 20% of points"
-        [loading]="loading()"
-        [value]="topShare()"
-        hint="share of the revenue they hold"
-      />
-    </div>
-    <div class="grid gap-6 md:grid-cols-3">
-      <app-amount-bars title="Revenue by enterprise" [items]="enterpriseBars()" />
-      <app-amount-bars title="Revenue by agent" [items]="agentBars()" />
-      <app-amount-bars title="Revenue by city" [items]="cityBars()" />
-    </div>
-  </section>
-
-  <section aria-labelledby="points-title" class="flex flex-col gap-2">
-    <h2 id="points-title" class="text-lg font-semibold">Delivery points</h2>
-    <p class="text-muted-foreground text-sm">
-      Largest revenue first. Showing {{ listedRows().length }} of {{ rows().length }}.
-    </p>
-    <div hlmTableContainer>
-      <table hlmTable>
-        <thead hlmTHead>
-          <tr hlmTr>
-            <th hlmTh scope="col">Point</th>
-            <th hlmTh scope="col">Customer</th>
-            <th hlmTh scope="col">City</th>
-            <th hlmTh scope="col">Agent</th>
-            <th hlmTh scope="col" class="text-right">Revenue</th>
-          </tr>
-        </thead>
-        <tbody hlmTBody>
-          @for (row of listedRows(); track row.point.id) {
-            <tr hlmTr [attr.aria-current]="row.point.id === selectedId() ? 'true' : null">
-              <td hlmTd>
+          <button hlmBtn variant="ghost" size="sm" type="button" [disabled]="activeFilters() === 0" (click)="resetFilters()">
+            Reset<span class="max-xl:sr-only"> filters</span>
+          </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-3 xl:flex-col xl:items-stretch xl:gap-4">
+          <div class="flex flex-col gap-1.5">
+            <span hlmLabel id="dashboard-enterprises-label" class="max-xl:sr-only">Enterprises</span>
+            <div class="flex flex-wrap items-center gap-2 xl:flex-col xl:items-stretch" role="group" aria-labelledby="dashboard-enterprises-label">
+              @for (enterprise of enterprises(); track enterprise.enterpriseId) {
                 <button
                   hlmBtn
-                  variant="link"
-                  size="sm"
                   type="button"
-                  class="h-auto p-0"
-                  (click)="select(row.point.id)"
+                  size="sm"
+                  class="rounded-full xl:justify-start"
+                  [variant]="isSelected(enterprise.enterpriseId) ? 'secondary' : 'outline'"
+                  [attr.aria-pressed]="isSelected(enterprise.enterpriseId)"
+                  (click)="toggleEnterprise(enterprise.enterpriseId)"
                 >
-                  {{ row.point.pointName }}
+                  <span
+                    class="border-foreground/20 size-2.5 shrink-0 rounded-full border"
+                    [style.background-color]="enterprise.color"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="truncate">{{ enterprise.name }}</span>
                 </button>
-              </td>
-              <td hlmTd>{{ row.point.customerName }}</td>
-              <td hlmTd>{{ row.point.city }}</td>
-              <td hlmTd>{{ row.point.agent ?? '–' }}</td>
-              <td hlmTd class="text-right tabular-nums">{{ row.revenue | eur }}</td>
-            </tr>
+              }
+            </div>
+          </div>
+          <div class="flex items-center gap-2 max-sm:w-full xl:flex-col xl:items-stretch xl:gap-1.5">
+            <label hlmLabel for="dashboard-agent" class="text-muted-foreground shrink-0 font-normal max-sm:w-28 xl:text-foreground xl:font-medium">Agent</label>
+            <hlm-native-select selectId="dashboard-agent" size="sm" class="max-sm:flex-1 xl:w-full" [value]="filter().agent ?? ''" (valueChange)="setAgent($event)">
+              <option hlmNativeSelectOption value="">All agents</option>
+              @for (agent of options().agents; track agent) {
+                <option hlmNativeSelectOption [value]="agent">{{ agent }}</option>
+              }
+            </hlm-native-select>
+          </div>
+          <div class="flex items-center gap-2 max-sm:w-full xl:flex-col xl:items-stretch xl:gap-1.5">
+            <label hlmLabel for="dashboard-city" class="text-muted-foreground shrink-0 font-normal max-sm:w-28 xl:text-foreground xl:font-medium">City</label>
+            <hlm-native-select selectId="dashboard-city" size="sm" class="max-sm:flex-1 xl:w-full" [value]="filter().city ?? ''" (valueChange)="setCity($event)">
+              <option hlmNativeSelectOption value="">All cities</option>
+              @for (city of options().cities; track city) {
+                <option hlmNativeSelectOption [value]="city">{{ city }}</option>
+              }
+            </hlm-native-select>
+          </div>
+          <div class="flex items-center gap-2 max-sm:w-full xl:flex-col xl:items-stretch xl:gap-1.5">
+            <label hlmLabel for="dashboard-min-revenue" class="text-muted-foreground shrink-0 font-normal max-sm:w-28 xl:text-foreground xl:font-medium">
+              Min. revenue (€)
+            </label>
+            <input
+              hlmInput
+              id="dashboard-min-revenue"
+              class="h-8 w-28 max-sm:flex-1 xl:w-full"
+              type="number"
+              min="0"
+              step="100"
+              inputmode="numeric"
+              placeholder="0"
+              [value]="filter().minRevenue || ''"
+              (change)="setMinRevenue($event)"
+            />
+          </div>
+        </div>
+        <p class="text-muted-foreground text-xs xl:mt-auto">
+          Enterprise and agent also update the indicators and charts; city and minimum revenue only the map and the list.
+        </p>
+      </div>
+    </section>
+
+    <section hlmCard size="sm" class="xl:col-start-2 xl:row-start-1" aria-label="Map of the delivery points">
+      <div hlmCardContent class="flex flex-col gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
+          <p class="text-muted-foreground text-sm" aria-live="polite">
+            {{ markers().length }} of {{ filteredPoints().length }} points on the map
+            @if (withoutPosition() > 0) {
+              · {{ withoutPosition() }} {{ withoutPosition() === 1 ? 'point' : 'points' }} without position ·
+              <a [routerLink]="['/imports', id()]" class="text-foreground underline underline-offset-4">Fix positions</a>
+            }
+          </p>
+        </div>
+        <div class="relative">
+          <app-map-view
+            class="block h-[30rem] overflow-hidden rounded-xl border xl:h-[44rem]"
+            ariaLabel="Map of the delivery points"
+            [markers]="markers()"
+            [highlightedId]="selectedId()"
+            [popupId]="popupOnMap() ? selectedId() : null"
+            (markerClick)="selectOnMap($event.id)"
+          >
+            <!-- Wide screens: the selected point in a popup anchored to its marker (moves with the map). -->
+            <div data-map-popup>
+              @if (popupOnMap() && selected(); as point) {
+                <app-point-details
+                  class="block max-h-[28rem] w-80 overflow-y-auto rounded-2xl shadow-lg xl:max-h-[42rem]"
+                  [point]="point"
+                  [enterprises]="enterprises()"
+                  (closed)="selectedId.set(null)"
+                />
+              }
+            </div>
+          </app-map-view>
+          @if (wide() && !popupOnMap() && selected(); as point) {
+            <!-- Desktop, point without position: no marker to anchor to, so the details sit over the map's corner. -->
+            <div data-map-corner class="absolute top-3 right-3 z-10">
+              <app-point-details
+                class="block max-h-[28rem] w-80 overflow-y-auto rounded-2xl shadow-lg xl:max-h-[42rem]"
+                [point]="point"
+                [enterprises]="enterprises()"
+                (closed)="selectedId.set(null)"
+              />
+            </div>
           }
-        </tbody>
-      </table>
+        </div>
+        <!-- Smaller screens: the selected point in a card below the map (a placeholder until one is selected). -->
+        @if (!wide()) {
+          <aside class="flex flex-col gap-4" aria-label="Selected point">
+            @if (selected(); as point) {
+              <app-point-details [point]="point" [enterprises]="enterprises()" (closed)="selectedId.set(null)" />
+            } @else {
+              <section hlmCard size="sm" class="h-full">
+                <div hlmCardContent class="flex h-full flex-col items-center justify-center gap-3 py-10 text-center">
+                  <span class="bg-muted text-muted-foreground grid size-12 place-items-center rounded-2xl" aria-hidden="true">
+                    <ng-icon name="lucideMousePointerClick" class="text-xl" />
+                  </span>
+                  <p class="font-medium">No point selected</p>
+                  <p class="text-muted-foreground max-w-xs text-sm">
+                    Select a marker, or a point in the list below, to see its customer, address and revenue per enterprise.
+                  </p>
+                </div>
+              </section>
+            }
+          </aside>
+        }
+      </div>
+    </section>
+
+  </div>
+
+  <section hlmCard size="sm" aria-labelledby="points-title">
+    <div hlmCardHeader class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 hlmCardTitle id="points-title">Delivery points</h2>
+        <p hlmCardDescription>Largest revenue first. Choose a point to see its details.</p>
+      </div>
+    </div>
+    <div hlmCardContent class="px-0">
+      <!-- Scrolls inside the card (the header stays visible) so a long page does not push the pager off screen. -->
+      <div
+        hlmTableContainer
+        data-testid="points-scroller"
+        class="max-h-[28rem] overflow-y-auto border-t"
+        tabindex="0"
+        role="region"
+        aria-labelledby="points-title"
+        #scroller
+      >
+        <table hlmTable>
+          <thead hlmTHead class="bg-card sticky top-0 z-10 shadow-[inset_0_-1px_0_var(--border)]">
+            <tr hlmTr class="hover:bg-transparent">
+              <th hlmTh scope="col" class="pl-6">Point</th>
+              <th hlmTh scope="col">Customer</th>
+              <th hlmTh scope="col">City</th>
+              <th hlmTh scope="col">Agent</th>
+              <th hlmTh scope="col" class="pr-6 text-right">Revenue</th>
+            </tr>
+          </thead>
+          <tbody hlmTBody>
+            @for (row of paging.rows(); track row.point.id) {
+              <tr hlmTr [attr.data-point-id]="row.point.id" [attr.aria-current]="row.point.id === selectedId() ? 'true' : null" [class.bg-accent]="row.point.id === selectedId()">
+                <td hlmTd class="pl-6 whitespace-normal">
+                  <button hlmBtn variant="link" size="sm" type="button" class="h-auto p-0 text-left font-medium whitespace-normal" (click)="select(row.point.id)">
+                    {{ row.point.pointName }}
+                  </button>
+                </td>
+                <td hlmTd class="whitespace-normal">{{ row.point.customerName }}</td>
+                <td hlmTd>{{ row.point.city }}</td>
+                <td hlmTd>{{ row.point.agent ?? '–' }}</td>
+                <td hlmTd class="pr-6 text-right tabular-nums">{{ row.revenue | eur }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-table-pager [paging]="paging" idPrefix="points" label="Pages of points" [scroller]="scroller" />
     </div>
   </section>
 </div>

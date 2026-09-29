@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
@@ -6,25 +6,60 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideBuilding2, lucideKeyRound, lucideMail } from '@ng-icons/lucide';
 import { AuthService } from '../../core/auth/auth.service';
 import { problemDetail } from '../../core/auth/problem-detail';
 import { PASSWORD_MAX_LENGTH, requiredText } from '../auth/text-rules';
+import { PageHeader } from '../../shared';
 import { ProfileService } from './profile.service';
 
 /** US-34 - owner: Puccetti (task PUC-9, AUTHENTICATION.md step 7). */
 @Component({
   selector: 'app-profile-page',
-  imports: [FormRoot, FormField, HlmAlertImports, HlmButtonImports, HlmCardImports, HlmFieldImports, HlmInputImports],
+  // Same rhythm as every page: the header and the sections 1.75rem apart.
+  host: { class: 'flex flex-col gap-7' },
+  imports: [
+    FormRoot,
+    FormField,
+    NgIcon,
+    PageHeader,
+    HlmAlertImports,
+    HlmButtonImports,
+    HlmCardImports,
+    HlmFieldImports,
+    HlmInputImports,
+  ],
+  providers: [provideIcons({ lucideBuilding2, lucideKeyRound, lucideMail })],
   template: `
-    <h1 class="text-2xl font-semibold">Profile</h1>
-    <p class="text-muted-foreground mt-1 text-sm">
-      Logged in as <span class="text-foreground font-medium">{{ auth.currentTenant()?.email }}</span>
-    </p>
+    <app-page-header title="Profile">
+      <ul class="page-facts">
+        <li>
+          <ng-icon name="lucideMail" aria-hidden="true" /> Logged in as
+          <span class="text-foreground font-medium">{{ auth.currentTenant()?.email }}</span>
+        </li>
+      </ul>
+    </app-page-header>
 
-    <div class="mt-6 grid max-w-3xl gap-6 md:grid-cols-2">
+    <div class="grid gap-7 lg:grid-cols-[minmax(0,20rem)_1fr] 2xl:grid-cols-[minmax(0,24rem)_1fr]">
+      <section hlmCard class="lg:row-span-2" aria-label="Account">
+        <div hlmCardContent class="flex flex-col items-center gap-4 py-8 text-center">
+          <span class="bg-brand grid size-20 place-items-center rounded-full text-2xl font-semibold text-white shadow-raised" aria-hidden="true">
+            {{ initials() }}
+          </span>
+          <div class="flex flex-col gap-1">
+            <p class="text-lg font-semibold tracking-tight">{{ auth.currentTenant()?.name }}</p>
+            <p class="text-muted-foreground text-sm">{{ auth.currentTenant()?.email }}</p>
+          </div>
+          <p class="pill">Federation account</p>
+        </div>
+      </section>
+
       <section hlmCard aria-labelledby="profile-name-title">
         <div hlmCardHeader>
-          <h2 hlmCardTitle id="profile-name-title">Federation name</h2>
+          <h2 hlmCardTitle id="profile-name-title" class="flex items-center gap-2">
+            <ng-icon name="lucideBuilding2" class="text-brand" aria-hidden="true" /> Federation name
+          </h2>
           <p hlmCardDescription>Shown in the header and on exports.</p>
         </div>
         <form hlmCardContent [formRoot]="nameForm" aria-labelledby="profile-name-title" class="flex flex-col gap-4">
@@ -40,7 +75,9 @@ import { ProfileService } from './profile.service';
 
       <section hlmCard aria-labelledby="profile-password-title">
         <div hlmCardHeader>
-          <h2 hlmCardTitle id="profile-password-title">Password</h2>
+          <h2 hlmCardTitle id="profile-password-title" class="flex items-center gap-2">
+            <ng-icon name="lucideKeyRound" class="text-brand" aria-hidden="true" /> Password
+          </h2>
           <p hlmCardDescription>Changing it logs out every other device.</p>
         </div>
         <form
@@ -91,6 +128,18 @@ import { ProfileService } from './profile.service';
 export class ProfilePage {
   private readonly profile = inject(ProfileService);
   protected readonly auth = inject(AuthService);
+
+  protected readonly initials = computed(() => {
+    const name = this.auth.currentTenant()?.name ?? '';
+    return (
+      name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((word) => word[0]?.toUpperCase() ?? '')
+        .join('') || '?'
+    );
+  });
 
   protected readonly nameStatus = signal('');
   protected readonly passwordStatus = signal('');

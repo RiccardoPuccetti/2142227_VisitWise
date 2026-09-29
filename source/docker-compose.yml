@@ -31,6 +31,8 @@ services:
       GEOCODING_USER_AGENT: ${GEOCODING_USER_AGENT:-VisitWise-hackathon/0.1}
       ROUTING_ENABLED: ${ROUTING_ENABLED:-true}
       ROUTING_BASE_URL: ${ROUTING_BASE_URL:-https://router.project-osrm.org}
+      # Road distance matrix for the planner: only with the self-hosted OSRM below (never the public server).
+      ROUTING_MATRIX_ENABLED: ${ROUTING_MATRIX_ENABLED:-false}
       PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-20}
       REMEMBER_ME_DAYS: ${REMEMBER_ME_DAYS:-14}
@@ -54,5 +56,47 @@ services:
       - backend
     restart: unless-stopped
 
+  # Self-hosted OSRM (optional, profile "osrm": COMPOSE_PROFILES=osrm in .env). The first start downloads the
+  # OpenStreetMap extract from Geofabrik and prepares the car road network (a few minutes); later starts reuse the
+  # volume and prepare again only when OSRM_PBF_URL changes.
+  osrm-data:
+    image: ghcr.io/project-osrm/osrm-backend:v6.0.0
+    profiles: [osrm]
+    environment:
+      OSRM_PBF_URL: ${OSRM_PBF_URL:-https://download.geofabrik.de/europe/italy/centro-latest.osm.pbf}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        if [ -f /data/region.osrm.hsgr ] && [ "$$(cat /data/source-url 2>/dev/null)" = "$$OSRM_PBF_URL" ]; then
+          echo "Road network ready: $$OSRM_PBF_URL"; exit 0
+        fi
+        rm -f /data/region.* /data/source-url
+        echo "Downloading $$OSRM_PBF_URL"
+        wget -q -O /data/region.osm.pbf "$$OSRM_PBF_URL"
+        osrm-extract -p /opt/car.lua /data/region.osm.pbf
+        osrm-contract /data/region.osrm
+        rm /data/region.osm.pbf
+        echo "$$OSRM_PBF_URL" > /data/source-url
+        echo "Road network ready: $$OSRM_PBF_URL"
+    volumes:
+      - visitwise-osrm-data:/data
+
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v6.0.0
+    profiles: [osrm]
+    # Tables up to 500 x 500 per request: the planner asks for its road distance matrix in blocks of that size.
+    command: ["osrm-routed", "--algorithm", "ch", "--max-table-size", "500", "/data/region.osrm"]
+    ports:
+      # Only this machine (a backend started with ./mvnw uses http://localhost:5000).
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - visitwise-osrm-data:/data
+    depends_on:
+      osrm-data:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
 volumes:
   visitwise-db-data:
+  visitwise-osrm-data:

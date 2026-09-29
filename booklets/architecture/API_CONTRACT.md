@@ -139,7 +139,7 @@ Parsing rules (both preview and import):
 
 ```json
 {
-  "source": "OSRM",                      // "ESTIMATE" when OSRM is disabled/unreachable: same Haversine model as the plan KPIs
+  "source": "OSRM",                      // "ESTIMATE" when OSRM is disabled/unreachable: Haversine x road factor, as the plan KPIs without road network
   "km": 18.7, "minutes": 46.2,
   "legs": [{ "km": 2.4, "minutes": 6.1 }, { "km": 3.1, "minutes": 7.5 }],   // base->stop1, stop1->stop2, ..., last->base
   "geometry": [{ "latitude": 41.896, "longitude": 12.4823 }, "..."]        // polyline to draw; base/stops/base for ESTIMATE
@@ -187,7 +187,8 @@ Validation: `workingDays` 1..260, `visitDurationMinutes` 30..480, `workdayMinute
     "coveredRevenue": 395000.0, "eligibleRevenue": 560000.0, "coverage": 0.71,
     "upperBoundRevenue": 402000.0,
     "totalKm": 420.5, "travelHours": 21.9, "workingDaysUsed": 20,
-    "lastVisitDate": "2026-11-27", "visitsAfterDeadline": 0, "excludedOutOfRange": 1
+    "lastVisitDate": "2026-11-27", "visitsAfterDeadline": 0, "excludedOutOfRange": 1,
+    "travelSource": "OSRM"   // km and hours measured on the road network (US-39); "ESTIMATE" = straight line x road factor at the average speed; null in plans saved before 2026-09-28
   },
   "days": [
     {

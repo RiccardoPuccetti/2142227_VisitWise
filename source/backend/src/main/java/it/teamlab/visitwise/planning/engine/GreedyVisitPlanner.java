@@ -55,7 +55,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
             requireFinite(revenue);
             if (value <= p.minRevenue()) continue;
             var first = group.getFirst();
-            if (!p.constraints().isWithinRange(p.base(), first.location(), p.travel())) {
+            if (!p.constraints().isWithinRange(p.base(), first.location(), p.roads())) {
                 outOfRange++;
                 continue;
             }
@@ -92,7 +92,8 @@ public final class GreedyVisitPlanner implements VisitPlanner {
                     VisitTarget added = null;
                     double bestGain = 0;
                     for (var target : unassigned) {
-                        // Insertion cannot shorten a metric route; remaining targets have no higher value.
+                        // Insertion cannot shorten a metric route (road figures are shortest paths, so nearly
+                        // metric); remaining targets have no higher value.
                         if (target.value() < bestGain - 1e-9) break;
                         var candidate = routing.insert(route, target);
                         double gain = target.value() - p.travelCostPerKm() * (candidate.km() - route.km());
@@ -117,7 +118,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
             for (int i = 0; i < routes.size(); i++) {
                 var route = routes.get(i);
                 days.add(new PlannedDay(dates.get(i), visitor.getKey(), route.targets(), route.km(),
-                        route.km() / p.travel().averageSpeedKmh() * 60));
+                        route.minutes()));
             }
             remaining.addAll(unassigned);
         }
@@ -127,6 +128,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
         double covered = planned.stream().mapToDouble(VisitTarget::revenue).sum();
         double total = eligible.stream().mapToDouble(VisitTarget::revenue).sum();
         double km = days.stream().mapToDouble(PlannedDay::km).sum();
+        double travelMinutes = days.stream().mapToDouble(PlannedDay::travelMinutes).sum();
         requireFinite(total);
         requireFinite(upperBound);
         requireFinite(km);
@@ -135,7 +137,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
         int late = days.stream().filter(day -> day.date().isAfter(p.deadline()))
                 .mapToInt(day -> day.targets().size()).sum();
         var kpis = new PlannerResult.Kpis(planned.size(), customers, covered, total,
-                total == 0 ? 0 : covered / total, upperBound, km, km / p.travel().averageSpeedKmh(),
+                total == 0 ? 0 : covered / total, upperBound, km, travelMinutes / 60,
                 (int) days.stream().map(PlannedDay::date).distinct().count(),
                 days.isEmpty() ? null : days.getLast().date(), late, outOfRange);
         return new PlannerResult(days, kpis, remaining.stream().limit(20).toList(), notGeocoded);
@@ -191,48 +193,70 @@ public final class GreedyVisitPlanner implements VisitPlanner {
     }
 
     private record AddressKey(String address, String city, String agent) { }
-    private record Route(List<VisitTarget> targets, double km, double value) { }
+    private record Route(List<VisitTarget> targets, double km, double minutes, double value) { }
 
     private static final class Routing {
         private final PlannerParameters p;
         private final Map<Long, Integer> indices = new HashMap<>();
         private final double[][] distances;
+        private final double[][] minutes;
 
         Routing(PlannerParameters p, List<VisitTarget> targets) {
             this.p = p;
-            // Limit memory for large imports; the usual 1,000-point case reuses exact local distances.
-            distances = targets.size() <= 2000 ? new double[targets.size() + 1][targets.size() + 1] : null;
+            // Limit memory for large imports; the usual 1,000-point case reuses exact distances and times.
+            int size = targets.size() + 1;
+            distances = targets.size() <= 2000 ? new double[size][size] : null;
+            minutes = distances == null ? null : new double[size][size];
             if (distances == null) return;
             for (int i = 0; i < targets.size(); i++) indices.put(targets.get(i).id(), i + 1);
-            for (int i = 0; i < targets.size(); i++) {
-                distances[0][i + 1] = distances[i + 1][0] = p.travel().roadDistanceKm(p.base(), targets.get(i).location());
-                for (int j = 0; j < i; j++) {
-                    distances[i + 1][j + 1] = distances[j + 1][i + 1] = p.travel()
-                            .roadDistanceKm(targets.get(i).location(), targets.get(j).location());
+            // Road figures can differ by direction (one-way streets): fill both.
+            for (int i = 0; i < size; i++) {
+                var from = i == 0 ? p.base() : targets.get(i - 1).location();
+                for (int j = 0; j < size; j++) {
+                    if (i == j) continue;
+                    var to = j == 0 ? p.base() : targets.get(j - 1).location();
+                    distances[i][j] = p.roads().roadDistanceKm(from, to);
+                    minutes[i][j] = p.roads().travelMinutes(from, to);
                 }
             }
         }
 
         private double distance(VisitTarget a, VisitTarget b) {
-            if (distances != null) return distances[a == null ? 0 : indices.get(a.id())][b == null ? 0 : indices.get(b.id())];
-            return p.travel().roadDistanceKm(a == null ? p.base() : a.location(), b == null ? p.base() : b.location());
+            if (distances != null) return distances[index(a)][index(b)];
+            return p.roads().roadDistanceKm(location(a), location(b));
+        }
+
+        private double minutes(VisitTarget a, VisitTarget b) {
+            if (minutes != null) return minutes[index(a)][index(b)];
+            return p.roads().travelMinutes(location(a), location(b));
+        }
+
+        private int index(VisitTarget target) {
+            return target == null ? 0 : indices.get(target.id());
+        }
+
+        private GeoPoint location(VisitTarget target) {
+            return target == null ? p.base() : target.location();
         }
 
         Route route(List<VisitTarget> targets) {
             double km = 0;
+            double travelMinutes = 0;
             double value = 0;
             VisitTarget previous = null;
             for (var target : targets) {
                 km += distance(previous, target);
+                travelMinutes += minutes(previous, target);
                 value += target.value();
                 previous = target;
             }
             requireFinite(value);
-            return new Route(List.copyOf(targets), km + distance(previous, null), value);
+            return new Route(List.copyOf(targets), km + distance(previous, null),
+                    travelMinutes + minutes(previous, null), value);
         }
 
         boolean fits(Route route) {
-            return route.km() / p.travel().averageSpeedKmh() * 60
+            return route.minutes()
                     + (double) route.targets().size() * p.constraints().visitDurationMinutes()
                     <= p.constraints().workdayMinutes();
         }

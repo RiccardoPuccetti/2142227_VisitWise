@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
-import { App, importIdFromUrl } from './app';
+import { App, importIdFromUrl, tenantInitials } from './app';
 import { AuthService } from './core/auth/auth.service';
+import { SIDEBAR_STORAGE_KEY } from './core/layout/sidebar-preference';
 
 @Component({ template: '' })
 class EmptyPage {}
@@ -33,6 +34,11 @@ describe('App', () => {
     await fixture.whenStable();
     return { fixture, header: fixture.nativeElement.querySelector('header') as HTMLElement };
   };
+
+  const buttonNamed = (header: HTMLElement, name: string) =>
+    [...header.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.trim() === name || button.getAttribute('aria-label') === name,
+    );
 
   it('should create the app', () => {
     const fixture = TestBed.createComponent(App);
@@ -90,7 +96,17 @@ describe('App', () => {
     expect(header.querySelector('nav[aria-label="Main"]')?.textContent).toContain('Imports');
     const profile = header.querySelector<HTMLAnchorElement>('a[href="/profile"]');
     expect(profile?.textContent).toContain('Demo federation');
-    expect(header.querySelector('button')?.textContent).toContain('Log out');
+    expect(buttonNamed(header, 'Log out')).toBeDefined();
+  });
+
+  it('shows the initials of the federation next to its name (US-38)', async () => {
+    auth.setCurrentTenant(TENANT);
+
+    const { header } = await render();
+
+    const initials = header.querySelector('a[href="/profile"] [data-testid="initials"]');
+    expect(initials?.textContent?.trim()).toBe('DF');
+    expect(initials?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('logs out and goes to the login page', async () => {
@@ -99,11 +115,98 @@ describe('App', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const { fixture, header } = await render();
 
-    header.querySelector('button')?.click();
+    buttonNamed(header, 'Log out')?.click();
     await fixture.whenStable();
 
     expect(logout).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/login');
+  });
+
+  describe('sidebar (US-38)', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      auth.setCurrentTenant(TENANT);
+    });
+    afterEach(() => localStorage.clear());
+
+    it('collapses to icons and remembers it, keeping the link names for screen readers', async () => {
+      const { fixture, header } = await render();
+      const toggle = buttonNamed(header, 'Collapse sidebar')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+      toggle.click();
+      await fixture.whenStable();
+
+      expect(header.getAttribute('data-collapsed')).toBe('true');
+      expect(buttonNamed(header, 'Expand sidebar')?.getAttribute('aria-expanded')).toBe('false');
+      expect(localStorage.getItem(SIDEBAR_STORAGE_KEY)).toBe('collapsed');
+      const imports = header.querySelector<HTMLAnchorElement>('nav[aria-label="Main"] a[href="/imports"]');
+      expect(imports?.textContent?.trim()).toBe('Imports');
+    });
+
+    it('shows the name of the open import above its sections', async () => {
+      const fixture = TestBed.createComponent(App);
+      const http = TestBed.inject(HttpTestingController);
+      await TestBed.inject(Router).navigateByUrl('/imports/42/map');
+      TestBed.tick();
+      http.expectOne('/api/imports/42').flush({ id: 42, name: 'Sample 2025' });
+      await fixture.whenStable();
+
+      const header = (fixture.nativeElement as HTMLElement).querySelector('header')!;
+      expect(header.querySelector('[data-testid="import-name"]')?.textContent?.trim()).toBe('Sample 2025');
+    });
+  });
+
+  describe('menu drawer on small screens', () => {
+    beforeEach(() => auth.setCurrentTenant(TENANT));
+
+    const menuButton = (root: HTMLElement) =>
+      root.querySelector<HTMLButtonElement>('button[aria-controls="app-sidebar"][aria-label="Open menu"]')!;
+    const drawer = (root: HTMLElement) => root.querySelector<HTMLElement>('#app-sidebar')!;
+
+    it('opens the navigation from the top bar and moves the focus into it, with the page behind inert', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(menuButton(root).getAttribute('aria-expanded')).toBe('false');
+      expect(drawer(root).getAttribute('data-open')).toBe('false');
+
+      menuButton(root).click();
+      await fixture.whenStable();
+
+      expect(menuButton(root).getAttribute('aria-expanded')).toBe('true');
+      expect(drawer(root).getAttribute('data-open')).toBe('true');
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('Close menu');
+      expect(root.querySelector('main')?.hasAttribute('inert')).toBe(true);
+    });
+
+    it('closes with Escape and gives the focus back to the menu button', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      menuButton(root).click();
+      await fixture.whenStable();
+
+      drawer(root).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await fixture.whenStable();
+
+      expect(drawer(root).getAttribute('data-open')).toBe('false');
+      expect(root.querySelector('main')?.hasAttribute('inert')).toBe(false);
+      expect(document.activeElement).toBe(menuButton(root));
+    });
+
+    it('closes after choosing a page', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      menuButton(root).click();
+      await fixture.whenStable();
+
+      await TestBed.inject(Router).navigateByUrl('/imports/new');
+      await fixture.whenStable();
+
+      expect(drawer(root).getAttribute('data-open')).toBe('false');
+    });
   });
 
   it('shows the import sections only inside an import', async () => {
@@ -117,6 +220,8 @@ describe('App', () => {
     expect(compiled.querySelector('nav[aria-label="Import 42"]')).toBeNull();
 
     await router.navigateByUrl('/imports/42/map');
+    TestBed.tick();
+    TestBed.inject(HttpTestingController).expectOne('/api/imports/42').flush({ id: 42, name: 'Sample 2025' });
     await fixture.whenStable();
     const importNav = compiled.querySelector('nav[aria-label="Import 42"]');
     const links = Array.from(importNav?.querySelectorAll('a') ?? []);
@@ -136,6 +241,21 @@ describe('App', () => {
       'Map',
     );
   });
+
+  it('keeps Scenarios current on a saved plan, opened from the scenarios', async () => {
+    auth.setCurrentTenant(TENANT);
+    const fixture = TestBed.createComponent(App);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await TestBed.inject(Router).navigateByUrl('/imports/42/plans/7');
+    TestBed.tick();
+    TestBed.inject(HttpTestingController).expectOne('/api/imports/42').flush({ id: 42, name: 'Sample 2025' });
+    await fixture.whenStable();
+
+    const current = compiled.querySelectorAll('nav[aria-label="Import 42"] a[aria-current="page"]');
+    expect(Array.from(current).map((a) => a.textContent?.trim())).toEqual(['Scenarios']);
+    expect(current[0].classList).toContain('active');
+  });
 });
 
 describe('importIdFromUrl', () => {
@@ -149,6 +269,18 @@ describe('importIdFromUrl', () => {
     expect(importIdFromUrl('/imports')).toBeNull();
     expect(importIdFromUrl('/imports/new')).toBeNull();
     expect(importIdFromUrl('/')).toBeNull();
+  });
+});
+
+describe('tenantInitials (US-38)', () => {
+  it('takes the first letter of the first two words', () => {
+    expect(tenantInitials('Demo federation')).toBe('DF');
+    expect(tenantInitials('  federazione   vini  del Lazio ')).toBe('FV');
+  });
+
+  it('uses one letter for a one-word name and a placeholder for an empty one', () => {
+    expect(tenantInitials('Acme')).toBe('A');
+    expect(tenantInitials('   ')).toBe('?');
   });
 });
 

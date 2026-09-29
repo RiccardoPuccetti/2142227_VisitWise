@@ -126,7 +126,30 @@ class PlanningControllerTest {
                 .andExpect(jsonPath("$.kpis.coveredRevenue").value(1850.50))
                 .andExpect(jsonPath("$.days", hasSize(1)))
                 .andExpect(jsonPath("$.days[0].visits[*].pointName", contains("RISTORANTE ACME", "BAR BETA")))
+                .andExpect(jsonPath("$.kpis.travelSource").value("ESTIMATE"))
                 .andExpect(jsonPath("$.warnings", hasSize(0)));
+    }
+
+    @Test
+    void simulationUsesRoadDistancesAndTimesWhenTheRoadNetworkAnswers() throws Exception {
+        FakeRoadMatrixProvider.answerEveryPair(10, 15);
+        try {
+            mvc.perform(post(importUrl("/plans/simulate"))
+                            .with(asTenant(tenantId)).with(xsrf())
+                            .contentType(MediaType.APPLICATION_JSON).content(parameters(1)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.kpis.travelSource").value("OSRM"))
+                    .andExpect(jsonPath("$.kpis.plannedVisits").value(2))
+                    .andExpect(jsonPath("$.kpis.totalKm").value(30.0))
+                    .andExpect(jsonPath("$.kpis.travelHours").value(0.75))
+                    .andExpect(jsonPath("$.days[0].km").value(30.0))
+                    .andExpect(jsonPath("$.days[0].visits[*].travelKm", contains(10.0, 10.0)));
+            // One table for the base and the located points of the import, base first.
+            org.assertj.core.api.Assertions.assertThat(FakeRoadMatrixProvider.lastPoints()).containsExactly(
+                    new GeoPoint(41.8960, 12.4823), new GeoPoint(41.9009, 12.4800), new GeoPoint(41.9020, 12.4900));
+        } finally {
+            FakeRoadMatrixProvider.reset();
+        }
     }
 
     private static final String ROUTE_REQUEST = """

@@ -48,6 +48,8 @@ PUC-8 and PUC-9 follow the steps in `booklets/architecture/AUTHENTICATION.md`.
 | PUC-10 | Tenant starting base: columns on `tenant`, get / save API geocoding address + city, `StartingBaseField` component for the planner form | 35 | PUC-8, PUC-4 |
 | PUC-12 | "Keep me logged in": persistent remember-me tokens (`persistent_logins`, changeset 005), checkbox on the login page, logout forgets this device, password change forgets all | 37 | PUC-8, PUC-9 |
 | PUC-11 | Dark mode: `ThemeService` (system preference until the user chooses, choice kept in the browser), theme applied before first paint (`theme-init.js`, allowed by the CSP), toggle in the header | 36 | RIV-1 |
+| PUC-13 | Visual revamp (reference: dark investment dashboard): theme tokens for both themes, brand accent, pill navigation in the header, then every page (key figures, cards, tables, charts) step by step | 38 | RIV-1, PUC-11 |
+| PUC-14 | Self-hosted OSRM: optional Compose profile (Geofabrik extract prepared once in a volume), road distance and time table for the planner (OSRM table service in blocks, cached), `travelSource` in the plan KPIs. Touches Marzella's engine and planner page: review by Marzella | 39 | MAR-2, MAR-3 |
 
 ## Marzella - Planning
 
@@ -60,7 +62,7 @@ Owns: backend `planning/` (except `planning/export/`); frontend `features/planne
 | MAR-3 | Planning API: campaigns, simulate, what-if, save/list/get/delete plans | 19-28 | MAR-2, PUC-3 |
 | MAR-4 | Planner page: parameters form, KPIs, day-by-day timeline, routes on `MapView`, save scenario | 19-25 | MAR-3, RIV-1 |
 | MAR-5 | What-if page (coverage curve over horizons) + scenarios side-by-side compare | 26, 27 | MAR-3, RIV-1 |
-| MAR-6 | Update the strategy doc with measured results, mockups S7-S10 | - | - |
+| MAR-6 | Mockups S7-S10 (planner parameters, planner result, what-if, scenarios compare) | - | - |
 
 ## Rivera - Platform & map
 

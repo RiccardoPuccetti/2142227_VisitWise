@@ -50,6 +50,22 @@ npx ng test --watch=false
 
 No local Java? `docker compose up --build backend db` and run only the frontend with `npm start`.
 
+## Real road distances (optional, self-hosted OSRM)
+
+By default the planner estimates travel (straight line x road factor at an average speed) and the public OSRM demo
+server draws the route of one day. To plan with real road distances and driving times, run OSRM locally: in `.env`
+set `COMPOSE_PROFILES=osrm`, `ROUTING_BASE_URL=http://osrm:5000` and `ROUTING_MATRIX_ENABLED=true` (see
+`.env.example`), then `docker compose up --build`.
+
+- The first start downloads the OpenStreetMap extract of central Italy from Geofabrik (about 370 MB) into the volume
+  `visitwise-osrm-data` and prepares the car road network (a few minutes and up to 4 GB of memory, once; about 1 GB
+  on disk). Later starts reuse it; the server then uses about 0.6 GB of memory.
+  Another region: set `OSRM_PBF_URL` to another Geofabrik `.osm.pbf` link.
+- Points outside the downloaded region keep the estimate. The planner shows "road network" or "estimate" next to the
+  hours on the road.
+- A backend started with `./mvnw` reaches the server at `ROUTING_BASE_URL=http://127.0.0.1:5000`.
+- OSRM driving times assume free-flowing traffic: in city centres real times are longer.
+
 ## Folders
 
 | Folder | Content |

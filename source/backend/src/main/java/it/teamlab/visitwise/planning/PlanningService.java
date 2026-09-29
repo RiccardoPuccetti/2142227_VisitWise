@@ -26,6 +26,8 @@ import it.teamlab.visitwise.planning.engine.GreedyVisitPlanner;
 import it.teamlab.visitwise.planning.engine.PlannedDay;
 import it.teamlab.visitwise.planning.engine.PlannerPoint;
 import it.teamlab.visitwise.planning.engine.PlannerResult;
+import it.teamlab.visitwise.planning.engine.RoadMatrix;
+import it.teamlab.visitwise.planning.engine.Travel;
 import it.teamlab.visitwise.planning.engine.TravelModel;
 import it.teamlab.visitwise.planning.engine.VisitConstraints;
 import it.teamlab.visitwise.planning.engine.VisitPlanner;
@@ -33,11 +35,14 @@ import it.teamlab.visitwise.planning.engine.WorkingCalendar;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,11 +61,12 @@ public class PlanningService {
     private final PlannedVisitRepository visits;
     private final JsonMapper json;
     private final RouteProvider routes;
+    private final RoadMatrixProvider matrices;
     private final VisitPlanner planner = new GreedyVisitPlanner();
 
     PlanningService(ImportBatchRepository imports, EnterpriseRepository enterprises,
             DeliveryPointRepository points, VisitPlanRepository plans, PlannedVisitRepository visits,
-            JsonMapper json, RouteProvider routes) {
+            JsonMapper json, RouteProvider routes, RoadMatrixProvider matrices) {
         this.imports = imports;
         this.enterprises = enterprises;
         this.points = points;
@@ -68,6 +74,7 @@ public class PlanningService {
         this.visits = visits;
         this.json = json;
         this.routes = routes;
+        this.matrices = matrices;
     }
 
     /**
@@ -225,14 +232,30 @@ public class PlanningService {
             return new PlannerPoint(point.getId(), point.getCustomerName(), point.getPointName(), point.getAddress(),
                     point.getCity(), point.getAgent(), location, revenues);
         }).toList();
-        return new LoadedInput(batch, enginePoints, byId);
+        return new LoadedInput(batch, enginePoints, byId, roadMatrix(request.base(), enginePoints));
+    }
+
+    /**
+     * Road figures (US-39) for the base and every located point of the import, not only the eligible ones, so the same
+     * table serves every parameter change and what-if horizon. Null when the road network is off or unavailable.
+     */
+    private RoadMatrix roadMatrix(PlanningDtos.GeoPoint base, List<PlannerPoint> enginePoints) {
+        if (base == null) {
+            return null;
+        }
+        Set<GeoPoint> located = new LinkedHashSet<>();
+        located.add(new GeoPoint(base.latitude(), base.longitude()));
+        enginePoints.stream().sorted(Comparator.comparingLong(PlannerPoint::id))
+                .map(PlannerPoint::location).filter(Objects::nonNull).forEach(located::add);
+        return located.size() < 2 ? null : matrices.matrix(List.copyOf(located)).orElse(null);
     }
 
     private Computed compute(LoadedInput input, PlanParameters request, Long planId, String name) {
-        var engineParameters = toEngine(request);
+        var engineParameters = toEngine(request, input.roadMatrix());
         PlannerResult engineResult = planner.plan(input.enginePoints(), engineParameters);
-        PlanResult response = toResponse(planId, name, request, engineParameters.travel(), engineResult,
-                input.pointsById());
+        RouteSource travelSource = input.roadMatrix() == null ? RouteSource.ESTIMATE : RouteSource.OSRM;
+        PlanResult response = toResponse(planId, name, request, engineParameters.roads(), travelSource,
+                engineResult, input.pointsById());
         return new Computed(input.importBatch(), response, input.pointsById());
     }
 
@@ -254,7 +277,8 @@ public class PlanningService {
         }
     }
 
-    private static it.teamlab.visitwise.planning.engine.PlannerParameters toEngine(PlanParameters request) {
+    private static it.teamlab.visitwise.planning.engine.PlannerParameters toEngine(PlanParameters request,
+            RoadMatrix roadMatrix) {
         if (request.campaign() == null || request.startDate() == null || request.agents() == null
                 || request.planningMode() == null || request.base() == null) {
             throw new IllegalArgumentException("Campaign, start date, agents, planning mode and base are required");
@@ -265,16 +289,17 @@ public class PlanningService {
         Map<Long, Double> weights = new LinkedHashMap<>();
         request.enterpriseWeights().forEach(weight -> weights.put(weight.enterpriseId(), weight.weight()));
         LocalDate deadline = request.deadline() == null ? LocalDate.MAX : request.deadline();
+        TravelModel travel = new TravelModel(request.averageSpeedKmh(), request.roadFactor());
         return new it.teamlab.visitwise.planning.engine.PlannerParameters(
                 request.startDate(), deadline, request.workingDays(), weights, Set.copyOf(request.agents()),
                 request.planningMode(), new GeoPoint(request.base().latitude(), request.base().longitude()),
                 new VisitConstraints(request.visitDurationMinutes(), request.workdayMinutes(), request.maxDistanceKm()),
-                new TravelModel(request.averageSpeedKmh(), request.roadFactor()), request.travelCostPerKm(),
-                request.minRevenue());
+                travel, request.travelCostPerKm(), request.minRevenue(),
+                roadMatrix == null ? travel : roadMatrix.over(travel));
     }
 
-    private static PlanResult toResponse(Long id, String name, PlanParameters parameters, TravelModel travel,
-            PlannerResult result, Map<Long, DeliveryPoint> byId) {
+    private static PlanResult toResponse(Long id, String name, PlanParameters parameters, Travel roads,
+            RouteSource travelSource, PlannerResult result, Map<Long, DeliveryPoint> byId) {
         List<PlanDay> days = new ArrayList<>();
         List<LocalDate> workingDates = new WorkingCalendar()
                 .workingDates(parameters.startDate(), parameters.workingDays());
@@ -285,7 +310,7 @@ public class PlanningService {
             for (int slotIndex = 0; slotIndex < day.targets().size(); slotIndex++) {
                 var target = day.targets().get(slotIndex);
                 DeliveryPoint point = byId.get(target.id());
-                double legKm = travel.roadDistanceKm(previous, target.location());
+                double legKm = roads.roadDistanceKm(previous, target.location());
                 dayVisits.add(new PlannedVisitResponse(point.getId(), point.getCustomerName(), point.getPointName(),
                         point.getAddress(), point.getCity(), blankToNull(day.agent()), point.getLatitude(),
                         point.getLongitude(), day.date(), dayIndex, slotIndex + 1, target.revenue(), legKm));
@@ -303,14 +328,14 @@ public class PlanningService {
             warnings.add(result.kpis().excludedOutOfRange() + " delivery points are farther than "
                     + parameters.maxDistanceKm() + " km from the base and were excluded");
         }
-        return new PlanResult(id, name, parameters, kpis(result.kpis()), days, notPlanned, warnings);
+        return new PlanResult(id, name, parameters, kpis(result.kpis(), travelSource), days, notPlanned, warnings);
     }
 
-    private static PlanKpis kpis(PlannerResult.Kpis source) {
+    private static PlanKpis kpis(PlannerResult.Kpis source, RouteSource travelSource) {
         return new PlanKpis(source.plannedVisits(), source.uniqueCustomers(), source.coveredRevenue(),
                 source.eligibleRevenue(), source.coverage(), source.upperBoundRevenue(), source.totalKm(),
                 source.travelHours(), source.workingDaysUsed(), source.lastVisitDate(), source.visitsAfterDeadline(),
-                source.excludedOutOfRange());
+                source.excludedOutOfRange(), travelSource);
     }
 
     private static DeliveryPointResponse deliveryPoint(DeliveryPoint point) {
@@ -336,5 +361,5 @@ public class PlanningService {
                             Map<Long, DeliveryPoint> pointsById) { }
 
     private record LoadedInput(it.teamlab.visitwise.imports.ImportBatch importBatch, List<PlannerPoint> enginePoints,
-                               Map<Long, DeliveryPoint> pointsById) { }
+                               Map<Long, DeliveryPoint> pointsById, RoadMatrix roadMatrix) { }
 }

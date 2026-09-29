@@ -1,0 +1,480 @@
+/*
+ * App shell layout. Logged out, the navigation is a top bar with the brand and the dark mode toggle. Logged in, from
+ * 1024 px, the layout is inset: the sidebar sits on the app frame (--shell) and the page is one panel set into it,
+ * taking the whole remaining width; the sidebar can shrink to icons. Below 1024 px the same sidebar is an off-canvas
+ * drawer opened from a slim top bar. --page-pad-x/y are read by the page header to reach the panel edges.
+ */
+
+/* ---------- Top bar (default) ---------- */
+
+.sidebar {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--background) 85%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brand-mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #ff7a50, var(--brand) 70%);
+  color: var(--brand-foreground);
+  font-size: 1.125rem;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 6px 16px -6px color-mix(in oklab, var(--brand) 70%, transparent);
+}
+
+.brand-sub {
+  display: none;
+}
+
+.nav-group {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.nav-heading {
+  display: none;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.nav-item ng-icon {
+  display: none;
+  flex-shrink: 0;
+  font-size: 1.125rem;
+}
+
+.nav-item:hover {
+  color: var(--foreground);
+}
+
+.nav-item.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.account {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  border-radius: 9999px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-size: 0.875rem;
+  transition: background-color 150ms ease;
+}
+
+.account:hover,
+.account.active {
+  background: var(--accent);
+}
+
+.initials {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--brand) 25%, var(--secondary)), var(--secondary));
+  color: var(--secondary-foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.account-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.account-name {
+  overflow: hidden;
+  max-width: 10rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-role {
+  display: none;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.logout ng-icon,
+.collapse-toggle {
+  display: none;
+}
+
+.content {
+  --page-pad-x: 1.25rem;
+  --page-pad-y: 1.5rem;
+  display: block;
+  padding: var(--page-pad-y) var(--page-pad-x);
+}
+
+.page {
+  width: 100%;
+}
+
+@media (min-width: 40rem) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+  }
+
+  .content {
+    --page-pad-x: 2rem;
+  }
+}
+
+/* ---------- Vertical navigation (logged in): the sidebar from 1024 px, the drawer below ---------- */
+
+.shell[data-layout='sidebar'] .sidebar {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 1.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1.25rem 0.875rem;
+  border-bottom: 0;
+  backdrop-filter: none;
+}
+
+.shell[data-layout='sidebar'] .brand {
+  padding: 0.125rem 0.5rem;
+}
+
+.shell[data-layout='sidebar'] .brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.shell[data-layout='sidebar'] .brand-sub {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.shell[data-layout='sidebar'] .nav-group {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.125rem;
+  overflow: visible;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.shell[data-layout='sidebar'] .nav-heading {
+  display: block;
+  overflow: hidden;
+  margin: 0 0 0.375rem;
+  padding: 0 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.shell[data-layout='sidebar'] .nav-item {
+  padding: 0.5625rem 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.shell[data-layout='sidebar'] .nav-item ng-icon {
+  display: inline-flex;
+}
+
+.shell[data-layout='sidebar'] .nav-item:not(.active):hover {
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+.shell[data-layout='sidebar'] .nav-item.active {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: var(--shadow-card);
+}
+
+.shell[data-layout='sidebar'] .nav-item.active::before {
+  position: absolute;
+  top: 0.625rem;
+  bottom: 0.625rem;
+  left: 0;
+  width: 3px;
+  border-radius: 9999px;
+  background: var(--brand);
+  content: '';
+}
+
+.shell[data-layout='sidebar'] .nav-item.active ng-icon {
+  color: var(--brand);
+}
+
+.shell[data-layout='sidebar'] .sidebar-footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-top: auto;
+  margin-left: 0;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.shell[data-layout='sidebar'] .account {
+  padding: 0.375rem;
+  border-radius: 0.75rem;
+  background: none;
+  box-shadow: none;
+}
+
+.shell[data-layout='sidebar'] .account:hover,
+.shell[data-layout='sidebar'] .account.active {
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+.shell[data-layout='sidebar'] .account-name {
+  max-width: none;
+}
+
+.shell[data-layout='sidebar'] .account-role {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.shell[data-layout='sidebar'] .logout {
+  flex: 1;
+  justify-content: flex-start;
+  gap: 0.625rem;
+}
+
+/* ---------- Drawer (logged in, below 1024 px) ---------- */
+
+@media (max-width: 63.999rem) {
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in oklab, var(--background) 85%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .shell[data-layout='sidebar'] .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    width: min(18rem, 85vw);
+    border-right: 1px solid var(--border);
+    background: var(--shell);
+    box-shadow: 0 24px 48px -12px rgb(0 0 0 / 45%);
+    /* Closed, it is also inert (set by the app), so it is out of the tab order and hidden from screen readers. */
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+  }
+
+  .shell[data-layout='sidebar'] .sidebar[data-open='true'] {
+    transform: none;
+  }
+
+  .drawer-close {
+    position: absolute;
+    top: 1.25rem;
+    right: 0.75rem;
+  }
+
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgb(0 0 0 / 50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+
+  .drawer-backdrop[data-open='true'] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* ---------- Sidebar (logged in, from 1024 px) ---------- */
+
+@media (min-width: 64rem) {
+  .shell[data-layout='sidebar'] {
+    display: flex;
+    min-height: 100dvh;
+    background: var(--shell);
+  }
+
+  .shell[data-layout='sidebar'] .sidebar {
+    position: sticky;
+    top: 0;
+    flex-shrink: 0;
+    width: 16.5rem;
+    height: 100dvh;
+    background: none;
+    transition: width 200ms ease;
+  }
+
+  .topbar,
+  .drawer-backdrop,
+  .drawer-close {
+    display: none;
+  }
+
+  .shell[data-layout='sidebar'] .logout ng-icon,
+  .shell[data-layout='sidebar'] .collapse-toggle {
+    display: inline-flex;
+  }
+
+  .shell[data-layout='sidebar'] .content {
+    --page-pad-x: 2.5rem;
+    --page-pad-y: 2rem;
+    flex: 1;
+    min-width: 0;
+    min-height: calc(100dvh - 1rem);
+    margin: 0.5rem 0.5rem 0.5rem 0;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--background);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Collapsed: icons only. The labels stay in the page for screen readers (visually hidden). */
+  .shell[data-layout='sidebar'] .sidebar[data-collapsed='true'] {
+    width: 4.75rem;
+  }
+
+  .sidebar[data-collapsed='true'] .label,
+  .sidebar[data-collapsed='true'] .brand-sub,
+  .sidebar[data-collapsed='true'] .account-role {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sidebar[data-collapsed='true'] .brand,
+  .sidebar[data-collapsed='true'] .nav-item,
+  .sidebar[data-collapsed='true'] .account,
+  .sidebar[data-collapsed='true'] .logout {
+    justify-content: center;
+  }
+
+  .sidebar[data-collapsed='true'] .brand {
+    padding: 0;
+  }
+
+  .sidebar[data-collapsed='true'] .nav-heading {
+    display: none;
+  }
+
+  .sidebar[data-collapsed='true'] .nav-group + .nav-group {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .sidebar[data-collapsed='true'] .footer-actions {
+    flex-direction: column;
+  }
+
+  .sidebar[data-collapsed='true'] .logout {
+    flex: none;
+  }
+}
+
+@media (min-width: 96rem) {
+  .shell[data-layout='sidebar'] .content {
+    --page-pad-x: 3.5rem;
+    --page-pad-y: 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .drawer-backdrop,
+  .nav-item,
+  .account {
+    transition: none;
+  }
+}
