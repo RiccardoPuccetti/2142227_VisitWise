@@ -2,6 +2,7 @@ package it.teamlab.visitwise.planning.engine;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -32,7 +33,7 @@ public record PlannerParameters(LocalDate startDate, LocalDate deadline, int wor
                 throw new IllegalArgumentException("Enterprise weights must be finite and non-negative with positive ids");
             }
         }
-        if (agents.stream().anyMatch(java.util.Objects::isNull)) {
+        if (agents.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("Agent filters cannot contain null");
         }
         enterpriseWeights = Map.copyOf(enterpriseWeights);

@@ -3,6 +3,7 @@ package it.teamlab.visitwise.planning.engine;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Road distances (km) and driving times (minutes) measured on the road network between known points, row = from,
@@ -15,7 +16,7 @@ public final class RoadMatrix {
     private final double[][] minutes;
 
     public RoadMatrix(List<GeoPoint> points, double[][] km, double[][] minutes) {
-        if (points == null || points.stream().anyMatch(java.util.Objects::isNull)) {
+        if (points == null || points.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("Points are required");
         }
         for (int i = 0; i < points.size(); i++) {

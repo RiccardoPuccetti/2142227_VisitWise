@@ -5,6 +5,7 @@ import it.teamlab.visitwise.common.NotFoundException;
 import it.teamlab.visitwise.imports.DeliveryPoint;
 import it.teamlab.visitwise.imports.DeliveryPointRepository;
 import it.teamlab.visitwise.imports.EnterpriseRepository;
+import it.teamlab.visitwise.imports.ImportBatch;
 import it.teamlab.visitwise.imports.ImportBatchRepository;
 import it.teamlab.visitwise.planning.PlanningDtos.CreatePlanRequest;
 import it.teamlab.visitwise.planning.PlanningDtos.PlanDay;
@@ -23,6 +24,7 @@ import it.teamlab.visitwise.planning.PlanningDtos.WhatIfRow;
 import it.teamlab.visitwise.planning.engine.GeoPoint;
 import it.teamlab.visitwise.planning.engine.GreedyVisitPlanner;
 import it.teamlab.visitwise.planning.engine.PlannedDay;
+import it.teamlab.visitwise.planning.engine.PlannerParameters;
 import it.teamlab.visitwise.planning.engine.PlannerPoint;
 import it.teamlab.visitwise.planning.engine.PlannerResult;
 import it.teamlab.visitwise.planning.engine.RoadMatrix;
@@ -43,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -262,7 +265,7 @@ public class PlanningService {
             throw new IllegalArgumentException("Enterprise weights are required");
         }
         Set<Long> available = enterprises.findByImportBatchIdOrderByPosition(importId).stream()
-                .map(enterprise -> enterprise.getId()).collect(java.util.stream.Collectors.toSet());
+                .map(enterprise -> enterprise.getId()).collect(Collectors.toSet());
         Set<Long> seen = new HashSet<>();
         for (var weight : request.enterpriseWeights()) {
             if (weight == null || weight.enterpriseId() == null || !available.contains(weight.enterpriseId())) {
@@ -275,7 +278,7 @@ public class PlanningService {
         }
     }
 
-    private static it.teamlab.visitwise.planning.engine.PlannerParameters toEngine(PlanParameters request,
+    private static PlannerParameters toEngine(PlanParameters request,
             RoadMatrix roadMatrix) {
         if (request.campaign() == null || request.startDate() == null || request.agents() == null
                 || request.planningMode() == null || request.base() == null) {
@@ -288,7 +291,7 @@ public class PlanningService {
         request.enterpriseWeights().forEach(weight -> weights.put(weight.enterpriseId(), weight.weight()));
         LocalDate deadline = request.deadline() == null ? LocalDate.MAX : request.deadline();
         TravelModel travel = new TravelModel(request.averageSpeedKmh(), request.roadFactor());
-        return new it.teamlab.visitwise.planning.engine.PlannerParameters(
+        return new PlannerParameters(
                 request.startDate(), deadline, request.workingDays(), weights, Set.copyOf(request.agents()),
                 request.planningMode(), new GeoPoint(request.base().latitude(), request.base().longitude()),
                 new VisitConstraints(request.visitDurationMinutes(), request.workdayMinutes(), request.maxDistanceKm()),
@@ -347,9 +350,9 @@ public class PlanningService {
         return value == null || value.isBlank() ? null : value;
     }
 
-    private record Computed(it.teamlab.visitwise.imports.ImportBatch importBatch, PlanResult response,
+    private record Computed(ImportBatch importBatch, PlanResult response,
                             Map<Long, DeliveryPoint> pointsById) { }
 
-    private record LoadedInput(it.teamlab.visitwise.imports.ImportBatch importBatch, List<PlannerPoint> enginePoints,
+    private record LoadedInput(ImportBatch importBatch, List<PlannerPoint> enginePoints,
                                Map<Long, DeliveryPoint> pointsById, RoadMatrix roadMatrix) { }
 }
