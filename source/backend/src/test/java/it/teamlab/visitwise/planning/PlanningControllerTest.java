@@ -217,6 +217,16 @@ class PlanningControllerTest {
     }
 
     @Test
+    void whatIfRejectsAMissingHorizon() throws Exception {
+        String request = "{\"base\":" + parameters(1) + ",\"horizons\":[2,null]}";
+
+        mvc.perform(post(importUrl("/plans/what-if"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void aScenarioCanBeSavedListedReadAndDeleted() throws Exception {
         String request = "{\"name\":\"Christmas priority\",\"parameters\":" + parameters(1) + "}";
 

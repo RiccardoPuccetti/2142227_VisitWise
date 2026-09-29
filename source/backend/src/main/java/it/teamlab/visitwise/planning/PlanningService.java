@@ -140,10 +140,10 @@ public class PlanningService {
                 || request.horizons().isEmpty() || request.horizons().size() > 5) {
             throw new IllegalArgumentException("Base parameters and 1 to 5 horizons are required");
         }
-        List<Integer> horizons = request.horizons().stream().distinct().sorted().toList();
-        if (horizons.stream().anyMatch(value -> value == null || value < 1 || value > 260)) {
+        if (request.horizons().stream().anyMatch(value -> value == null || value < 1 || value > 260)) {
             throw new IllegalArgumentException("What-if horizons must be between 1 and 260 working days");
         }
+        List<Integer> horizons = request.horizons().stream().distinct().sorted().toList();
         LoadedInput input = load(importId, request.base());
         List<WhatIfRow> rows = new ArrayList<>();
         double previous = 0;
