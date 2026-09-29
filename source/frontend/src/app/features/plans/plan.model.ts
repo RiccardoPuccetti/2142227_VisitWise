@@ -97,3 +97,44 @@ export function exportUrl(planId: number, agent: string | null): string {
   const url = `/api/plans/${planId}/export`;
   return agent ? `${url}?agent=${encodeURIComponent(agent)}` : url;
 }
+
+/** Company forms kept in capitals by {@link readableName}. */
+const COMPANY_FORMS = new Set(['SNC', 'SAS', 'SRL', 'SRLS', 'SPA', 'SS', 'SCARL', 'SCRL', 'SAPA', 'COOP']);
+/** Italian articles and prepositions written in lower case inside a name ("Via di Porta Maggiore"). */
+const PARTICLES = new Set([
+  'di', 'da', 'e', 'a', 'in', 'con', 'su', 'per', 'tra', 'fra',
+  'del', 'dello', 'della', 'dei', 'degli', 'delle', 'dell',
+  'al', 'allo', 'alla', 'ai', 'agli', 'alle', 'all',
+  'dal', 'dallo', 'dalla', 'dai', 'dagli', 'dalle', 'dall',
+  'nel', 'nello', 'nella', 'nei', 'negli', 'nelle', 'nell',
+  'sul', 'sullo', 'sulla', 'sui', 'sugli', 'sulle', 'sull',
+]);
+
+function capitalize(word: string): string {
+  const index = word.search(/\p{L}/u);
+  return index < 0 ? word : word.slice(0, index) + word[index].toUpperCase() + word.slice(index + 1);
+}
+
+/**
+ * Names and addresses of the ERP export arrive in capitals: shown as ordinary words ("Ristorante Luna Rossa",
+ * "Via di Porta Maggiore 30"), keeping company forms (SNC, S.R.L.) and anything with digits as they are.
+ */
+export function readableName(text: string): string {
+  return text
+    .split(/(\s+)/)
+    .map((word, index) => {
+      const letters = word.replace(/[^\p{L}.]/gu, '');
+      if (!letters || /\d/.test(word) || COMPANY_FORMS.has(letters) || /\p{L}\.\p{L}/u.test(letters)) {
+        return word;
+      }
+      const first = index === 0;
+      return word
+        .toLowerCase()
+        .split("'")
+        .map((part, position) =>
+          position === 0 && !first && PARTICLES.has(part.replace(/[^\p{L}]/gu, '')) ? part : capitalize(part),
+        )
+        .join("'");
+    })
+    .join('');
+}

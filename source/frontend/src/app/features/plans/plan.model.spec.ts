@@ -5,6 +5,7 @@ import {
   directionsUrl,
   exportUrl,
   planAgents,
+  readableName,
   visitStops,
 } from './plan.model';
 
@@ -130,5 +131,24 @@ describe('plan model', () => {
       expect(exportUrl(3, null)).toBe('/api/plans/3/export');
       expect(exportUrl(3, 'AGENT NORTH')).toBe('/api/plans/3/export?agent=AGENT%20NORTH');
     });
+  });
+});
+
+describe('readableName', () => {
+  it('turns the capitals of the ERP export into ordinary words', () => {
+    expect(readableName('RISTORANTE LUNA ROSSA')).toBe('Ristorante Luna Rossa');
+    expect(readableName('VIA TUSCOLANA 14, ROMA')).toBe('Via Tuscolana 14, Roma');
+  });
+
+  it('keeps Italian particles lower case after the first word', () => {
+    expect(readableName('VIA DI PORTA MAGGIORE 30')).toBe('Via di Porta Maggiore 30');
+    expect(readableName('DEL CORSO')).toBe('Del Corso');
+  });
+
+  it('keeps company forms and codes as they are', () => {
+    expect(readableName('IL FARO SNC (82587)')).toBe('Il Faro SNC (82587)');
+    expect(readableName('LE TERRAZZE SAS')).toBe('Le Terrazze SAS');
+    expect(readableName('BELVEDERE S.R.L.')).toBe('Belvedere S.R.L.');
+    expect(readableName("BAR DELL'ANGOLO")).toBe("Bar dell'Angolo");
   });
 });

@@ -21,7 +21,7 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { problemDetail } from '../../core/auth/problem-detail';
 import { EurPipe, formatEur, KpiCard, PageHeader } from '../../shared';
-import { agentLabel, calendarWeeks, exportUrl, planAgents, visitStops } from './plan.model';
+import { agentLabel, calendarWeeks, exportUrl, planAgents, readableName, visitStops } from './plan.model';
 import { PlansService } from './plans.service';
 
 // Dates of the API are YYYY-MM-DD: formatted in UTC so the day never moves with the time zone.
@@ -169,6 +169,9 @@ export class PlanDetailPage {
       })),
     }));
   });
+
+  /** Names and addresses in ordinary capitalisation instead of the capitals of the ERP export. */
+  protected readonly readable = readableName;
 
   /** Several agents can share a day only when the calendar shows every agent. */
   protected readonly showAgentNames = computed(() => this.agent() === null);

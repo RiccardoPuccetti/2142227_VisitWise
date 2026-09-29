@@ -142,7 +142,7 @@ describe('PlanDetailPage', () => {
     expect(days).toHaveLength(5);
     const monday = days[0].textContent?.replace(/[ \t\r\n]+/g, ' ') ?? '';
     expect(monday).toContain('Mon 2 Nov');
-    expect(monday.indexOf('RISTORANTE ACME')).toBeLessThan(monday.indexOf('BAR BETA'));
+    expect(monday.indexOf('Ristorante Acme')).toBeLessThan(monday.indexOf('Bar Beta'));
     expect(days[2].textContent).toContain('No visits');
   });
 
@@ -173,8 +173,8 @@ describe('PlanDetailPage', () => {
     await harness.fixture.whenStable();
 
     expect(TestBed.inject(Router).url).toBe('/imports/42/plans/3?agent=AGENT%20SOUTH');
-    expect(text()).toContain('CAFFE GAMMA');
-    expect(text()).not.toContain('RISTORANTE ACME');
+    expect(text()).toContain('Caffe Gamma');
+    expect(text()).not.toContain('Ristorante Acme');
     expect(exportLink()?.getAttribute('href')).toBe('/api/plans/3/export?agent=AGENT%20SOUTH');
   });
 
@@ -182,7 +182,7 @@ describe('PlanDetailPage', () => {
     await open('/imports/42/plans/3?agent=AGENT%20NORTH');
 
     expect(page().querySelector<HTMLSelectElement>('#plan-agent')?.value).toBe('AGENT NORTH');
-    expect(text()).not.toContain('CAFFE GAMMA');
+    expect(text()).not.toContain('Caffe Gamma');
   });
 
   it('shows the problem when the plan cannot be loaded', async () => {
