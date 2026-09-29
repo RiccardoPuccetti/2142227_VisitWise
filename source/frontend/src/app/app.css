@@ -165,7 +165,7 @@
 }
 
 .content {
-  --page-pad-x: 1rem;
+  --page-pad-x: 1.25rem;
   --page-pad-y: 1.5rem;
   display: block;
   padding: var(--page-pad-y) var(--page-pad-x);
@@ -182,7 +182,7 @@
   }
 
   .content {
-    --page-pad-x: 1.5rem;
+    --page-pad-x: 2rem;
   }
 }
 
@@ -335,8 +335,8 @@
   }
 
   .shell[data-layout='sidebar'] .content {
-    --page-pad-x: 2rem;
-    --page-pad-y: 1.5rem;
+    --page-pad-x: 2.5rem;
+    --page-pad-y: 2rem;
     flex: 1;
     min-width: 0;
     min-height: calc(100dvh - 1rem);
@@ -397,8 +397,8 @@
 
 @media (min-width: 96rem) {
   .shell[data-layout='sidebar'] .content {
-    --page-pad-x: 2.5rem;
-    --page-pad-y: 1.75rem;
+    --page-pad-x: 3.5rem;
+    --page-pad-y: 2.5rem;
   }
 }
 

@@ -1,5 +1,7 @@
 import { Component, ElementRef, input, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideChevronRight } from '@ng-icons/lucide';
 
 /** One step of the breadcrumb above the title, e.g. `{ label: 'Imports', link: '/imports' }`. */
 export interface Crumb {
@@ -20,15 +22,16 @@ export interface Crumb {
  */
 @Component({
   selector: 'app-page-header',
-  imports: [RouterLink],
+  imports: [RouterLink, NgIcon],
+  providers: [provideIcons({ lucideChevronRight })],
   template: `
     @if (trail().length > 0) {
-      <nav aria-label="Breadcrumb" class="mb-2">
-        <ol class="text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm">
+      <nav aria-label="Breadcrumb" class="mb-3">
+        <ol class="text-muted-foreground flex flex-wrap items-center gap-1 text-[0.8125rem]">
           @for (crumb of trail(); track crumb.label) {
-            <li class="flex items-center gap-1.5">
+            <li class="flex items-center gap-1">
               <a [routerLink]="crumb.link" class="hover:text-foreground transition-colors">{{ crumb.label }}</a>
-              <span aria-hidden="true" class="opacity-50">/</span>
+              <ng-icon name="lucideChevronRight" class="text-sm opacity-50" aria-hidden="true" />
             </li>
           }
           <li class="min-w-0">
@@ -37,18 +40,19 @@ export interface Crumb {
         </ol>
       </nav>
     }
-    <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-      <div class="flex min-w-0 flex-col gap-1">
+    <!-- The actions sit on the right, centred on the title block; under it on narrow screens. -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
+      <div class="flex min-w-0 flex-1 flex-col gap-2">
         <h1
           #heading
           tabindex="-1"
-          class="text-[1.625rem] leading-tight font-semibold tracking-[-0.015em] text-balance outline-none"
+          class="text-[1.75rem] leading-tight font-semibold tracking-[-0.015em] text-balance outline-none"
         >
           {{ title() }}
         </h1>
-        <div data-slot="page-description" class="text-muted-foreground text-sm"><ng-content /></div>
+        <div data-slot="page-description" class="text-muted-foreground max-w-3xl text-sm leading-relaxed"><ng-content /></div>
       </div>
-      <div data-slot="page-actions" class="flex flex-wrap items-center gap-2">
+      <div data-slot="page-actions" class="flex shrink-0 flex-wrap items-center gap-2 empty:hidden">
         <ng-content select="[actions]" />
       </div>
     </div>
@@ -57,8 +61,9 @@ export interface Crumb {
     /* Bleeds to the edges of the page panel (--page-pad-x/y set by the app shell), so the divider joins the frame. */
     :host {
       display: block;
-      margin: calc(var(--page-pad-y, 1.5rem) * -1) calc(var(--page-pad-x, 1rem) * -1) 1.5rem;
-      padding: var(--page-pad-y, 1.5rem) var(--page-pad-x, 1rem) 1.25rem;
+      /* No bottom margin: every page puts the header in its 2rem column (flex gap-8). */
+      margin: calc(var(--page-pad-y, 1.5rem) * -1) calc(var(--page-pad-x, 1rem) * -1) 0;
+      padding: var(--page-pad-y, 1.5rem) var(--page-pad-x, 1rem) 1.5rem;
       border-bottom: 1px solid var(--border);
     }
   `,
