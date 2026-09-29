@@ -1,6 +1,6 @@
 package it.teamlab.visitwise.imports;
 
-import java.text.Normalizer;
+import it.teamlab.visitwise.common.Text;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -52,7 +52,7 @@ class MappingSuggester {
         for (int column = 0; column < sheet.headers().size(); column++) {
             String header = sheet.headers().get(column);
             if (!used.contains(header) && !isTotal(header) && isAmountColumn(sheet.rows(), column)) {
-                String name = header.length() > MAX_ENTERPRISE_NAME ? header.substring(0, MAX_ENTERPRISE_NAME) : header;
+                String name = Text.truncate(header, MAX_ENTERPRISE_NAME);
                 enterprises.add(new EnterpriseMapping(header, name, PALETTE.get(enterprises.size() % PALETTE.size())));
             }
         }
@@ -124,7 +124,6 @@ class MappingSuggester {
 
     /** "RAG. SOC." -> "rag soc", "CITTÀ" -> "citta". */
     static String normalize(String header) {
-        String withoutAccents = Normalizer.normalize(header, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        return withoutAccents.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").strip();
+        return Text.withoutAccents(header).toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").strip();
     }
 }

@@ -1,6 +1,6 @@
 package it.teamlab.visitwise.geocoding;
 
-import java.text.Normalizer;
+import it.teamlab.visitwise.common.Text;
 import java.util.Locale;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -48,13 +48,11 @@ public class GeocodingService {
     /** Cache key: "ADDRESS, CITY" without accents, upper case, single spaces (column {@code query_key}, 400 chars). */
     public static String queryKey(String address, String city) {
         String key = normalize(address) + ", " + normalize(city);
-        return key.length() > 400 ? key.substring(0, 400) : key;
+        return Text.truncate(key, 400);
     }
 
     private static String normalize(String value) {
-        String stripped = Normalizer.normalize(value == null ? "" : value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "");
-        return stripped.strip().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
+        return Text.withoutAccents(value == null ? "" : value).strip().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
     }
 
     private static Optional<GeocodedLocation> toLocation(GeocodeCacheEntry entry) {

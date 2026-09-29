@@ -21,6 +21,7 @@ final class ImportRowParser {
     /** Database limits of {@code delivery_point}. */
     private static final int MAX_NAME = 255;
     private static final int MAX_CITY = 120;
+    private static final int MAX_AGENT = 120;
 
     private ImportRowParser() {
     }
@@ -102,7 +103,7 @@ final class ImportRowParser {
             return Optional.empty();
         }
         if (customer.length() > MAX_NAME || deliveryPoint.length() > MAX_NAME || address.length() > MAX_NAME
-                || city.length() > MAX_CITY || agent.length() > MAX_CITY) {
+                || city.length() > MAX_CITY || agent.length() > MAX_AGENT) {
             return Optional.empty();
         }
         List<BigDecimal> amounts = new ArrayList<>();
