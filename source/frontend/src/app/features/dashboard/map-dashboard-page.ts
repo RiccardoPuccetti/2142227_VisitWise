@@ -43,6 +43,7 @@ import {
   EnterpriseLegend,
   EurPipe,
   formatEur,
+  formatPercent,
   KpiSummary,
   MapView,
   minimumLoading,
@@ -76,8 +77,6 @@ const WIDE_QUERY = '(min-width: 64rem)';
 const POPUP_SPACE = 320 + POPUP_GAP + 16;
 
 
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
-const WHOLE_PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 });
 /** Points of the concentration curve: enough to show the bend, few enough to label. */
 const PARETO_STEPS = 6;
 
@@ -229,7 +228,7 @@ export class MapDashboardPage {
 
   protected readonly topShare = computed(() => {
     const share = shareOfTopFraction(this.summary()?.pareto ?? [], 0.2);
-    return share === null ? '–' : PERCENT.format(share);
+    return share === null ? '–' : formatPercent(share);
   });
 
   protected readonly agentBars = computed<BarItem[]>(() =>
@@ -260,7 +259,7 @@ export class MapDashboardPage {
     for (let step = 1; step <= steps; step++) {
       const index = Math.min(total - 1, Math.round((step / steps) * total) - 1);
       const entry = pareto[index];
-      points.push({ label: WHOLE_PERCENT.format(entry.points / total), value: entry.revenueShare });
+      points.push({ label: formatPercent(entry.points / total, 0), value: entry.revenueShare });
     }
     return points;
   });
@@ -293,7 +292,7 @@ export class MapDashboardPage {
 
   protected readonly formatEur = formatEur;
   protected readonly formatCompact = (value: number): string => formatEur(value, 'compact');
-  protected readonly formatPercent = (value: number): string => WHOLE_PERCENT.format(value);
+  protected readonly wholePercent = (value: number): string => formatPercent(value, 0);
 
   protected isSelected(enterpriseId: number): boolean {
     return this.filter().enterpriseIds.includes(enterpriseId);

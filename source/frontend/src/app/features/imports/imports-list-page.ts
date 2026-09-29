@@ -27,9 +27,9 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { type KpiDetail, KpiSummary, minimumLoading, PageHeader } from '../../shared';
+import { formatDateTime, type KpiDetail, KpiSummary, minimumLoading, PageHeader } from '../../shared';
 import { locatedPercent } from './import-detail.model';
-import { formatCreatedAt, importStatusLabel } from './import-status';
+import { importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
 import { ImportsService } from './imports.service';
 
@@ -104,7 +104,7 @@ export class ImportsListPage {
   protected readonly items = computed(() =>
     this.imports().map((item) => ({
       ...item,
-      created: formatCreatedAt(item.createdAt),
+      created: formatDateTime(item.createdAt),
       statusLabel: importStatusLabel(item.status),
       locatedPercent: locatedPercent({ total: item.importedRows, located: item.geocodedRows }),
     })),

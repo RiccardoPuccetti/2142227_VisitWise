@@ -40,6 +40,7 @@ import {
   createPaging,
   EnterpriseLegend,
   EurPipe,
+  formatDateTime,
   type KpiDetail,
   KpiSummary,
   MapView,
@@ -56,7 +57,7 @@ import {
   needsLocation,
   territoryMarkers,
 } from './import-detail.model';
-import { formatCreatedAt, importStatusLabel } from './import-status';
+import { importStatusLabel } from './import-status';
 import { ImportsService } from './imports.service';
 import { PointLocationForm } from './point-location-form';
 
@@ -144,7 +145,7 @@ export class ImportDetailPage {
 
   protected readonly created = computed(() => {
     const detail = this.detail();
-    return detail ? formatCreatedAt(detail.createdAt) : '';
+    return detail ? formatDateTime(detail.createdAt) : '';
   });
   protected readonly statusLabel = computed(() => {
     const detail = this.detail();

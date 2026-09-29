@@ -2,6 +2,7 @@ export * from './charts/area-chart';
 export * from './charts/donut-chart';
 export * from './enterprise-legend';
 export * from './eur.pipe';
+export * from './format';
 export * from './kpi-summary';
 export * from './map-view/map-view';
 export * from './map-view/map-view.model';

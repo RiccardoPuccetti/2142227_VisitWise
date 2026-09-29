@@ -1,7 +1,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
+import { LOCALE } from './format';
 
 /** Locale used for every amount in the app: the federation and its data are Italian. */
-const LOCALE = 'it-IT';
 
 const FULL = new Intl.NumberFormat(LOCALE, {
   style: 'currency',

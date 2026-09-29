@@ -1,7 +1,6 @@
 import type { PlanDay, PlanParameters, PlanResult, PlannedVisit } from '../../core/models/api.models';
 import {
   dayRevenue,
-  dayTitle,
   groupDays,
   planRoutes,
   revealDelay,
@@ -78,11 +77,6 @@ describe('travelBasis', () => {
 });
 
 describe('days of the plan', () => {
-  it('titles a day with the weekday, the day and the month', () => {
-    expect(dayTitle('2026-11-02')).toBe('Mon 2 Nov');
-    expect(dayTitle('2026-12-18')).toBe('Fri 18 Dec');
-  });
-
   it('adds up the revenue expected from the visits of a day', () => {
     const visit = (expectedRevenue: number) => ({ expectedRevenue }) as PlannedVisit;
     const day: PlanDay = { date: '2026-11-02', agent: null, km: 12, visits: [visit(1200.5), visit(300)] };

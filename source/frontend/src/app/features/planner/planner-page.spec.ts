@@ -309,7 +309,7 @@ describe('PlannerPage', () => {
     const labels = [...page().querySelectorAll('[data-testid="kpi-details"] dt')].map((term) => term.textContent?.trim());
     expect(labels).toEqual(['Visits', 'Working days', 'Distance']);
     expect(text()).toContain('POINT 1');
-    expect(page().querySelector('[aria-label="Itinerary for 2 November 2026"]')).not.toBeNull();
+    expect(page().querySelector('[aria-label="Itinerary for 2 Nov 2026"]')).not.toBeNull();
     const summary = page().querySelector('[data-testid="planner-road-summary"]')!.textContent!;
     expect(summary.replace(/\s+/g, ' ')).toContain('12,4 km · 31 min (road route)');
   });

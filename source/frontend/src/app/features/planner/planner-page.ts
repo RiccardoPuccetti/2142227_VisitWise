@@ -48,7 +48,16 @@ import type {
   StartingBase,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, KpiSummary, MapView, PageHeader, valueOf } from '../../shared';
+import {
+  EurPipe,
+  formatDate,
+  formatDecimal,
+  formatPercent,
+  KpiSummary,
+  MapView,
+  PageHeader,
+  valueOf,
+} from '../../shared';
 import {
   DEFAULT_BASE,
   baseMarker,
@@ -62,14 +71,6 @@ import {
 import { PlannerService } from './planner.service';
 import { workingDaysBetween } from './working-calendar';
 
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
-const DECIMAL = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
-const DATE = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 const GEOCODING_POLL_MS = 3000;
 /** The planning API's upper bound, used as the horizon when there is no deadline. */
 const MAX_WORKING_DAYS = 260;
@@ -81,7 +82,7 @@ export const PLAN_REVEAL_MS = new InjectionToken<number>('PLAN_REVEAL_MS', { pro
 type PlannerTab = 'setup' | 'plan';
 
 function dateLabel(value: string | null): string {
-  return value ? DATE.format(new Date(`${value}T00:00:00Z`)) : '–';
+  return value ? formatDate(value) : '–';
 }
 
 /**
@@ -497,11 +498,11 @@ export class PlannerPage {
   }
 
   protected percent(value: number): string {
-    return PERCENT.format(value);
+    return formatPercent(value);
   }
 
   protected decimal(value: number): string {
-    return DECIMAL.format(value);
+    return formatDecimal(value);
   }
 
   protected readonly travelBasis = travelBasis;

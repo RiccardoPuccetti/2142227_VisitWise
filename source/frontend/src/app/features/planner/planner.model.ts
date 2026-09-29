@@ -6,7 +6,7 @@ import type {
   RouteResponse,
   RouteSource,
 } from '../../core/models/api.models';
-import type { MapMarker, MapRoute } from '../../shared';
+import { formatDay, type MapMarker, type MapRoute } from '../../shared';
 
 export const DEFAULT_BASE = { latitude: 41.896, longitude: 12.4823 } as const;
 export const BASE_MARKER_ID = 'base';
@@ -107,18 +107,6 @@ export function travelBasis(source: RouteSource | null | undefined): string {
   return source === 'OSRM' ? 'road network' : 'estimate';
 }
 
-const DAY_TITLE = new Intl.DateTimeFormat('en-GB', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-});
-
-/** Short title of a plan day, e.g. "Mon 2 Nov" (the date is a calendar day, read as UTC). */
-export function dayTitle(date: string): string {
-  return DAY_TITLE.format(new Date(`${date}T00:00:00Z`)).replace(',', '');
-}
-
 /** Revenue expected from the visits of a day. */
 export function dayRevenue(day: PlanDay): number {
   return day.visits.reduce((sum, visit) => sum + visit.expectedRevenue, 0);
@@ -164,7 +152,7 @@ export function groupDays(days: readonly PlanDay[]): DayGroup[] {
     const revenue = dayRevenue(day);
     let group = groups.at(-1);
     if (!group || group.date !== day.date) {
-      group = { date: day.date, title: dayTitle(day.date), revenue: 0, routes: [] };
+      group = { date: day.date, title: formatDay(day.date), revenue: 0, routes: [] };
       groups.push(group);
     }
     group.revenue += revenue;

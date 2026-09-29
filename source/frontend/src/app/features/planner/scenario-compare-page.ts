@@ -24,7 +24,7 @@ import type {
   WhatIfResult,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, PageHeader, valueOf } from '../../shared';
+import { EurPipe, formatDateTime, formatDecimal, formatEur, formatPercent, PageHeader, valueOf } from '../../shared';
 import { DEFAULT_BASE } from './planner.model';
 import { PlannerService } from './planner.service';
 import {
@@ -36,14 +36,6 @@ import {
   parseHorizons,
 } from './scenario-compare.model';
 
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
-const DECIMAL = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
-const DATE = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 /** Drawing box of the coverage curve (SVG user units; the element scales to its container). */
 const CHART = { width: 320, height: 120 } as const;
 /** Room around the drawing for the labels above the points and under the axis. */
@@ -273,26 +265,26 @@ export class ScenarioComparePage {
       case 'eur':
         return formatEur(value, 'rounded');
       case 'percent':
-        return PERCENT.format(value);
+        return formatPercent(value);
       case 'km':
-        return `${DECIMAL.format(value)} km`;
+        return `${formatDecimal(value)} km`;
       case 'hours':
-        return `${DECIMAL.format(value)} h`;
+        return `${formatDecimal(value)} h`;
       default:
         return String(value);
     }
   }
 
   protected percent(value: number): string {
-    return PERCENT.format(value);
+    return formatPercent(value);
   }
 
   protected decimal(value: number): string {
-    return DECIMAL.format(value);
+    return formatDecimal(value);
   }
 
   protected date(value: string): string {
-    return DATE.format(new Date(value));
+    return formatDateTime(value);
   }
 
   protected campaignLabel(parameters: PlanParameters): string {
@@ -320,7 +312,7 @@ export class ScenarioComparePage {
         const name =
           enterprises.find((enterprise) => enterprise.enterpriseId === item.enterpriseId)?.name ??
           `Enterprise ${item.enterpriseId}`;
-        return item.weight === 0 ? `${name} excluded` : `${name} ×${DECIMAL.format(item.weight)}`;
+        return item.weight === 0 ? `${name} excluded` : `${name} ×${formatDecimal(item.weight)}`;
       })
       .join(', ');
   }
