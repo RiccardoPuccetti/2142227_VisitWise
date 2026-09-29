@@ -390,4 +390,17 @@ describe('MapDashboardPage', () => {
 
     expect(page().querySelector('[role="alert"]')?.textContent).toContain('Import 42 not found');
   });
+
+  it('shows the problem, not endless placeholders, when the indicators cannot be loaded', async () => {
+    await harness.navigateByUrl('/imports/42/map');
+    http.expectOne('/api/imports/42/points').flush(POINTS);
+    summaryRequests().forEach((r) =>
+      r.flush({ detail: 'Summary not available' }, { status: 500, statusText: 'Server Error' }),
+    );
+    await harness.fixture.whenStable();
+
+    expect(page().querySelector('[role="alert"]')?.textContent).toContain('Summary not available');
+    expect(page().querySelector('[data-testid="chart-placeholder"]')).toBeNull();
+    expect(page().querySelector('[data-testid="row-placeholder"]')).toBeNull();
+  });
 });

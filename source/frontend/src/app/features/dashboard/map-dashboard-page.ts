@@ -185,7 +185,12 @@ export class MapDashboardPage {
   /** A filtered summary is loading while the previous figures stay on screen. */
   protected readonly refreshing = computed(() => this.filteredSummary.isLoading());
 
-  protected readonly loading = minimumLoading(() => this.pointsResource.isLoading() || !this.summary());
+  /** Until the points and the first indicators are there; a failed request ends it (the alert shows instead). */
+  protected readonly loading = minimumLoading(
+    () =>
+      this.pointsResource.isLoading() ||
+      (!this.summary() && !this.baseSummary.error() && !this.filteredSummary.error()),
+  );
 
   protected readonly error = computed(() => {
     const error =
