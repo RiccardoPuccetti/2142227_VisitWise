@@ -204,6 +204,71 @@
   .eyebrow {
     @apply text-muted-foreground text-[0.6875rem] font-semibold tracking-[0.08em] uppercase;
   }
+
+  /*
+   * Motion, only where something changes because of the user or the data arrives. Short (<= 240 ms) and switched
+   * off by the reduced-motion rule below. Use as classes, or with animate.enter / animate.leave in templates.
+   * --motion-index delays items of a list one after the other (capped, so long lists do not crawl).
+   */
+  .motion-enter {
+    animation: motion-rise 220ms cubic-bezier(0.2, 0, 0, 1) both;
+    animation-delay: calc(min(var(--motion-index, 0), 8) * 35ms);
+  }
+  .motion-fade {
+    animation: motion-fade 200ms ease-out both;
+  }
+  .motion-from-end {
+    animation: motion-from-end 240ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+  .motion-from-start {
+    animation: motion-from-start 240ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+  .motion-leave {
+    animation: motion-leave 200ms ease-in both;
+  }
+}
+
+/*
+ * Progress bars fill from empty when they appear, then glide to each new value (e.g. the geocoding progress,
+ * refreshed every few seconds). The indicator is placed with an inline transform, hence !important on the start.
+ */
+[data-slot='progress-indicator'] {
+  transition: transform 700ms cubic-bezier(0.2, 0, 0, 1);
+}
+@starting-style {
+  [data-slot='progress-indicator'] {
+    transform: translateX(-100%) !important;
+  }
+}
+
+@keyframes motion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes motion-from-end {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+}
+@keyframes motion-from-start {
+  from {
+    opacity: 0;
+    transform: translateX(-1rem);
+  }
+}
+@keyframes motion-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
 }
 
 /* OpenLayers: give the map the same rounded, bordered look as the cards, in both themes. */
