@@ -1,5 +1,7 @@
 <app-page-header title="Imports">
-  <p>Every Excel file your federation imported. Open one to see its customers and plan visits.</p>
+  <ul class="page-facts">
+    <li><ng-icon name="lucideInfo" aria-hidden="true" /> Every Excel file your federation imported. Open one to see its customers and plan visits.</li>
+  </ul>
   <div actions class="flex flex-wrap items-center gap-3">
     <div
       hlmToggleGroup
@@ -17,7 +19,7 @@
   </div>
 </app-page-header>
 
-<section class="flex flex-col gap-6" aria-label="Imports list">
+<section class="flex flex-col gap-7" aria-label="Imports list">
   <p role="status" class="empty:hidden text-sm">{{ message() }}</p>
 
   @if (deleteError(); as error) {
@@ -48,43 +50,76 @@
       </div>
     </div>
   } @else {
-    <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-      <app-kpi-card label="Imports" icon="lucideFolderOpen" tone="brand" [value]="'' + items().length" />
-      <app-kpi-card label="Delivery points" icon="lucideMapPin" tone="chart-2" [value]="'' + totals().points" hint="across all imports" />
-      <app-kpi-card label="Ready to plan" icon="lucideCircleCheck" tone="chart-3" [value]="'' + totals().ready" [hint]="totals().pending > 0 ? totals().pending + ' still processing' : 'all imports ready'" />
-      <app-kpi-card label="Enterprises" icon="lucideBuilding2" tone="chart-5" [value]="'' + totals().enterprises" hint="distinct names" />
-    </div>
+    <app-kpi-summary
+      label="Delivery points"
+      [value]="'' + totals().points"
+      [hint]="totals().located + ' located on the map, across all imports'"
+      [progress]="totals().points ? totals().located / totals().points : null"
+      [details]="[
+        { label: 'Imports', value: '' + items().length, icon: 'lucideFolderOpen' },
+        {
+          label: 'Ready to plan',
+          value: '' + totals().ready,
+          hint: totals().pending > 0 ? totals().pending + ' still processing' : 'all imports ready',
+          icon: 'lucideCircleCheck',
+        },
+        { label: 'Enterprises', value: '' + totals().enterprises, hint: 'distinct names', icon: 'lucideBuilding2' },
+      ]"
+    />
 
     @if (view() === 'cards') {
-      <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4" aria-label="Imports">
+      <!-- Same columns as the KPI row above, so the card edges line up. -->
+      <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Imports">
         @for (item of items(); track item.id) {
-          <li hlmCard data-testid="import-card" class="group relative">
+          <li hlmCard data-testid="import-card" class="group relative min-w-0">
             <div class="absolute inset-x-0 top-0 flex h-1" aria-hidden="true">
               @for (enterprise of item.enterprises; track enterprise.id) {
                 <span class="flex-1" [style.background-color]="enterprise.color"></span>
               }
             </div>
             <div hlmCardHeader>
-              <div class="flex items-start justify-between gap-3">
-                <h2 hlmCardTitle class="text-lg">
+              <div class="flex min-w-0 items-start justify-between gap-3">
+                <!-- Up to two lines, and two lines tall when cards sit side by side: the rows below line up across cards. -->
+                <h2 hlmCardTitle class="line-clamp-2 min-w-0 sm:min-h-14 text-lg leading-7 break-words" [attr.title]="item.name">
                   <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
                 </h2>
-                <span hlmBadge [variant]="item.status === 'FAILED' ? 'destructive' : item.status === 'READY' ? 'outline' : 'secondary'">
+                <span hlmBadge class="mt-1" [variant]="item.status === 'FAILED' ? 'destructive' : item.status === 'READY' ? 'outline' : 'secondary'">
                   {{ item.statusLabel }}
                 </span>
               </div>
-              <p hlmCardDescription class="flex items-center gap-1.5">
-                <ng-icon name="lucideCalendar" class="shrink-0" aria-hidden="true" />
-                <time [attr.datetime]="item.createdAt">{{ item.created }}</time>
-                <span aria-hidden="true">·</span>
-                <span class="truncate">{{ item.sourceFileName }}</span>
-              </p>
+              <!-- One fact per line, never wrapped: every card has the same header height. -->
+              <div hlmCardDescription class="flex min-w-0 flex-col gap-1">
+                <p class="flex items-center gap-1.5 whitespace-nowrap">
+                  <ng-icon name="lucideCalendar" class="shrink-0" aria-hidden="true" />
+                  <time [attr.datetime]="item.createdAt">{{ item.created }}</time>
+                </p>
+                <p class="flex min-w-0 items-center gap-1.5" [attr.title]="item.sourceFileName">
+                  <ng-icon name="lucideFileSpreadsheet" class="shrink-0" aria-hidden="true" />
+                  <span class="truncate">{{ item.sourceFileName }}</span>
+                </p>
+              </div>
             </div>
             <div hlmCardContent class="flex flex-col gap-4">
-              <p class="flex items-baseline gap-2">
-                <span class="text-3xl font-semibold tracking-tight tabular-nums">{{ item.importedRows }}</span>
-                <span class="text-muted-foreground text-sm"> points</span>
-              </p>
+              <!-- How usable the file is: rows kept, rows with coordinates, rows left out. -->
+              <div class="flex flex-col gap-3">
+                <dl class="grid grid-cols-3 gap-2">
+                  <div class="flex flex-col-reverse">
+                    <dt class="text-muted-foreground text-xs">imported</dt>
+                    <dd class="text-xl font-semibold tracking-tight tabular-nums">{{ item.importedRows }}</dd>
+                  </div>
+                  <div class="flex flex-col-reverse">
+                    <dt class="text-muted-foreground text-xs">located</dt>
+                    <dd class="text-xl font-semibold tracking-tight tabular-nums">{{ item.geocodedRows }}</dd>
+                  </div>
+                  <div class="flex flex-col-reverse">
+                    <dt class="text-muted-foreground text-xs">skipped</dt>
+                    <dd class="text-muted-foreground text-xl font-semibold tracking-tight tabular-nums">{{ item.skippedRows }}</dd>
+                  </div>
+                </dl>
+                <hlm-progress class="h-1.5" [value]="item.locatedPercent" [attr.aria-label]="item.geocodedRows + ' of ' + item.importedRows + ' points located'">
+                  <hlm-progress-indicator />
+                </hlm-progress>
+              </div>
               <ul class="flex flex-wrap gap-x-3 gap-y-1.5 text-sm" aria-label="Enterprises">
                 @for (enterprise of item.enterprises; track enterprise.id) {
                   <li class="flex items-center gap-2">
@@ -94,12 +129,13 @@
                 }
               </ul>
             </div>
-            <div hlmCardFooter class="flex flex-wrap gap-2 border-t pt-4">
+            <!-- mt-auto: the actions sit on the bottom edge even when the enterprise list is shorter. -->
+            <div hlmCardFooter class="mt-auto flex items-center gap-2 border-t pt-4">
               <a hlmBtn size="sm" [routerLink]="['/imports', item.id]" [attr.aria-label]="'Open ' + item.name">Open</a>
               <a hlmBtn size="sm" variant="outline" [routerLink]="['/imports', item.id, 'map']" [attr.aria-label]="'Map of ' + item.name">
                 <ng-icon name="lucideMap" aria-hidden="true" /> Map
               </a>
-              <span class="ml-auto"><ng-container *ngTemplateOutlet="deleteDialog; context: { $implicit: item }" /></span>
+              <span class="ml-auto"><ng-container *ngTemplateOutlet="deleteDialog; context: { $implicit: item, compact: true }" /></span>
             </div>
           </li>
         }
@@ -156,18 +192,23 @@
   }
 </section>
 
-<ng-template #deleteDialog let-item>
+<!-- compact: icon only (cards are narrow); the accessible name and the tooltip still say "Delete <name>". -->
+<ng-template #deleteDialog let-item let-compact="compact">
   <hlm-alert-dialog>
     <button
       hlmAlertDialogTrigger
       hlmBtn
-      size="sm"
+      [size]="compact ? 'icon-sm' : 'sm'"
       variant="ghost"
       class="text-muted-foreground hover:text-destructive"
       [attr.aria-label]="'Delete ' + item.name"
+      [attr.title]="compact ? 'Delete ' + item.name : null"
       [disabled]="deleting() === item.id"
     >
-      <ng-icon name="lucideTrash2" aria-hidden="true" /> Delete
+      <ng-icon name="lucideTrash2" aria-hidden="true" />
+      @if (!compact) {
+        Delete
+      }
     </button>
     <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
       <hlm-alert-dialog-header>

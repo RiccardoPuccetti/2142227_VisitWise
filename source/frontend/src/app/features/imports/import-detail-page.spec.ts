@@ -110,6 +110,15 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
   /** Waits for the (shortened) geocoding poll to fire. */
   const nextPoll = () => new Promise((resolve) => setTimeout(resolve, 30));
 
+  beforeAll(() => {
+    // jsdom has no ResizeObserver; OpenLayers needs one for the territory map.
+    globalThis.ResizeObserver ??= class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    };
+  });
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [ImportDetailPage],
@@ -136,17 +145,21 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
     const page = root(fixture);
 
     expect(text(page.querySelector('h1'))).toBe('Sample 2025');
-    expect(page.querySelector('nav[aria-label="Breadcrumb"] a[href="/imports"]')).not.toBeNull();
     expect(text(page)).toContain('sample-erp-layout.xlsx');
     expect(page.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-28T10:15:00+02:00');
-    expect(pairs(page.querySelector('[data-testid="report"] dl'))).toEqual([
-      'Rows in the file 129',
-      'Imported 73',
-      'Skipped 56',
-      'Agents 2',
-      'Cities 2',
-    ]);
-    expect(text(page.querySelector('[aria-label="Enterprises"]'))).toBe('Wine Beer');
+    // Same key figures as the map dashboard: the imported rows lead, with the share of the file they cover.
+    const headline = page.querySelector('[data-testid="report"] [data-testid="kpi-headline"]')!;
+    expect(text(headline.querySelector('h3'))).toBe('Imported');
+    expect(text(headline)).toContain('73');
+    expect(text(headline)).toContain('of 129 rows in the file');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('57');
+    const details = Array.from(page.querySelectorAll('[data-testid="report"] [data-testid="kpi-details"] > div')).map(
+      (row) => `${text(row.querySelector('dt'))}: ${text(row.querySelector('dd'))}`,
+    );
+    expect(details).toEqual(['Skipped: 56 subtotals, totals and incomplete rows', 'Agents: 2', 'Cities: 2']);
+    // The enterprise colors are the legend of the territory map, as on the map dashboard.
+    const legend = page.querySelectorAll('[data-testid="territory"] [aria-label="Enterprises"] li');
+    expect(Array.from(legend).map((entry) => text(entry))).toEqual(['Wine', 'Beer']);
     const mapping = pairs(page.querySelector('[data-testid="mapping"] dl'));
     expect(mapping).toContain('Customer Ragione Sociale');
     expect(mapping).toContain('Wine ENTERPRISE A');
@@ -181,14 +194,14 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
     it('shows the progress while addresses are located and refreshes it until the end', async () => {
       const fixture = await render({ ...DETAIL, status: 'GEOCODING' }, POINTS, RUNNING);
 
-      const bar = root(fixture).querySelector('[role="progressbar"]');
+      const bar = root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]');
       expect(bar?.getAttribute('aria-valuenow')).toBe('55');
       expect(text(root(fixture).querySelector('[data-testid="geocoding"]'))).toContain('40 of 73 addresses located');
 
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush({ ...RUNNING, located: 60, pending: 11 });
       await settle(fixture);
-      expect(root(fixture).querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('82');
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('82');
 
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush({ ...RUNNING, status: 'READY', located: 71, pending: 0 });
@@ -199,7 +212,7 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       http.expectOne('/api/imports/7/points').flush(POINTS);
       await settle(fixture);
 
-      expect(root(fixture).querySelector('[role="progressbar"]')).toBeNull();
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')).toBeNull();
       expect(text(root(fixture).querySelector('[data-testid="geocoding"]'))).toContain('71 of 73 addresses located');
       await nextPoll();
       http.expectNone('/api/imports/7/geocoding');
@@ -222,7 +235,7 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush({ ...DONE, status: 'GEOCODING', pending: 1, notFound: 0 });
       await settle(fixture);
-      expect(root(fixture).querySelector('[role="progressbar"]')).not.toBeNull();
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')).not.toBeNull();
 
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush(DONE);
@@ -257,7 +270,7 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       const fixture = await render(DETAIL, POINTS, stopped);
       const geocoding = root(fixture).querySelector('[data-testid="geocoding"]')!;
 
-      expect(root(fixture).querySelector('[role="progressbar"]')).toBeNull();
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')).toBeNull();
       expect(text(geocoding)).toContain('2 addresses not located yet');
       expect(button('Retry the missing addresses', geocoding).disabled).toBe(false);
       await nextPoll();
@@ -300,21 +313,47 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       expect(text(rows(fixture)[0])).toContain('BAR ACME 2');
     });
 
-    it('shows long lists 50 points at a time', async () => {
+    it('pages long lists: 50 points at a time, a page selector and the rows per page', async () => {
       const many = Array.from({ length: 120 }, (_, index) => point(2000 + index, `POINT ${index + 1}`, 'OK'));
       const fixture = await render(DETAIL, many);
+      const pager = () => text(root(fixture).querySelector('nav[aria-label="Pages of points"]'));
+      const choose = async (id: string, value: string) => {
+        const select = root(fixture).querySelector<HTMLSelectElement>(`#${id}`)!;
+        select.value = value;
+        select.dispatchEvent(new Event('change'));
+        await settle(fixture);
+      };
 
       expect(rows(fixture)).toHaveLength(50);
-      expect(text(root(fixture).querySelector('[data-testid="pages"]'))).toContain('Page 1 of 3');
+      expect(pager()).toContain('Showing 1–50 of 120');
       expect(button('Previous page', root(fixture)).disabled).toBe(true);
 
       button('Next page', root(fixture)).click();
-      button('Next page', root(fixture)).click();
       await settle(fixture);
+      expect(text(rows(fixture)[0])).toContain('POINT 51');
 
+      await choose('points-page', '3');
       expect(rows(fixture)).toHaveLength(20);
       expect(text(rows(fixture)[0])).toContain('POINT 101');
       expect(button('Next page', root(fixture)).disabled).toBe(true);
+
+      await choose('points-page-size', '25');
+      expect(rows(fixture)).toHaveLength(25);
+      expect(pager()).toContain('Showing 1–25 of 120');
+    });
+
+    it('goes back to the first page when the list filter changes', async () => {
+      const many = Array.from({ length: 120 }, (_, index) => point(2000 + index, `POINT ${index + 1}`, 'OK'));
+      const fixture = await render(DETAIL, many);
+      button('Next page', root(fixture)).click();
+      await settle(fixture);
+
+      button('Not located (0)', root(fixture)).click();
+      await settle(fixture);
+      button('All points', root(fixture)).click();
+      await settle(fixture);
+
+      expect(text(rows(fixture)[0])).toContain('POINT 1');
     });
 
     it('places a point that was not found by hand', async () => {

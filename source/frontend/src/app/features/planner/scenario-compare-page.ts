@@ -1,7 +1,14 @@
 import { Component, computed, effect, inject, input, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCalendarRange } from '@ng-icons/lucide';
+import {
+  lucideArrowUpRight,
+  lucideCalendarRange,
+  lucideGitCompare,
+  lucideInfo,
+  lucideTrash2,
+  lucideTrendingUp,
+} from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -40,7 +47,8 @@ const DATE = new Intl.DateTimeFormat('en-GB', {
 });
 /** Drawing box of the coverage curve (SVG user units; the element scales to its container). */
 const CHART = { width: 320, height: 120 } as const;
-const CHART_PADDING = 12;
+/** Room around the drawing for the labels above the points and under the axis. */
+const CHART_PADDING = 22;
 /** Side-by-side columns stay readable up to this many scenarios. */
 const MAX_COMPARED = 4;
 const DEFAULT_HORIZONS = '20, 30, 40';
@@ -66,7 +74,16 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     HlmTableImports,
     EurPipe,
   ],
-  providers: [provideIcons({ lucideCalendarRange })],
+  providers: [
+    provideIcons({
+      lucideArrowUpRight,
+      lucideCalendarRange,
+      lucideGitCompare,
+      lucideInfo,
+      lucideTrash2,
+      lucideTrendingUp,
+    }),
+  ],
   templateUrl: './scenario-compare-page.html',
 })
 export class ScenarioComparePage {

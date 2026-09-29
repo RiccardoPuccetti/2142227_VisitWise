@@ -6,8 +6,6 @@ import {
   mappingRows,
   missingAddresses,
   needsLocation,
-  pageCount,
-  pageOf,
   parseCoordinate,
   territoryMarkers,
 } from './import-detail.model';
@@ -66,6 +64,10 @@ describe('import detail model', () => {
       expect(locatedPercent(PROGRESS)).toBe(55);
       expect(locatedPercent({ ...PROGRESS, total: 0, located: 0 })).toBe(100);
     });
+
+    it('needs only the two counts, so the import list can use it with the summary figures', () => {
+      expect(locatedPercent({ total: 73, located: 40 })).toBe(55);
+    });
   });
 
   it('names every geocode status for people', () => {
@@ -82,15 +84,6 @@ describe('import detail model', () => {
     expect(needsLocation('OK')).toBe(false);
     expect(needsLocation('MANUAL')).toBe(false);
     expect(needsLocation('FROM_FILE')).toBe(false);
-  });
-
-  it('pages a long list of points', () => {
-    const items = Array.from({ length: 120 }, (_, index) => index);
-
-    expect(pageCount(items.length, 50)).toBe(3);
-    expect(pageCount(0, 50)).toBe(1);
-    expect(pageOf(items, 1, 50)).toEqual(items.slice(0, 50));
-    expect(pageOf(items, 3, 50)).toEqual(items.slice(100));
   });
 
   it('lists the mapped columns, skipping the unmapped optional ones', () => {

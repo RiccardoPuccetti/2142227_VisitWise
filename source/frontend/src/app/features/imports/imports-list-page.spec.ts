@@ -85,12 +85,39 @@ describe('ImportsListPage (US-10, US-12)', () => {
     const first = cards[0];
     expect(text(first.querySelector('a[href="/imports/7"]'))).toBe('Sample 2025');
     expect(text(first)).toContain('sample-erp-layout.xlsx');
-    expect(text(first)).toContain('73 points');
     expect(text(first)).toContain('Locating addresses');
     expect(text(first)).toContain('Wine');
     expect(text(first)).toContain('Beer');
     expect(first.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-28T10:15:00+02:00');
     expect(text(cards[1])).toContain('Ready');
+  });
+
+  it('sums up the imports: the delivery points with the located share, then imports, ready and enterprises', async () => {
+    const fixture = await render();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const headline = root.querySelector('[data-testid="kpi-headline"]')!;
+    expect(text(headline.querySelector('h3'))).toBe('Delivery points');
+    expect(text(headline)).toContain('146');
+    expect(text(headline)).toContain('113 located on the map, across all imports');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('77');
+    const details = Array.from(root.querySelectorAll('[data-testid="kpi-details"] > div')).map(
+      (row) => `${text(row.querySelector('dt'))}: ${text(row.querySelector('dd'))}`,
+    );
+    expect(details).toEqual(['Imports: 2', 'Ready to plan: 1 1 still processing', 'Enterprises: 2 distinct names']);
+  });
+
+  it('shows how usable each import is: rows imported, located and skipped, and the located share', async () => {
+    const fixture = await render();
+    const first = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="import-card"]')!;
+
+    const figures = Array.from(first.querySelectorAll('dl > div')).map(
+      (figure) => `${text(figure.querySelector('dd'))} ${text(figure.querySelector('dt'))}`,
+    );
+    expect(figures).toEqual(['73 imported', '40 located', '56 skipped']);
+    const bar = first.querySelector('[role="progressbar"]');
+    expect(bar?.getAttribute('aria-valuenow')).toBe('55');
+    expect(bar?.getAttribute('aria-label')).toBe('40 of 73 points located');
   });
 
   it('shows a loading state until the list arrives', async () => {

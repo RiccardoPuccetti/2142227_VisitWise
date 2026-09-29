@@ -10,7 +10,7 @@ import type {
   RouteResponse,
   StartingBase,
 } from '../../core/models/api.models';
-import { PlannerPage } from './planner-page';
+import { PLAN_REVEAL_MS, PlannerPage } from './planner-page';
 
 const BASE: StartingBase = {
   address: 'Via del Corso 300',
@@ -132,6 +132,8 @@ describe('PlannerPage', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [
+        // No minimum loading time: the tests answer the requests themselves.
+        { provide: PLAN_REVEAL_MS, useValue: 0 },
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter(
@@ -247,10 +249,36 @@ describe('PlannerPage', () => {
 
     expect(text()).toContain('Covered revenue');
     expect(text()).toContain('85%');
+    // The covered revenue leads, with a bar for its share of the eligible revenue.
+    const headline = page().querySelector('[data-testid="kpi-headline"]')!;
+    expect(headline.querySelector('h3')?.textContent?.trim()).toBe('Covered revenue');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('85');
+    const labels = [...page().querySelectorAll('[data-testid="kpi-details"] dt')].map((term) => term.textContent?.trim());
+    expect(labels).toEqual(['Visits', 'Working days', 'Distance']);
     expect(text()).toContain('POINT 1');
     expect(page().querySelector('[aria-label="Itinerary for 2 November 2026"]')).not.toBeNull();
     const summary = page().querySelector('[data-testid="planner-road-summary"]')!.textContent!;
     expect(summary.replace(/\s+/g, ' ')).toContain('12,4 km · 31 min (road route)');
+  });
+
+  it('leaves out the note on points without coordinates, already told by the geocoding strip', async () => {
+    button('Generate plan').click();
+    TestBed.tick();
+    http.expectOne('/api/imports/42/plans/simulate').flush({
+      ...RESULT,
+      warnings: [
+        '8 delivery points without coordinates were excluded',
+        '3 delivery points are farther than 50 km from the base and were excluded',
+      ],
+    });
+    await harness.fixture.whenStable();
+    http.expectOne('/api/imports/42/plans/route').flush(ROAD);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(text()).not.toContain('without coordinates');
+    expect(text()).not.toContain('Planning notes');
+    expect(text()).toContain('3 delivery points are farther than 50 km from the base and were excluded');
   });
 
   it('falls back to the estimate when the road service is unavailable', async () => {
@@ -292,8 +320,17 @@ describe('PlannerPage', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
 
-    type('#planner-scenario-name', 'Christmas priority');
-    button('Save scenario').click();
+    button('Save as scenario').click();
+    await harness.fixture.whenStable();
+
+    // The dialog is rendered in an overlay on the document body.
+    const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
+    const name = dialog()!.querySelector<HTMLInputElement>('#planner-scenario-name')!;
+    name.value = 'Christmas priority';
+    name.dispatchEvent(new Event('input'));
+    Array.from(dialog()!.querySelectorAll('button'))
+      .find((item) => item.textContent?.trim() === 'Save scenario')!
+      .click();
     TestBed.tick();
 
     const request = http.expectOne('/api/imports/42/plans');
@@ -302,6 +339,59 @@ describe('PlannerPage', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
     expect(text()).toContain('Scenario saved');
+    await vi.waitFor(() => expect(dialog()).toBeNull());
+  });
+
+  const tab = (label: string) =>
+    Array.from(page().querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((item) =>
+      item.textContent?.includes(label),
+    )!;
+
+  it('opens the plan tab with a loading view while the plan is generated, and goes back to the setup', async () => {
+    expect(tab('Setup').getAttribute('aria-selected')).toBe('true');
+    expect(tab('Plan').disabled).toBe(true);
+
+    button('Generate plan').click();
+    TestBed.tick();
+
+    expect(tab('Plan').getAttribute('aria-selected')).toBe('true');
+    expect(page().querySelector('[data-testid="plan-loading"]')).not.toBeNull();
+
+    http.expectOne('/api/imports/42/plans/simulate').flush(RESULT);
+    await harness.fixture.whenStable();
+    http.expectOne('/api/imports/42/plans/route').flush(ROAD);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(page().querySelector('[data-testid="plan-loading"]')).toBeNull();
+    expect(text()).toContain('Covered revenue');
+
+    tab('Setup').click();
+    await harness.fixture.whenStable();
+    expect(tab('Setup').getAttribute('aria-selected')).toBe('true');
+    expect(tab('Plan').disabled).toBe(false);
+  });
+
+  it('lists the routes by day: the day with its total, then each agent with stops, distance and revenue', async () => {
+    button('Generate plan').click();
+    TestBed.tick();
+    http.expectOne('/api/imports/42/plans/simulate').flush(RESULT);
+    await harness.fixture.whenStable();
+    http.expectOne('/api/imports/42/plans/route').flush(ROAD);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    const rail = page().querySelector('[aria-labelledby="planner-days-title"]')!;
+    const heading = rail.querySelector('h4')?.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(heading).toContain('Mon 2 Nov');
+    expect(heading).toContain('1 route');
+    const route = rail.querySelector('li li button')!;
+    const words = route.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(words).toContain('AGENT NORTH');
+    expect(words).toContain('1 stop');
+    expect(words).toContain('42,5 km');
+    expect(words).toContain('8500');
+    expect(route.getAttribute('aria-pressed')).toBe('true');
   });
 });
 
@@ -356,11 +446,17 @@ describe('PlannerPage while addresses are still being geocoded', () => {
     http.expectOne('/api/imports/42/geocoding').flush({ ...PROGRESS_DONE, notFound: 2 });
     await harness.fixture.whenStable();
     harness.detectChanges();
-    expect(text()).toContain('2 of 2 addresses could not be located');
+    // One slim line: what is missing, why it matters, and the two ways to fix it.
+    expect(text()).toContain('2 of 2 addresses not located');
+    expect(text()).toContain('left out of the plan');
+    const root = harness.routeNativeElement as HTMLElement;
+    const fix = Array.from(root.querySelectorAll<HTMLAnchorElement>('a[href="/imports/42"]')).find((link) =>
+      link.textContent?.includes('Fix positions'),
+    );
+    expect(fix).toBeDefined();
 
-    const retry = Array.from(
-      (harness.routeNativeElement as HTMLElement).querySelectorAll('button'),
-    ).find((item) => item.textContent?.includes('Retry geocoding'))!;
+    const retry = root.querySelector<HTMLButtonElement>('button[aria-label="Retry geocoding"]')!;
+    expect(retry.textContent?.trim()).toBe('Retry');
     retry.click();
     TestBed.tick();
     const request = http.expectOne('/api/imports/42/geocoding/retry');

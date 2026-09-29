@@ -1,6 +1,19 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, resource } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  resource,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -11,12 +24,14 @@ import {
   lucideLayoutDashboard,
   lucideLogOut,
   lucideMap,
+  lucideMenu,
   lucideMoon,
   lucidePanelLeftClose,
   lucidePanelLeftOpen,
   lucideRoute,
   lucideSun,
   lucideUpload,
+  lucideX,
 } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmToasterImports } from '@spartan-ng/helm/sonner';
@@ -26,13 +41,16 @@ import { SidebarPreference } from './core/layout/sidebar-preference';
 import type { ImportSummary } from './core/models/api.models';
 import { ThemeService } from './core/theme/theme.service';
 
-/** Pages of one import, shown in the navigation when the URL is `/imports/:importId/...`. */
-const IMPORT_SECTIONS = [
-  { path: '', label: 'Overview', icon: 'lucideLayoutDashboard', exact: true },
-  { path: 'map', label: 'Map', icon: 'lucideMap', exact: false },
-  { path: 'planner', label: 'Planner', icon: 'lucideCalendarRange', exact: false },
-  { path: 'scenarios', label: 'Scenarios', icon: 'lucideGitCompareArrows', exact: false },
-] as const;
+/**
+ * Pages of one import, shown in the navigation when the URL is `/imports/:importId/...`. A section is current on its
+ * own path and below it, and on the `also` paths: a saved plan (`plans/:planId`) is opened from the scenarios.
+ */
+const IMPORT_SECTIONS: readonly { path: string; label: string; icon: string; also?: readonly string[] }[] = [
+  { path: '', label: 'Overview', icon: 'lucideLayoutDashboard' },
+  { path: 'map', label: 'Map', icon: 'lucideMap' },
+  { path: 'planner', label: 'Planner', icon: 'lucideCalendarRange' },
+  { path: 'scenarios', label: 'Scenarios', icon: 'lucideGitCompareArrows', also: ['plans'] },
+];
 
 /** Extracts the numeric import id from a URL such as `/imports/42/map`; `/imports/new` has none. */
 export function importIdFromUrl(url: string): number | null {
@@ -56,12 +74,14 @@ export function tenantInitials(name: string): string {
       lucideLayoutDashboard,
       lucideLogOut,
       lucideMap,
+      lucideMenu,
       lucideMoon,
       lucidePanelLeftClose,
       lucidePanelLeftOpen,
       lucideRoute,
       lucideSun,
       lucideUpload,
+      lucideX,
     }),
   ],
   selector: 'app-root',
@@ -102,13 +122,60 @@ export class App {
 
   protected readonly importSections = computed(() => {
     const id = this.importId();
-    return id === null
-      ? []
-      : IMPORT_SECTIONS.map((section) => ({
-          ...section,
-          link: section.path ? ['/imports', id, section.path] : ['/imports', id],
-        }));
+    if (id === null) {
+      return [];
+    }
+    // The first segment after /imports/:id ('' on the overview), without query or fragment.
+    const segment = this.url().split(/[?#]/)[0].split('/')[3] ?? '';
+    return IMPORT_SECTIONS.map((section) => ({
+      ...section,
+      link: section.path ? ['/imports', id, section.path] : ['/imports', id],
+      current: segment === section.path || (section.also?.includes(segment) ?? false),
+    }));
   });
+
+  /** Below 1024 px the navigation is a drawer opened from the top bar (the sidebar from 1024 px). */
+  protected readonly menuOpen = signal(false);
+  private readonly wideQuery = this.document.defaultView?.matchMedia?.('(min-width: 64rem)');
+  /** Below 1024 px the closed drawer is inert: out of the tab order and hidden from screen readers. */
+  protected readonly narrow = signal(this.wideQuery ? !this.wideQuery.matches : false);
+  private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
+  private readonly closeButton = viewChild<ElementRef<HTMLButtonElement>>('closeButton');
+  private readonly injector = inject(Injector);
+
+  constructor() {
+    // Choosing a page closes the drawer.
+    effect(() => {
+      this.url();
+      untracked(() => this.menuOpen.set(false));
+    });
+    // Growing to the sidebar layout closes it too, so the page is never left inert behind a hidden drawer.
+    const wide = this.wideQuery;
+    if (wide) {
+      const change = (event: MediaQueryListEvent) => {
+        this.narrow.set(!event.matches);
+        if (event.matches) {
+          this.menuOpen.set(false);
+        }
+      };
+      wide.addEventListener('change', change);
+      inject(DestroyRef).onDestroy(() => wide.removeEventListener('change', change));
+    }
+  }
+
+  protected openMenu(): void {
+    this.menuOpen.set(true);
+    afterNextRender(() => this.closeButton()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  /** Closes the drawer and gives the focus back to the menu button. */
+  protected closeMenu(): void {
+    if (!this.menuOpen()) {
+      return;
+    }
+    this.menuOpen.set(false);
+    afterNextRender(() => this.menuButton()?.nativeElement.focus(), { injector: this.injector });
+  }
 
   /**
    * With `<base href="/">` a plain `#main` link would navigate to `/#main` and reload the route,

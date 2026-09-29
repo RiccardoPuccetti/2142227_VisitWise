@@ -157,6 +157,58 @@ describe('App', () => {
     });
   });
 
+  describe('menu drawer on small screens', () => {
+    beforeEach(() => auth.setCurrentTenant(TENANT));
+
+    const menuButton = (root: HTMLElement) =>
+      root.querySelector<HTMLButtonElement>('button[aria-controls="app-sidebar"][aria-label="Open menu"]')!;
+    const drawer = (root: HTMLElement) => root.querySelector<HTMLElement>('#app-sidebar')!;
+
+    it('opens the navigation from the top bar and moves the focus into it, with the page behind inert', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      expect(menuButton(root).getAttribute('aria-expanded')).toBe('false');
+      expect(drawer(root).getAttribute('data-open')).toBe('false');
+
+      menuButton(root).click();
+      await fixture.whenStable();
+
+      expect(menuButton(root).getAttribute('aria-expanded')).toBe('true');
+      expect(drawer(root).getAttribute('data-open')).toBe('true');
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('Close menu');
+      expect(root.querySelector('main')?.hasAttribute('inert')).toBe(true);
+    });
+
+    it('closes with Escape and gives the focus back to the menu button', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      menuButton(root).click();
+      await fixture.whenStable();
+
+      drawer(root).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await fixture.whenStable();
+
+      expect(drawer(root).getAttribute('data-open')).toBe('false');
+      expect(root.querySelector('main')?.hasAttribute('inert')).toBe(false);
+      expect(document.activeElement).toBe(menuButton(root));
+    });
+
+    it('closes after choosing a page', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      menuButton(root).click();
+      await fixture.whenStable();
+
+      await TestBed.inject(Router).navigateByUrl('/imports/new');
+      await fixture.whenStable();
+
+      expect(drawer(root).getAttribute('data-open')).toBe('false');
+    });
+  });
+
   it('shows the import sections only inside an import', async () => {
     auth.setCurrentTenant(TENANT);
     const fixture = TestBed.createComponent(App);
@@ -188,6 +240,21 @@ describe('App', () => {
     expect(links.find((a) => a.getAttribute('aria-current') === 'page')?.textContent?.trim()).toBe(
       'Map',
     );
+  });
+
+  it('keeps Scenarios current on a saved plan, opened from the scenarios', async () => {
+    auth.setCurrentTenant(TENANT);
+    const fixture = TestBed.createComponent(App);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await TestBed.inject(Router).navigateByUrl('/imports/42/plans/7');
+    TestBed.tick();
+    TestBed.inject(HttpTestingController).expectOne('/api/imports/42').flush({ id: 42, name: 'Sample 2025' });
+    await fixture.whenStable();
+
+    const current = compiled.querySelectorAll('nav[aria-label="Import 42"] a[aria-current="page"]');
+    expect(Array.from(current).map((a) => a.textContent?.trim())).toEqual(['Scenarios']);
+    expect(current[0].classList).toContain('active');
   });
 });
 

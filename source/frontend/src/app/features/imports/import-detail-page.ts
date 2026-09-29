@@ -16,12 +16,11 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  lucideBuilding2,
+  lucideCalendarDays,
   lucideCalendarRange,
   lucideCircleCheck,
   lucideCircleSlash,
   lucideFileSpreadsheet,
-  lucideMap,
   lucideMapPin,
   lucideMapPinned,
   lucideTableProperties,
@@ -38,7 +37,16 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { DeliveryPoint, GeocodingProgress } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, MapView, PageHeader } from '../../shared';
+import {
+  createPaging,
+  EnterpriseLegend,
+  EurPipe,
+  type KpiDetail,
+  KpiSummary,
+  MapView,
+  PageHeader,
+  TablePager,
+} from '../../shared';
 import {
   geocodeStatusLabel,
   geocodingRunning,
@@ -46,8 +54,6 @@ import {
   mappingRows,
   missingAddresses,
   needsLocation,
-  pageCount,
-  pageOf,
   territoryMarkers,
 } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
@@ -60,8 +66,6 @@ export const GEOCODING_POLL_MS = new InjectionToken<number>('GEOCODING_POLL_MS',
   factory: () => 3000,
 });
 
-const PAGE_SIZE = 50;
-
 type PointFilter = 'all' | 'missing';
 
 /**
@@ -70,6 +74,8 @@ type PointFilter = 'all' | 'missing';
  */
 @Component({
   selector: 'app-import-detail-page',
+  // Same rhythm as every page: the header and the sections 1.75rem apart.
+  host: { class: 'flex flex-col gap-7' },
   imports: [
     RouterLink,
     NgIcon,
@@ -85,16 +91,18 @@ type PointFilter = 'all' | 'missing';
     EurPipe,
     MapView,
     PageHeader,
+    TablePager,
+    KpiSummary,
+    EnterpriseLegend,
     PointLocationForm,
   ],
   providers: [
     provideIcons({
-      lucideBuilding2,
+      lucideCalendarDays,
       lucideCalendarRange,
       lucideCircleCheck,
       lucideCircleSlash,
       lucideFileSpreadsheet,
-      lucideMap,
       lucideMapPin,
       lucideMapPinned,
       lucideTableProperties,
@@ -143,18 +151,28 @@ export class ImportDetailPage {
     const detail = this.detail();
     return detail ? importStatusLabel(detail.status) : '';
   });
-  /** The report figures shown as one strip (US-07, US-11). */
+  /** The report figures, as the key figures of the map dashboard: the imported rows lead (US-07, US-11). */
   protected readonly figures = computed(() => {
     const detail = this.detail();
-    return detail
-      ? [
-          { label: 'Rows in the file', value: detail.totalRows, icon: 'lucideFileSpreadsheet', tone: 'bg-muted text-muted-foreground' },
-          { label: 'Imported', value: detail.importedRows, icon: 'lucideCircleCheck', tone: 'bg-success/15 text-success' },
-          { label: 'Skipped', value: detail.skippedRows, icon: 'lucideCircleSlash', tone: 'bg-warning/15 text-warning' },
-          { label: 'Agents', value: detail.agents.length, icon: 'lucideUsers', tone: 'bg-info/15 text-info' },
-          { label: 'Cities', value: detail.cities.length, icon: 'lucideMapPin', tone: 'bg-brand-soft text-brand' },
-        ]
-      : [];
+    if (!detail) {
+      return null;
+    }
+    const details: KpiDetail[] = [
+      {
+        label: 'Skipped',
+        value: String(detail.skippedRows),
+        hint: 'subtotals, totals and incomplete rows',
+        icon: 'lucideCircleSlash',
+      },
+      { label: 'Agents', value: String(detail.agents.length), icon: 'lucideUsers' },
+      { label: 'Cities', value: String(detail.cities.length), icon: 'lucideMapPin' },
+    ];
+    return {
+      value: String(detail.importedRows),
+      hint: `of ${detail.totalRows} rows in the file`,
+      share: detail.totalRows ? detail.importedRows / detail.totalRows : null,
+      details,
+    };
   });
   protected readonly mapping = computed(() => {
     const mapping = this.detail()?.mapping;
@@ -190,11 +208,10 @@ export class ImportDetailPage {
   private readonly shown = computed(() =>
     this.filter() === 'missing' ? this.points().filter((point) => needsLocation(point.geocodeStatus)) : this.points(),
   );
-  protected readonly pages = computed(() => pageCount(this.shown().length, PAGE_SIZE));
-  /** Back to the first page when the filter changes. */
-  protected readonly page = linkedSignal({ source: this.filter, computation: () => 1 });
+  /** Pages of the list; back to the first page when the filter changes (not when geocoding refreshes it). */
+  protected readonly paging = createPaging(this.shown, this.filter);
   protected readonly rows = computed(() =>
-    pageOf(this.shown(), this.page(), PAGE_SIZE).map((point) => ({
+    this.paging.rows().map((point) => ({
       point,
       location: geocodeStatusLabel(point.geocodeStatus),
       canLocate: needsLocation(point.geocodeStatus),
@@ -226,14 +243,6 @@ export class ImportDetailPage {
     if (value === 'all' || value === 'missing') {
       this.filter.set(value);
     }
-  }
-
-  protected previousPage(): void {
-    this.page.update((page) => Math.max(1, page - 1));
-  }
-
-  protected nextPage(): void {
-    this.page.update((page) => Math.min(this.pages(), page + 1));
   }
 
   protected edit(point: DeliveryPoint, trigger: EventTarget | null): void {

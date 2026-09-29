@@ -1,55 +1,37 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { PageHeader, type Crumb } from './page-header';
+import { PageHeader } from './page-header';
 
 @Component({
   imports: [PageHeader],
   template: `
-    <app-page-header [trail]="trail" title="Sample 2025">
-      <p>Imported on 28 Sept 2026 from sample-erp-layout.xlsx</p>
+    <app-page-header title="Sample 2025">
+      <ul class="page-facts"><li>Imported on 28 Sept 2026</li></ul>
       <button actions type="button">Open the map</button>
     </app-page-header>
   `,
 })
-class Host {
-  trail: Crumb[] = [{ label: 'Imports', link: '/imports' }];
-}
+class Host {}
 
 describe('PageHeader (US-38)', () => {
   const render = async () => {
-    TestBed.configureTestingModule({ imports: [Host], providers: [provideRouter([])] });
+    TestBed.configureTestingModule({ imports: [Host] });
     const fixture = TestBed.createComponent(Host);
     await fixture.whenStable();
     return fixture.nativeElement as HTMLElement;
   };
 
-  it('shows where the page is: a breadcrumb up to the current page, which is the title', async () => {
+  it('has one row with the title and the actions, and no breadcrumb', async () => {
     const page = await render();
 
-    const breadcrumb = page.querySelector('nav[aria-label="Breadcrumb"]');
-    const imports = breadcrumb?.querySelector<HTMLAnchorElement>('a[href="/imports"]');
-    expect(imports?.textContent?.trim()).toBe('Imports');
-    const current = breadcrumb?.querySelector('[aria-current="page"]');
-    expect(current?.textContent?.trim()).toBe('Sample 2025');
     expect(page.querySelector('h1')?.textContent?.trim()).toBe('Sample 2025');
+    expect(page.querySelector('[data-slot="page-actions"] button')?.textContent?.trim()).toBe('Open the map');
+    expect(page.querySelector('nav[aria-label="Breadcrumb"]')).toBeNull();
   });
 
-  it('puts the description under the title and the actions beside it', async () => {
+  it('puts the facts of the page in a strip under the title row', async () => {
     const page = await render();
 
     expect(page.querySelector('[data-slot="page-description"]')?.textContent).toContain('Imported on 28 Sept 2026');
-    expect(page.querySelector('[data-slot="page-actions"] button')?.textContent?.trim()).toBe('Open the map');
-  });
-
-  it('has no breadcrumb on a top-level page', async () => {
-    TestBed.configureTestingModule({ imports: [PageHeader], providers: [provideRouter([])] });
-    const fixture = TestBed.createComponent(PageHeader);
-    fixture.componentRef.setInput('title', 'Imports');
-    await fixture.whenStable();
-
-    const page = fixture.nativeElement as HTMLElement;
-    expect(page.querySelector('nav[aria-label="Breadcrumb"]')).toBeNull();
-    expect(page.querySelector('h1')?.textContent?.trim()).toBe('Imports');
   });
 });

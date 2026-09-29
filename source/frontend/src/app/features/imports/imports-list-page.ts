@@ -6,7 +6,9 @@ import {
   lucideBuilding2,
   lucideCalendar,
   lucideCircleCheck,
+  lucideFileSpreadsheet,
   lucideFolderOpen,
+  lucideInfo,
   lucideLayoutGrid,
   lucideList,
   lucideMap,
@@ -20,12 +22,14 @@ import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
+import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { KpiCard, PageHeader } from '../../shared';
+import { KpiSummary, PageHeader } from '../../shared';
+import { locatedPercent } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
 import { ImportsService } from './imports.service';
@@ -36,6 +40,8 @@ import { ImportsService } from './imports.service';
  */
 @Component({
   selector: 'app-imports-list-page',
+  // Same rhythm as every page: the header and the sections 1.75rem apart.
+  host: { class: 'flex flex-col gap-7' },
   imports: [
     NgTemplateOutlet,
     RouterLink,
@@ -45,11 +51,12 @@ import { ImportsService } from './imports.service';
     HlmButtonImports,
     HlmCardImports,
     HlmEmptyImports,
+    HlmProgressImports,
     HlmSpinnerImports,
     HlmTableImports,
     HlmToggleGroupImports,
     NgIcon,
-    KpiCard,
+    KpiSummary,
     PageHeader,
   ],
   providers: [
@@ -57,7 +64,9 @@ import { ImportsService } from './imports.service';
       lucideBuilding2,
       lucideCalendar,
       lucideCircleCheck,
+      lucideFileSpreadsheet,
       lucideFolderOpen,
+      lucideInfo,
       lucideLayoutGrid,
       lucideList,
       lucideMap,
@@ -93,6 +102,7 @@ export class ImportsListPage {
       ...item,
       created: formatCreatedAt(item.createdAt),
       statusLabel: importStatusLabel(item.status),
+      locatedPercent: locatedPercent({ total: item.importedRows, located: item.geocodedRows }),
     })),
   );
 
@@ -100,6 +110,7 @@ export class ImportsListPage {
     const imports = this.imports();
     return {
       points: imports.reduce((sum, item) => sum + item.importedRows, 0),
+      located: imports.reduce((sum, item) => sum + item.geocodedRows, 0),
       ready: imports.filter((item) => item.status === 'READY').length,
       pending: imports.filter((item) => item.status === 'PROCESSING' || item.status === 'GEOCODING').length,
       enterprises: new Set(imports.flatMap((item) => item.enterprises.map((enterprise) => enterprise.name))).size,

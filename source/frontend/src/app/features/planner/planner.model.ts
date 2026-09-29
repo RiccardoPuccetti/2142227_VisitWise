@@ -1,5 +1,6 @@
 import type {
   GeoPoint,
+  PlanDay,
   PlanParameters,
   PlanResult,
   RouteResponse,
@@ -111,4 +112,78 @@ export function planRoutes(
 /** How the km and hours of a plan were obtained, for the label next to them (US-39). */
 export function travelBasis(source: RouteSource | null | undefined): string {
   return source === 'OSRM' ? 'road network' : 'estimate';
+}
+
+const DAY_TITLE = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+});
+
+/** Short title of a plan day, e.g. "Mon 2 Nov" (the date is a calendar day, read as UTC). */
+export function dayTitle(date: string): string {
+  return DAY_TITLE.format(new Date(`${date}T00:00:00Z`)).replace(',', '');
+}
+
+/** Revenue expected from the visits of a day. */
+export function dayRevenue(day: PlanDay): number {
+  return day.visits.reduce((sum, visit) => sum + visit.expectedRevenue, 0);
+}
+
+/** Milliseconds still to wait so a loading view started at `startedAt` stays up at least `minimum` ms. */
+export function revealDelay(startedAt: number, now: number, minimum: number): number {
+  return Math.max(0, minimum - (now - startedAt));
+}
+
+/** Agent colors of the day list: the chart series of the theme, in the order the agents first appear. */
+const AGENT_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+
+export interface DayRoute {
+  /** Position of the route (day) in the plan, used to select it. */
+  index: number;
+  agent: string;
+  color: string;
+  stops: number;
+  km: number;
+  revenue: number;
+  /** Revenue compared with the most valuable route of the plan, 0..1. */
+  share: number;
+}
+
+export interface DayGroup {
+  date: string;
+  title: string;
+  revenue: number;
+  routes: DayRoute[];
+}
+
+/** The routes of a plan grouped by working day, each agent with its own color on every day. */
+export function groupDays(days: readonly PlanDay[]): DayGroup[] {
+  const agents: string[] = [];
+  const best = Math.max(0, ...days.map(dayRevenue));
+  const groups: DayGroup[] = [];
+  days.forEach((day, index) => {
+    const agent = day.agent ?? 'One visitor';
+    if (!agents.includes(agent)) {
+      agents.push(agent);
+    }
+    const revenue = dayRevenue(day);
+    let group = groups.at(-1);
+    if (!group || group.date !== day.date) {
+      group = { date: day.date, title: dayTitle(day.date), revenue: 0, routes: [] };
+      groups.push(group);
+    }
+    group.revenue += revenue;
+    group.routes.push({
+      index,
+      agent,
+      color: AGENT_COLORS[agents.indexOf(agent) % AGENT_COLORS.length],
+      stops: day.visits.length,
+      km: day.km,
+      revenue,
+      share: best > 0 ? revenue / best : 0,
+    });
+  });
+  return groups;
 }

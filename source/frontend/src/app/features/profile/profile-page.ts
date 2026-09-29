@@ -7,7 +7,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBuilding2, lucideKeyRound } from '@ng-icons/lucide';
+import { lucideBuilding2, lucideKeyRound, lucideMail } from '@ng-icons/lucide';
 import { AuthService } from '../../core/auth/auth.service';
 import { problemDetail } from '../../core/auth/problem-detail';
 import { PASSWORD_MAX_LENGTH, requiredText } from '../auth/text-rules';
@@ -17,6 +17,8 @@ import { ProfileService } from './profile.service';
 /** US-34 - owner: Puccetti (task PUC-9, AUTHENTICATION.md step 7). */
 @Component({
   selector: 'app-profile-page',
+  // Same rhythm as every page: the header and the sections 1.75rem apart.
+  host: { class: 'flex flex-col gap-7' },
   imports: [
     FormRoot,
     FormField,
@@ -28,15 +30,18 @@ import { ProfileService } from './profile.service';
     HlmFieldImports,
     HlmInputImports,
   ],
-  providers: [provideIcons({ lucideBuilding2, lucideKeyRound })],
+  providers: [provideIcons({ lucideBuilding2, lucideKeyRound, lucideMail })],
   template: `
     <app-page-header title="Profile">
-      <p>
-        Logged in as <span class="text-foreground font-medium">{{ auth.currentTenant()?.email }}</span>
-      </p>
+      <ul class="page-facts">
+        <li>
+          <ng-icon name="lucideMail" aria-hidden="true" /> Logged in as
+          <span class="text-foreground font-medium">{{ auth.currentTenant()?.email }}</span>
+        </li>
+      </ul>
     </app-page-header>
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,20rem)_1fr] 2xl:grid-cols-[minmax(0,24rem)_1fr]">
+    <div class="grid gap-7 lg:grid-cols-[minmax(0,20rem)_1fr] 2xl:grid-cols-[minmax(0,24rem)_1fr]">
       <section hlmCard class="lg:row-span-2" aria-label="Account">
         <div hlmCardContent class="flex flex-col items-center gap-4 py-8 text-center">
           <span class="bg-brand grid size-20 place-items-center rounded-full text-2xl font-semibold text-white shadow-raised" aria-hidden="true">

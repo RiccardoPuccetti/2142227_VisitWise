@@ -1,12 +1,28 @@
-import { Component, computed, inject, input, resource, Resource, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  input,
+  linkedSignal,
+  resource,
+  Resource,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
+  lucideCircleDot,
   lucideEuro,
   lucideFilter,
   lucideMapPin,
   lucideMousePointerClick,
+  lucidePalette,
   lucideTrendingUp,
   lucideUsers,
 } from '@ng-icons/lucide';
@@ -18,6 +34,7 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { problemDetail } from '../../core/auth/problem-detail';
+import type { AnalyticsSummary } from '../../core/models/api.models';
 import {
   AreaChart,
   ChartPoint,
@@ -26,9 +43,12 @@ import {
   EnterpriseLegend,
   EurPipe,
   formatEur,
-  KpiCard,
+  KpiSummary,
   MapView,
+  createPaging,
   PageHeader,
+  POPUP_GAP,
+  TablePager,
 } from '../../shared';
 import { AmountBars, BarItem } from './amount-bars';
 import {
@@ -44,8 +64,14 @@ import {
 import { DashboardService, SummaryFilter } from './dashboard.service';
 import { PointDetails } from './point-details';
 
-/** Rows of the points list; the map shows all of them. */
-const LIST_LIMIT = 50;
+/**
+ * From this width (Tailwind lg, where the app shell shows its desktop sidebar) the selected point opens in a popup on
+ * the map instead of a card below it. The filters rail starts later, at xl.
+ */
+const WIDE_QUERY = '(min-width: 64rem)';
+/** Width of the popup (w-80) plus its gap to the marker and a margin to the map edge, in pixels. */
+const POPUP_SPACE = 320 + POPUP_GAP + 16;
+
 /** A resource's value, or undefined while it loads or when it failed (value() throws in the error state). */
 function valueOf<T>(resource: Resource<T | undefined>): T | undefined {
   return resource.hasValue() ? resource.value() : undefined;
@@ -63,6 +89,8 @@ const PARETO_STEPS = 6;
  */
 @Component({
   selector: 'app-map-dashboard-page',
+  // Same rhythm as every page: the header and the sections 1.75rem apart.
+  host: { class: 'flex flex-col gap-7' },
   imports: [
     RouterLink,
     NgIcon,
@@ -74,7 +102,7 @@ const PARETO_STEPS = 6;
     HlmNativeSelectImports,
     HlmTableImports,
     MapView,
-    KpiCard,
+    KpiSummary,
     PageHeader,
     EnterpriseLegend,
     EurPipe,
@@ -82,14 +110,17 @@ const PARETO_STEPS = 6;
     DonutChart,
     AreaChart,
     PointDetails,
+    TablePager,
   ],
   providers: [
     provideIcons({
       lucideCalendarRange,
+      lucideCircleDot,
       lucideEuro,
       lucideFilter,
       lucideMapPin,
       lucideMousePointerClick,
+      lucidePalette,
       lucideTrendingUp,
       lucideUsers,
     }),
@@ -103,6 +134,12 @@ export class MapDashboardPage {
   private readonly api = inject(DashboardService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly injector = inject(Injector);
+  private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
+  private readonly mapView = viewChild(MapView);
+
+  /** Wide screen: the selected point opens in a popup anchored to its marker. */
+  protected readonly wide = signal(globalThis.matchMedia?.(WIDE_QUERY).matches ?? false);
 
   protected readonly id = computed(() => Number(this.importId()));
 
@@ -136,12 +173,16 @@ export class MapDashboardPage {
     loader: ({ params }) => this.api.summary(params.id, params.filter),
   });
 
-  protected readonly summary = computed(() => {
-    const filter = this.summaryFilter();
-    const source =
-      filter.enterpriseIds.length || filter.agent ? this.filteredSummary : this.baseSummary;
-    return valueOf(source);
+  /** The summary for the current filter, or the previous one while it loads, so the charts do not empty and refill. */
+  protected readonly summary = linkedSignal<AnalyticsSummary | undefined, AnalyticsSummary | undefined>({
+    source: () => {
+      const filter = this.summaryFilter();
+      return valueOf(filter.enterpriseIds.length || filter.agent ? this.filteredSummary : this.baseSummary);
+    },
+    computation: (next, previous) => next ?? previous?.value,
   });
+  /** A filtered summary is loading while the previous figures stay on screen. */
+  protected readonly refreshing = computed(() => this.filteredSummary.isLoading());
 
   protected readonly loading = computed(() => this.pointsResource.isLoading() || !this.summary());
 
@@ -169,10 +210,16 @@ export class MapDashboardPage {
       .map((point) => ({ point, revenue: pointRevenue(point, this.filter().enterpriseIds) }))
       .sort((a, b) => b.revenue - a.revenue || a.point.id - b.point.id),
   );
-  protected readonly listedRows = computed(() => this.rows().slice(0, LIST_LIMIT));
+
+  /** Pages of the list; back to the first page when the filter changes. */
+  protected readonly paging = createPaging(this.rows, this.filter);
 
   protected readonly selected = computed(
     () => this.filteredPoints().find((point) => point.id === this.selectedId()) ?? null,
+  );
+  /** The selected point is shown in the map popup (wide screen and a marker to anchor it to). */
+  protected readonly popupOnMap = computed(
+    () => this.wide() && this.selected() !== null && this.markers().some((marker) => marker.id === this.selectedId()),
   );
 
   protected readonly topShare = computed(() => {
@@ -281,8 +328,45 @@ export class MapDashboardPage {
     this.update({ enterpriseIds: [], agent: null, city: null, minRevenue: 0 });
   }
 
+  constructor() {
+    const query = globalThis.matchMedia?.(WIDE_QUERY);
+    const update = (event: MediaQueryListEvent) => this.wide.set(event.matches);
+    query?.addEventListener('change', update);
+    inject(DestroyRef).onDestroy(() => query?.removeEventListener('change', update));
+  }
+
+  /** Selects a point and brings its marker to the middle of the map (left of the popup on wide screens). */
   protected select(id: number | string): void {
     this.selectedId.set(Number(id));
+    this.mapView()?.centerOn(Number(id), this.wide() ? [0, POPUP_SPACE, 0, 0] : [0, 0, 0, 0]);
+  }
+
+  /** A marker was clicked: select its point, turn the list to its page and scroll the list (not the page) to its row. */
+  protected selectOnMap(id: number | string): void {
+    this.select(id);
+    const index = this.rows().findIndex((row) => row.point.id === Number(id));
+    if (index < 0) {
+      return;
+    }
+    this.paging.showIndex(index);
+    afterNextRender({ read: () => this.scrollToRow(Number(id)) }, { injector: this.injector });
+  }
+
+  /** Centers the row in the visible part of the list, below the sticky header. */
+  private scrollToRow(id: number): void {
+    const scroller = this.scroller()?.nativeElement;
+    const row = scroller?.querySelector<HTMLElement>(`tr[data-point-id="${id}"]`);
+    if (!scroller || !row) {
+      return;
+    }
+    const header = scroller.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+    const rowTop = row.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const visible = scroller.clientHeight - header;
+    const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    scroller.scrollTo({
+      top: Math.max(0, rowTop - header - (visible - row.offsetHeight) / 2),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
   }
 
   /** Applies a filter change and writes it in the query string (US-15), without a new history entry. */

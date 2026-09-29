@@ -44,7 +44,8 @@ export function missingAddresses(progress: GeocodingProgress): number {
   return progress.pending + progress.notFound;
 }
 
-export function locatedPercent(progress: GeocodingProgress): number {
+/** Share of the points that have coordinates, as a whole percent (100 when there is nothing to locate). */
+export function locatedPercent(progress: Pick<GeocodingProgress, 'total' | 'located'>): number {
   return progress.total === 0 ? 100 : Math.round((progress.located / progress.total) * 100);
 }
 
@@ -63,15 +64,6 @@ export function geocodeStatusLabel(status: GeocodeStatus): string {
 /** Points without coordinates can be placed by hand (US-09). */
 export function needsLocation(status: GeocodeStatus): boolean {
   return status === 'NOT_FOUND' || status === 'PENDING';
-}
-
-export function pageCount(total: number, size: number): number {
-  return Math.max(1, Math.ceil(total / size));
-}
-
-/** Items of a 1-based page. */
-export function pageOf<T>(items: readonly T[], page: number, size: number): T[] {
-  return items.slice((page - 1) * size, page * size);
 }
 
 export interface MappingRow {

@@ -1,7 +1,12 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCheck, lucideDownload, lucideFileSpreadsheet } from '@ng-icons/lucide';
+import {
+  lucideCheck,
+  lucideDownload,
+  lucideFileSpreadsheet,
+  lucideInfo,
+} from '@ng-icons/lucide';
 import { applyEach, form, FormField, FormRoot, maxLength, required, validate } from '@angular/forms/signals';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -72,6 +77,8 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
  */
 @Component({
   selector: 'app-import-wizard-page',
+  // Same rhythm as every page: the header and the sections 1.75rem apart.
+  host: { class: 'flex flex-col gap-7' },
   imports: [
     RouterLink,
     FormRoot,
@@ -88,14 +95,21 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
     NgIcon,
     PageHeader,
   ],
-  providers: [provideIcons({ lucideCheck, lucideDownload, lucideFileSpreadsheet })],
+  providers: [provideIcons({
+      lucideCheck,
+      lucideDownload,
+      lucideFileSpreadsheet,
+      lucideInfo,
+    })],
   template: `
-    <app-page-header title="New import" [trail]="[{ label: 'Imports', link: '/imports' }]">
-      <p>Three short steps: upload the ERP export, map its columns, then name the enterprises.</p>
+    <app-page-header title="New import">
+      <ul class="page-facts">
+        <li><ng-icon name="lucideInfo" aria-hidden="true" /> Three short steps: upload the ERP export, map its columns, then name the enterprises.</li>
+      </ul>
     </app-page-header>
 
     @if (step() !== 'done') {
-      <ol aria-label="Import steps" class="mb-6 grid gap-3 sm:grid-cols-3">
+      <ol aria-label="Import steps" class="grid gap-3 sm:grid-cols-3">
         @for (item of steps; track item.id; let i = $index) {
           <li
             class="bg-card flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ring-1 ring-border shadow-card"
