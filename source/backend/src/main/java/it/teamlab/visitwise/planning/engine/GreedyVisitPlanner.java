@@ -256,9 +256,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
         }
 
         boolean fits(Route route) {
-            return route.minutes()
-                    + (double) route.targets().size() * p.constraints().visitDurationMinutes()
-                    <= p.constraints().workdayMinutes();
+            return p.constraints().fitsWorkday(route.minutes(), route.targets().size());
         }
 
         Route insert(Route route, VisitTarget target) {

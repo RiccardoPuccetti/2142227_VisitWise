@@ -229,7 +229,7 @@ public class PlanningService {
                     revenue.getEnterprise().getId(), revenue.getAmount().doubleValue()));
             GeoPoint location = point.getLatitude() == null || point.getLongitude() == null ? null
                     : new GeoPoint(point.getLatitude(), point.getLongitude());
-            return new PlannerPoint(point.getId(), point.getCustomerName(), point.getPointName(), point.getAddress(),
+            return new PlannerPoint(point.getId(), point.getCustomerName(), point.getAddress(),
                     point.getCity(), point.getAgent(), location, revenues);
         }).toList();
         return new LoadedInput(batch, enginePoints, byId, roadMatrix(request.base(), enginePoints));

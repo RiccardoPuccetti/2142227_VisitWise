@@ -18,7 +18,7 @@ class PlannerParametersTest {
                                          double penalty, double minimum) {
         return new PlannerParameters(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 1), days,
                 weights, agents, PlanningMode.PER_AGENT, new GeoPoint(0, 0),
-                VisitConstraints.DEFAULT, TravelModel.DEFAULT, penalty, minimum);
+                VisitConstraints.DEFAULT, TravelModel.DEFAULT, penalty, minimum, null);
     }
 
     @ParameterizedTest
@@ -44,7 +44,7 @@ class PlannerParametersTest {
         var weights = new HashMap<>(Map.of(1L, 1.0));
         var agents = new HashSet<>(Set.of("A"));
         var p = parameters(1, weights, agents, 0, 0);
-        var point = new PlannerPoint(1, "C", "P", "Address", "City", "A", new GeoPoint(0, 0), weights);
+        var point = new PlannerPoint(1, "C", "Address", "City", "A", new GeoPoint(0, 0), weights);
         weights.clear();
         agents.clear();
         assertThat(p.enterpriseWeights()).containsEntry(1L, 1.0);
@@ -65,11 +65,11 @@ class PlannerParametersTest {
         assertThatThrownBy(() -> planner.plan(List.of(), null)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> parameters(1, Map.of(0L, 1.0), Set.of(), 0, 0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PlannerPoint(0, "C", "P", "A", "City", "", null, Map.of()))
+        assertThatThrownBy(() -> new PlannerPoint(0, "C", "A", "City", "", null, Map.of()))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PlannerPoint(1, "C", "P", "A", "City", "", null, Map.of(1L, Double.NaN)))
+        assertThatThrownBy(() -> new PlannerPoint(1, "C", "A", "City", "", null, Map.of(1L, Double.NaN)))
                 .isInstanceOf(IllegalArgumentException.class);
-        var huge = new PlannerPoint(1, "C", "P", "A", "City", "", new GeoPoint(0, 0), Map.of(1L, Double.MAX_VALUE));
+        var huge = new PlannerPoint(1, "C", "A", "City", "", new GeoPoint(0, 0), Map.of(1L, Double.MAX_VALUE));
         assertThatThrownBy(() -> planner.plan(List.of(huge), p)).isInstanceOf(IllegalArgumentException.class);
     }
 }

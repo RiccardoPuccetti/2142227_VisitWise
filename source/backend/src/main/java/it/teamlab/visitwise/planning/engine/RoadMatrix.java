@@ -27,10 +27,6 @@ public final class RoadMatrix {
         this.minutes = copy(minutes, points.size());
     }
 
-    public int size() {
-        return km.length;
-    }
-
     /** Measured figures where known; the estimate for pairs with an unknown point or without a road. */
     public Travel over(TravelModel fallback) {
         if (fallback == null) {

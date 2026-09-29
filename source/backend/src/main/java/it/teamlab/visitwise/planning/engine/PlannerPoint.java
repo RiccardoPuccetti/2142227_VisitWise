@@ -3,10 +3,10 @@ package it.teamlab.visitwise.planning.engine;
 import java.util.Map;
 
 /** Engine input, independent of persistence. A null location means not geocoded. */
-public record PlannerPoint(long id, String customerName, String pointName, String address,
+public record PlannerPoint(long id, String customerName, String address,
                            String city, String agent, GeoPoint location, Map<Long, Double> revenues) {
     public PlannerPoint {
-        if (id <= 0 || customerName == null || customerName.isBlank() || pointName == null
+        if (id <= 0 || customerName == null || customerName.isBlank()
                 || address == null || address.isBlank() || city == null || city.isBlank()
                 || revenues == null) {
             throw new IllegalArgumentException("Point identity, customer, address, city and revenues are required");

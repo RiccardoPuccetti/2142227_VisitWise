@@ -1,7 +1,5 @@
 package it.teamlab.visitwise.planning.engine;
 
-import java.util.List;
-
 /** Validated visit settings and feasibility rules; does not select or reorder targets. */
 public record VisitConstraints(int visitDurationMinutes, int workdayMinutes, double maxDistanceKm) {
 
@@ -25,15 +23,9 @@ public record VisitConstraints(int visitDurationMinutes, int workdayMinutes, dou
         return travel.roadDistanceKm(base, target) <= maxDistanceKm;
     }
 
-    public boolean fitsDay(GeoPoint base, List<GeoPoint> stops, TravelModel travel) {
-        requireTravel(travel);
-        double travelMinutes = travel.roundTripMinutes(base, stops);
-        for (GeoPoint stop : stops) {
-            if (!isWithinRange(base, stop, travel)) {
-                return false;
-            }
-        }
-        return travelMinutes + (double) stops.size() * visitDurationMinutes <= workdayMinutes;
+    /** A day holds its visits and all its travel, return to the base included; fractional minutes are not rounded. */
+    public boolean fitsWorkday(double travelMinutes, int visits) {
+        return travelMinutes + (double) visits * visitDurationMinutes <= workdayMinutes;
     }
 
     private static void requireTravel(Travel travel) {

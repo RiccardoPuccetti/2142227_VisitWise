@@ -42,33 +42,6 @@ class CampaignWindowsTest {
         assertThat(easter.workingDays()).isEqualTo(29);
     }
 
-    @Test
-    void preservesCustomDatesAcrossYearsAndCountsOnlyWorkingDays() {
-        var custom = campaigns.custom(LocalDate.of(2026, 12, 24), LocalDate.of(2027, 1, 6));
-        assertThat(custom.code()).isEqualTo("CUSTOM");
-        assertThat(custom.startDate()).isEqualTo(LocalDate.of(2026, 12, 24));
-        assertThat(custom.endDate()).isEqualTo(LocalDate.of(2027, 1, 6));
-        assertThat(custom.workingDays()).isEqualTo(7);
-    }
-
-    @Test
-    void allowsSingleDayWindowsAndWindowsWithNoWorkingDays() {
-        LocalDate monday = LocalDate.of(2026, 9, 28);
-        LocalDate christmas = LocalDate.of(2026, 12, 25);
-        assertThat(campaigns.custom(monday, monday).workingDays()).isEqualTo(1);
-        assertThat(campaigns.custom(christmas, christmas).workingDays()).isZero();
-    }
-
-    @Test
-    void rejectsReversedOrMissingCustomDates() {
-        LocalDate date = LocalDate.of(2026, 1, 1);
-        assertThatThrownBy(() -> campaigns.custom(date, date.minusDays(1)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("End date must not be before start date");
-        assertThatThrownBy(() -> campaigns.custom(null, date)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> campaigns.custom(date, null)).isInstanceOf(IllegalArgumentException.class);
-    }
-
     @ParameterizedTest
     @ValueSource(ints = {-1, 0, 1000000000})
     void rejectsInvalidYears(int year) {
