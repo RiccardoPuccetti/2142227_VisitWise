@@ -8,8 +8,10 @@ import {
   lucideCalendarRange,
   lucideChevronLeft,
   lucideChevronRight,
+  lucideClock,
   lucideDownload,
   lucideEuro,
+  lucideFlag,
   lucideInfo,
   lucideMapPin,
   lucideRoute,
@@ -77,8 +79,10 @@ function visitCountLabel(count: number): string {
       lucideCalendarRange,
       lucideChevronLeft,
       lucideChevronRight,
+      lucideClock,
       lucideDownload,
       lucideEuro,
+      lucideFlag,
       lucideInfo,
       lucideMapPin,
       lucideRoute,
@@ -119,19 +123,20 @@ export class PlanDetailPage {
   protected readonly agents = computed(() => planAgents(this.plan()?.days ?? []));
   protected readonly exportHref = computed(() => exportUrl(this.id(), this.agent()));
 
-  protected readonly subtitle = computed(() => {
+  /** The horizon of the plan, one item per fact, shown under the title. */
+  protected readonly meta = computed(() => {
     const parameters = this.plan()?.parameters;
     if (!parameters) {
-      return '';
+      return [];
     }
-    const parts = [
-      `From ${formatDate(parameters.startDate, FULL_DATE)}`,
-      `${parameters.workingDays} working days`,
+    const items = [
+      { icon: 'lucideCalendarRange', text: `From ${formatDate(parameters.startDate, FULL_DATE)}` },
+      { icon: 'lucideClock', text: `${parameters.workingDays} working days` },
     ];
     if (parameters.deadline) {
-      parts.push(`deadline ${formatDate(parameters.deadline, FULL_DATE)}`);
+      items.push({ icon: 'lucideFlag', text: `Deadline ${formatDate(parameters.deadline, FULL_DATE)}` });
     }
-    return parts.join(' · ');
+    return items;
   });
 
   protected readonly indicators = computed(() => {

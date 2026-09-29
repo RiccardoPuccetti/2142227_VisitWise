@@ -17,6 +17,8 @@ import { ProfileService } from './profile.service';
 /** US-34 - owner: Puccetti (task PUC-9, AUTHENTICATION.md step 7). */
 @Component({
   selector: 'app-profile-page',
+  // Same rhythm as every page: the header and the sections 2rem apart.
+  host: { class: 'flex flex-col gap-8' },
   imports: [
     FormRoot,
     FormField,
@@ -36,7 +38,7 @@ import { ProfileService } from './profile.service';
       </p>
     </app-page-header>
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,20rem)_1fr] 2xl:grid-cols-[minmax(0,24rem)_1fr]">
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,20rem)_1fr] 2xl:grid-cols-[minmax(0,24rem)_1fr]">
       <section hlmCard class="lg:row-span-2" aria-label="Account">
         <div hlmCardContent class="flex flex-col items-center gap-4 py-8 text-center">
           <span class="bg-brand grid size-20 place-items-center rounded-full text-2xl font-semibold text-white shadow-raised" aria-hidden="true">

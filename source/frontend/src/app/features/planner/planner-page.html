@@ -1,10 +1,6 @@
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-8">
   <app-page-header title="Visit planner" [trail]="[{ label: 'Imports', link: '/imports' }, { label: 'Import ' + id(), link: ['/imports', id()] }]">
     <p>Set where the day starts, choose the campaign and generate the best routes for your visits.</p>
-    <div actions class="flex flex-wrap gap-2">
-      <a hlmBtn variant="outline" [routerLink]="['/imports', id(), 'map']"><ng-icon name="lucideMap" aria-hidden="true" /> Map</a>
-      <a hlmBtn variant="outline" [routerLink]="['/imports', id(), 'scenarios']"><ng-icon name="lucideGitCompare" aria-hidden="true" /> Scenarios</a>
-    </div>
   </app-page-header>
 
   @if (loadError()) {

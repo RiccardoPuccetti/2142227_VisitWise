@@ -87,6 +87,8 @@ const PARETO_STEPS = 6;
  */
 @Component({
   selector: 'app-map-dashboard-page',
+  // Same rhythm as every page: the header and the sections 2rem apart.
+  host: { class: 'flex flex-col gap-8' },
   imports: [
     RouterLink,
     NgIcon,

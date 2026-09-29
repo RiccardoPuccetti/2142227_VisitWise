@@ -15,9 +15,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
   lucideEuro,
-  lucideGitCompare,
   lucideInfo,
-  lucideMap,
   lucideMapPin,
   lucideMapPinOff,
   lucideRoute,
@@ -112,9 +110,7 @@ function dateLabel(value: string | null): string {
     provideIcons({
       lucideCalendarRange,
       lucideEuro,
-      lucideGitCompare,
       lucideInfo,
-      lucideMap,
       lucideMapPin,
       lucideMapPinOff,
       lucideRoute,

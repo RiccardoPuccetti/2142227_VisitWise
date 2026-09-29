@@ -19,7 +19,6 @@ import {
   lucideCalendarRange,
   lucideCircleCheck,
   lucideCircleSlash,
-  lucideMap,
   lucideMapPin,
   lucideMapPinned,
   lucideTableProperties,
@@ -73,6 +72,8 @@ type PointFilter = 'all' | 'missing';
  */
 @Component({
   selector: 'app-import-detail-page',
+  // Same rhythm as every page: the header and the sections 2rem apart.
+  host: { class: 'flex flex-col gap-8' },
   imports: [
     RouterLink,
     NgIcon,
@@ -98,7 +99,6 @@ type PointFilter = 'all' | 'missing';
       lucideCalendarRange,
       lucideCircleCheck,
       lucideCircleSlash,
-      lucideMap,
       lucideMapPin,
       lucideMapPinned,
       lucideTableProperties,

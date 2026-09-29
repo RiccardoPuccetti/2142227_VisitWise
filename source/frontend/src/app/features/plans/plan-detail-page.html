@@ -1,5 +1,5 @@
 <!-- Agent plan (owner: Rivera, task RIV-4, US-28..US-30). -->
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-8">
   <app-page-header
     [title]="plan()?.name ?? 'Agent plan'"
     [trail]="[
@@ -9,12 +9,14 @@
     ]"
   >
     <!-- Where the page comes from: a scenario saved in the planner and opened from the scenarios page. -->
-    <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span hlmBadge variant="outline"><ng-icon name="lucideBookmark" aria-hidden="true" /> Saved scenario</span>
-      @if (subtitle()) {
-        <span>{{ subtitle() }}</span>
+    <ul class="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <li><span hlmBadge variant="outline"><ng-icon name="lucideBookmark" aria-hidden="true" /> Saved scenario</span></li>
+      @for (item of meta(); track item.icon) {
+        <li class="inline-flex items-center gap-1.5">
+          <ng-icon [name]="item.icon" class="shrink-0" aria-hidden="true" /> {{ item.text }}
+        </li>
       }
-    </p>
+    </ul>
     <div actions class="flex flex-wrap items-end gap-3">
       <a hlmBtn variant="ghost" [routerLink]="['/imports', importId(), 'scenarios']">
         <ng-icon name="lucideArrowLeft" aria-hidden="true" /> Back to the scenarios

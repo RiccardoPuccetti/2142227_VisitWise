@@ -72,6 +72,8 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
  */
 @Component({
   selector: 'app-import-wizard-page',
+  // Same rhythm as every page: the header and the sections 2rem apart.
+  host: { class: 'flex flex-col gap-8' },
   imports: [
     RouterLink,
     FormRoot,
@@ -95,7 +97,7 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
     </app-page-header>
 
     @if (step() !== 'done') {
-      <ol aria-label="Import steps" class="mb-6 grid gap-3 sm:grid-cols-3">
+      <ol aria-label="Import steps" class="grid gap-3 sm:grid-cols-3">
         @for (item of steps; track item.id; let i = $index) {
           <li
             class="bg-card flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ring-1 ring-border shadow-card"
