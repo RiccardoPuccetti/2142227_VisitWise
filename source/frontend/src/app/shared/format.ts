@@ -1,9 +1,15 @@
-/** Numbers are written the Italian way (the data is Italian), dates in English words like the rest of the UI. */
+/// <reference lib="es2023.intl" />
+// useGrouping: 'always' is typed from ES2023 (the build targets ES2022); every supported browser has it.
+
+/**
+ * Numbers are written the Italian way (the data is Italian), dates in English words like the rest of the UI. Italian
+ * leaves four-digit numbers ungrouped ("2011"): the formatters group them always, so they match "11.761".
+ */
 export const LOCALE = 'it-IT';
 
 const PERCENT = new Intl.NumberFormat(LOCALE, { style: 'percent', maximumFractionDigits: 1 });
 const WHOLE_PERCENT = new Intl.NumberFormat(LOCALE, { style: 'percent', maximumFractionDigits: 0 });
-const DECIMAL = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 });
+const DECIMAL = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1, useGrouping: 'always' });
 
 // Dates of the API are YYYY-MM-DD: formatted in UTC so the day never moves with the time zone.
 const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });

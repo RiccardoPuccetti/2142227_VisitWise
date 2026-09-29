@@ -133,7 +133,7 @@ describe('MapDashboardPage', () => {
     await open();
 
     expect(page().querySelector('h1')?.textContent).toContain('Map');
-    expect(text()).toContain(`2780,50${NBSP}€`);
+    expect(text()).toContain(`2.780,50${NBSP}€`);
     expect(text()).toContain('Enterprise A');
     expect(text()).toContain('2 of 3 points on the map');
     expect(text()).toContain('1 point without position');
@@ -142,7 +142,7 @@ describe('MapDashboardPage', () => {
     // The revenue leads; the other figures are listed beside it.
     const headline = page().querySelector('[data-testid="kpi-headline"]')!;
     expect(headline.querySelector('h3')?.textContent?.trim()).toBe('Revenue');
-    expect(headline.textContent).toContain(`2780,50${NBSP}€`);
+    expect(headline.textContent).toContain(`2.780,50${NBSP}€`);
     const labels = [...page().querySelectorAll('[data-testid="kpi-details"] dt')].map((term) => term.textContent?.trim());
     expect(labels).toEqual(['Delivery points', 'Customers', 'Top 20% of points']);
   });
@@ -169,7 +169,7 @@ describe('MapDashboardPage', () => {
 
     // The router updates the URL asynchronously: checked once the page is stable.
     expect(TestBed.inject(Router).url).toBe('/imports/42/map?enterprise=22');
-    expect(text()).toContain(`1130,00${NBSP}€`);
+    expect(text()).toContain(`1.130,00${NBSP}€`);
     expect(text()).toContain('1 of 2 points on the map');
   });
 
@@ -180,12 +180,12 @@ describe('MapDashboardPage', () => {
     TestBed.tick();
 
     // The filtered summary has not arrived yet: the previous figures stay instead of emptying the charts.
-    expect(text()).toContain(`2780,50${NBSP}€`);
+    expect(text()).toContain(`2.780,50${NBSP}€`);
     expect(page().querySelector('[aria-labelledby="charts-title"]')?.getAttribute('aria-busy')).toBe('true');
 
     summaryRequests()[0].flush(summary({ totalRevenue: 1130 }));
     await harness.fixture.whenStable();
-    expect(text()).toContain(`1130,00${NBSP}€`);
+    expect(text()).toContain(`1.130,00${NBSP}€`);
     expect(page().querySelector('[aria-labelledby="charts-title"]')?.getAttribute('aria-busy')).toBe('false');
   });
 
@@ -211,7 +211,7 @@ describe('MapDashboardPage', () => {
     const detailsText = details?.textContent?.replace(/[ \t\r\n]+/g, ' ') ?? '';
     expect(detailsText).toContain('CUSTOMER 1');
     expect(detailsText).toContain('VIA DEL CORSO 1, ROMA');
-    expect(detailsText).toContain(`Enterprise A 1250,50${NBSP}€`);
+    expect(detailsText).toContain(`Enterprise A 1.250,50${NBSP}€`);
     expect(detailsText).toContain(`Enterprise B 830,00${NBSP}€`);
     expect(document.activeElement?.id).toBe('point-details-title');
   });

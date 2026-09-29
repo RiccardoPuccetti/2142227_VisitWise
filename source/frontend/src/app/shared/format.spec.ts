@@ -8,7 +8,8 @@ describe('format', () => {
 
   it('writes decimals with at most one digit after the comma', () => {
     expect(formatDecimal(610.26)).toBe('610,3');
-    expect(formatDecimal(1234)).toBe('1234');
+    expect(formatDecimal(1234)).toBe('1.234');
+    expect(formatDecimal(1630.8)).toBe('1.630,8');
   });
 
   it('writes calendar days of the API without moving them with the time zone', () => {

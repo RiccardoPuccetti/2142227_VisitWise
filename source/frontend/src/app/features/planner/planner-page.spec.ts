@@ -443,7 +443,7 @@ describe('PlannerPage', () => {
     expect(words).toContain('AGENT NORTH');
     expect(words).toContain('1 stop');
     expect(words).toContain('42,5 km');
-    expect(words).toContain('8500');
+    expect(words).toContain('8.500');
     expect(route.getAttribute('aria-pressed')).toBe('true');
   });
 });

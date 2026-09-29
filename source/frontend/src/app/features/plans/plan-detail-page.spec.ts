@@ -116,7 +116,7 @@ describe('PlanDetailPage', () => {
     await open();
 
     expect(page().querySelector('h1')?.textContent).toContain('Christmas 20 days');
-    expect(text()).toContain(`3751,50${NBSP}€`);
+    expect(text()).toContain(`3.751,50${NBSP}€`);
     expect(text()).toContain('36,9 km');
     // As in the planner: the covered revenue leads, with a bar for its share of the eligible revenue.
     const headline = page().querySelector('[data-testid="kpi-headline"]')!;
