@@ -1,112 +1,87 @@
 # Software Architecture
 
-> Owner: Rivera (coordinator). Everyone updates the part they change. Diagrams are Mermaid (rendered by GitHub) - export PNGs to `../slides/assets/` for the deck.
+Implemented structure, reviewed against source and deployment configuration on 2026-09-29.
+VisitWise imports yearly Excel revenue, maps delivery points and plans sales visits for a tenant.
 
-## 1. Context
-
-```mermaid
-flowchart LR
-  analyst([Analyst / Sales manager / Agent]) -->|browser| visitwise[VisitWise]
-  erp[(Company ERP)] -. yearly Excel export .-> analyst
-  visitwise -->|address + city only| nominatim[Nominatim geocoding]
-  analyst -->|map tiles| osm[OpenStreetMap tiles]
-```
-
-## 2. Containers (docker compose)
+## Runtime and deployment
 
 ```mermaid
 flowchart LR
-  browser([Browser]) -->|:4200 HTTP| fe[visitwise-frontend<br/>nginx + Angular SPA]
-  fe -->|/api/* reverse proxy :8080| be[visitwise-backend<br/>Spring Boot 4.1 / Java 21]
-  be -->|JDBC :5432| db[(visitwise-db<br/>PostgreSQL 17)]
-  be -->|HTTPS, 1 req/s| nom[Nominatim]
-  be -.->|profile osrm: route + table :5000| osrm[visitwise-osrm<br/>OSRM car road network]
-  browser -->|tiles| osm[tile.openstreetmap.org]
+  browser[Browser] -->|HTTP :4200| frontend[Angular SPA / nginx]
+  frontend -->|/api proxy| backend[Spring Boot / Java 21]
+  backend -->|JDBC| db[(PostgreSQL 17)]
+  backend -->|address and city| geocoder[Nominatim]
+  backend -->|coordinates| routing[OSRM route / optional table]
+  browser -->|map tiles| tiles[OpenStreetMap]
 ```
 
-| Container | Image / build | Port (host:container) | State |
-|---|---|---|---|
-| visitwise-frontend | `source/frontend/Dockerfile` (node build -> nginx) | 4200:80 | stateless |
-| visitwise-backend | `source/backend/Dockerfile` (maven build -> JRE) | 127.0.0.1:8080:8080 (this machine only) | login sessions in memory |
-| visitwise-db | `postgres:17-alpine` | 5432:5432 | volume `visitwise-db-data` |
-| visitwise-osrm-data (optional, profile `osrm`) | `ghcr.io/project-osrm/osrm-backend:v6.0.0`, runs once | - | downloads and prepares the Geofabrik extract into volume `visitwise-osrm-data` |
-| visitwise-osrm (optional, profile `osrm`) | `ghcr.io/project-osrm/osrm-backend:v6.0.0` (`osrm-routed`, CH) | 127.0.0.1:5000:5000 (this machine only) | reads volume `visitwise-osrm-data` |
+| Service | Implementation | Host port / state |
+|---|---|---|
+| `frontend` | Angular 22, spartan/ui, Tailwind 4, OpenLayers; nginx | `4200:80`; static SPA |
+| `backend` | Spring Boot 4.1.1, Java 21, Maven; POI, JPA, Security | `127.0.0.1:8080`; in-memory sessions |
+| `db` | PostgreSQL 17 Alpine; Liquibase schema | `5432`; `visitwise-db-data` volume |
+| `osrm-data` | Optional `osrm` profile, OSRM v6 car/CH preprocessing | Prepares central Italy extract in `visitwise-osrm-data` |
+| `osrm` | Optional local road route/table server | `127.0.0.1:5000`; reuses prepared volume |
 
-Infrastructure as Code: `source/docker-compose.yml` + Dockerfiles + Liquibase changelog + GitHub Actions CI (`.github/workflows/ci.yml`). A fresh machine needs only Docker.
+Deployment is defined by [Compose](../../source/docker-compose.yml), Dockerfiles and [application settings](../../source/backend/src/main/resources/application.yml).
+Compose starts frontend, backend and database by default. Local Angular development proxies `/api` to the backend.
+The OSRM profile alone does not change the backend URL: set `ROUTING_BASE_URL=http://osrm:5000` and `ROUTING_MATRIX_ENABLED=true` for road-based planning in Compose.
+Without those settings, planning uses estimates; day-route display defaults to the public OSRM service.
 
-## 3. Backend components
+## Backend boundaries
 
-```mermaid
-flowchart TB
-  subgraph backend[visitwise-backend]
-    imp[imports<br/>preview, import, list, points]
-    geo[geocoding<br/>async worker + cache]
-    ana[analytics<br/>summary, pareto]
-    pl[planning<br/>API + persistence]
-    eng[planning.engine<br/>calendar, campaigns, travel model, planner<br/>PURE JAVA]
-    com[common<br/>problem+json errors]
-    ten[tenant<br/>accounts, login, profile, tenant guard]
-  end
-  imp --> geo
-  pl --> eng
-  imp & geo & ana & pl & ten --> db[(PostgreSQL)]
-```
+Feature packages live under `it.teamlab.visitwise`; controllers return DTOs rather than JPA entities.
 
-Key flows
+| Package | Responsibility |
+|---|---|
+| `imports` | Excel preview/mapping, transactional import, list/detail/delete |
+| `geocoding` | Background jobs, Nominatim client, shared cache, retry and manual coordinates |
+| `analytics` | Delivery-point read API, filtered KPIs, breakdowns and Pareto |
+| `planning` | API DTOs, persistence, engine adapter and OSRM providers |
+| `planning.engine` | Pure Java calendar, campaigns, constraints and deterministic heuristic |
+| `planning.export` | XLSX generation from stored visits |
+| `tenant` | Registration, session/remember-me login, profile/base and tenant isolation |
+| `common` | Exceptions translated to problem+json |
 
-1. **Import**: `POST /imports/preview` (parse headers, suggest mapping) -> `POST /imports` (parse with mapping, save rows, status `GEOCODING`) -> background geocoder fills coordinates 1 req/s (cache first) -> status `READY`. The UI polls the detail endpoint.
-2. **Plan**: `POST /plans/simulate` loads the import's points, builds visit targets, runs the engine, returns the plan (nothing saved). With the self-hosted OSRM the backend first asks the road distance and time table of the base and all located points (cached in memory) and hands it to the engine (US-39). `POST /plans` does the same and persists `visit_plan` + `planned_visit`. `POST /plans/what-if` runs the engine for N horizons.
+The engine has no Spring, JPA or network dependency; the service supplies optional road matrices.
 
-## 4. Data model
+## Main flows
+
+1. Preview reads headers/sample rows without saving. Import validates the mapping and saves points, enterprises and revenues in one transaction, using batched inserts.
+2. Missing coordinates trigger geocoding after commit. The worker caches successes/misses, resumes interrupted `GEOCODING` imports at startup, and exposes progress for UI polling.
+3. The geocoder defaults to 1100 ms between provider calls. Completion sets `READY`; a provider interruption also sets `READY`, with an error message and unresolved points available for retry.
+4. Simulation loads current import data, optionally obtains a road matrix, then invokes the engine. What-if reuses loaded data/matrix across horizons.
+5. Save recomputes and writes parameters, KPIs and visits. List uses stored summaries; detail recomputes from saved parameters and current data; export reads stored visits.
+6. The displayed day's road polyline is a separate route request, with an estimate fallback. It does not update the plan's KPIs.
+
+## Data model
 
 ```mermaid
 erDiagram
   TENANT ||--o{ IMPORT_BATCH : owns
-  IMPORT_BATCH ||--o{ ENTERPRISE : has
-  IMPORT_BATCH ||--o{ DELIVERY_POINT : has
+  IMPORT_BATCH ||--o{ ENTERPRISE : defines
+  IMPORT_BATCH ||--o{ DELIVERY_POINT : contains
+  ENTERPRISE ||--o{ REVENUE : contributes
   DELIVERY_POINT ||--o{ REVENUE : has
-  ENTERPRISE ||--o{ REVENUE : "revenue of"
   IMPORT_BATCH ||--o{ VISIT_PLAN : has
-  VISIT_PLAN ||--o{ PLANNED_VISIT : contains
-  DELIVERY_POINT ||--o{ PLANNED_VISIT : "visited in"
-  GEOCODE_CACHE
+  VISIT_PLAN ||--o{ PLANNED_VISIT : stores
+  DELIVERY_POINT ||--o{ PLANNED_VISIT : represents
 ```
 
-- Enterprises are **data, not columns**: any number of companies per import (the file is parametric).
-- `geocode_cache` is global: next year's file re-uses all known addresses.
-- Deleting an import cascades to everything (FK `ON DELETE CASCADE`); deleting a tenant deletes its imports.
-- `tenant` is both the federation and its only login (email + Argon2id hash). `import_batch.tenant_id` is the only tenant column: everything else hangs off the import.
-- Schema source: `source/backend/src/main/resources/db/changelog/`.
+- `tenant` combines federation, credentials, lockout metadata and an optional starting base; one shared account per federation.
+- `persistent_logins` stores remember-me series/tokens keyed by email; `geocode_cache` is shared across imports and tenants.
+- Enterprises are rows scoped to an import; there is no separate tenant-wide enterprise registry.
+- `import_batch.tenant_id` anchors ownership. Foreign-key cascades remove dependent data when an import is deleted.
+- Mapping, plan parameters and KPIs are JSON stored in text columns. [Liquibase changesets](../../source/backend/src/main/resources/db/changelog/changes) own the schema; Hibernate only validates it.
 
-## 5. Security (details: `AUTHENTICATION.md`, decisions D-09, D-10)
+## Frontend and security
 
-- **Login**: one account per tenant; Spring Security form login, server session in an HttpOnly SameSite=Lax cookie (30 min idle), CSRF token in the `XSRF-TOKEN` cookie sent back by Angular `HttpClient`. Every `/api` call needs a session except register, login, csrf, health, API docs.
-- **Passwords**: 8-64 characters (minimum configurable, `PASSWORD_MIN_LENGTH`), NFKC, Argon2id (OWASP parameters); failed logins lock the account from the 5th attempt (1 min doubling to 15 min); login, register and password change limited per client IP.
-- **Tenant isolation**: `TenantGuardFilter` checks every URL under `/api/imports/{id}` and `/api/plans/{id}` before any controller; another tenant's id answers the same 404 as a missing one.
-- **Browser**: nginx sends a Content Security Policy (`script-src 'self'`, map tiles only from `tile.openstreetmap.org`), `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`, `nosniff`; the API is published on `127.0.0.1` only, users go through nginx.
+- Lazy routes: `/login`, `/register`, `/profile`, `/imports`, `/imports/new`, `/imports/:importId`, and its `/map`, `/planner`, `/scenarios`, `/plans/:planId` children.
+- `core` holds auth, theme and shared API models; `features` holds pages/services; `shared` holds maps, charts and reusable views; `libs/ui` holds Helm components.
+- Angular signals and reactive forms drive the UI; charts use local SVG/CSS and maps use OpenLayers with OSM tiles.
+- Auth guards protect pages; Spring Security protects the API. `TenantGuardFilter` checks import/plan ownership and hides foreign ids with `404`.
+- Session cookies are HttpOnly/SameSite=Lax; CSRF uses Angular's cookie/header convention. Remember-me tokens persist across backend restarts.
+- nginx supplies CSP and other browser headers; its `connect-src 'self'` keeps application API calls on the same origin.
+- Nominatim receives addresses/cities; OSRM receives coordinates; OSM receives tile requests and coordinates when the user opens directions. Customer names and revenues are not sent to these providers.
 
-## 6. Frontend structure
-
-```
-src/app/
-  core/models/api.models.ts   # contract mirror (single source of API types)
-  features/imports/           # Puccetti: wizard, list, detail
-  features/dashboard/         # Rivera: map dashboard
-  features/planner/           # Marzella: planner, what-if, scenarios
-  features/plans/             # Rivera: agent plan (calendar, export, directions)
-  shared/                     # Rivera: presentational components (KPI card, legend, MapView, ...)
-```
-
-Routes (all lazy): `/imports`, `/imports/new`, `/imports/:importId`, `/imports/:importId/map`, `/imports/:importId/planner`, `/imports/:importId/scenarios`, `/imports/:importId/plans/:planId`.
-
-## 7. Technology choices (summary - details in DECISIONS.md)
-
-| Concern | Choice | Why |
-|---|---|---|
-| Backend | Spring Boot 4.1, Java 21, Maven | Team stack; mature ecosystem (POI, JPA, Liquibase) |
-| DB | PostgreSQL 17 + Liquibase | Relational data; versioned, reproducible schema |
-| Frontend | Angular 22 + spartan-ng + Tailwind | Team stack; accessible headless components |
-| Map | OpenLayers + OSM | Required; free; no API key |
-| Geocoding | Nominatim + DB cache | Free, OSM-consistent; cache respects usage policy |
-| Planner | Custom deterministic heuristic | See OPTIMIZATION_STRATEGY.md |
-| Deploy | Docker Compose | IaC, one command on any platform |
+Details: [API contract](API_CONTRACT.md), [authentication](AUTHENTICATION.md), [planner](OPTIMIZATION_STRATEGY.md), [decisions](DECISIONS.md).
