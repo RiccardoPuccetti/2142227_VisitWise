@@ -121,8 +121,18 @@ export class ImportsListPage {
   });
 
   protected readonly deleting = signal<number | null>(null);
+  /** The import just deleted: kept after the request, as its card or row fades out once it has left the list. */
+  private readonly removed = signal<number | null>(null);
   protected readonly deleteError = signal<string | null>(null);
   protected readonly message = signal('');
+
+  /**
+   * Only a deleted import fades out. Switching between cards and table removes the old view at once, so it does not
+   * stay on screen above the new one while it fades.
+   */
+  protected leaveMotion(item: ImportSummary): string {
+    return this.removed() === item.id ? 'motion-leave' : '';
+  }
 
   protected setView(value: unknown): void {
     if (value === 'cards' || value === 'table') {
@@ -136,6 +146,7 @@ export class ImportsListPage {
     this.message.set('');
     try {
       await this.api.remove(item.id);
+      this.removed.set(item.id);
       this.imports.update((imports) => imports.filter((candidate) => candidate.id !== item.id));
       this.message.set(`${item.name} was deleted.`);
       // The button that opened the dialog is gone: keep the keyboard focus on the page.

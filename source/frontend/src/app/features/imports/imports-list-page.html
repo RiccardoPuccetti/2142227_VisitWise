@@ -105,7 +105,7 @@
             data-testid="import-card"
             class="motion-enter group relative min-w-0"
             [style.--motion-index]="$index"
-            animate.leave="motion-leave"
+            [animate.leave]="leaveMotion(item)"
           >
             <div class="absolute inset-x-0 top-0 flex h-1" aria-hidden="true">
               @for (enterprise of item.enterprises; track enterprise.id) {
@@ -193,7 +193,7 @@
               </thead>
               <tbody hlmTBody>
                 @for (item of items(); track item.id) {
-                  <tr hlmTr class="motion-fade" animate.leave="motion-leave">
+                  <tr hlmTr class="motion-fade" [animate.leave]="leaveMotion(item)">
                     <td hlmTd class="pl-6 font-medium">
                       <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
                       <span class="mt-1 flex gap-1" aria-hidden="true">
