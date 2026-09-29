@@ -2,19 +2,13 @@ package it.teamlab.visitwise.planning;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import it.teamlab.visitwise.planning.engine.GeoPoint;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -34,8 +28,7 @@ public class OsrmRouteProvider implements RouteProvider {
 
     @Autowired
     public OsrmRouteProvider(RoutingProperties properties) {
-        this(properties, RestClient.builder().baseUrl(properties.baseUrl())
-                .requestFactory(requestFactory(properties.timeoutMs())).build());
+        this(properties, OsrmRequests.client(properties));
     }
 
     OsrmRouteProvider(RoutingProperties properties, RestClient client) {
@@ -43,29 +36,14 @@ public class OsrmRouteProvider implements RouteProvider {
         this.client = client;
     }
 
-    private static JdkClientHttpRequestFactory requestFactory(long timeoutMs) {
-        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory();
-        factory.setReadTimeout(Duration.ofMillis(timeoutMs));
-        return factory;
-    }
-
     @Override
     public Optional<RoutedPath> route(List<GeoPoint> stops) {
         if (!properties.enabled() || stops == null || stops.size() < 2) {
             return Optional.empty();
         }
-        String coordinates = stops.stream()
-                .map(stop -> String.format(Locale.ROOT, "%.6f,%.6f", stop.longitude(), stop.latitude()))
-                .collect(Collectors.joining(";"));
         try {
-            Response response = client.get()
-                    .uri("/route/v1/driving/" + coordinates + "?overview=full&geometries=geojson&steps=false")
-                    .header(HttpHeaders.USER_AGENT, properties.userAgent())
-                    // A self-hosted osrm-routed answers "deflate" in a form the JDK client cannot read: gzip only.
-                    .header(HttpHeaders.ACCEPT_ENCODING, "gzip")
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(Response.class);
+            Response response = OsrmRequests.get(client, "/route/v1/driving/" + OsrmRequests.coordinates(stops)
+                    + "?overview=full&geometries=geojson&steps=false", properties.userAgent(), Response.class);
             return Optional.ofNullable(toPath(response));
         } catch (RuntimeException ex) {
             log.warn("Road routing unavailable, using the estimate: {}", ex.getMessage());

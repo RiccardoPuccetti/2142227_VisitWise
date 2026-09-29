@@ -23,8 +23,8 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 /**
  * Security configuration (AUTHENTICATION.md A4-A12): every request needs a session except the public list below;
  * form login at {@code POST /api/auth/login} with JSON answers; logout at {@code POST /api/auth/logout}; CSRF token in
- * the {@code XSRF-TOKEN} cookie, echoed by the SPA in {@code X-XSRF-TOKEN}; errors as problem+json; login and
- * registration rate-limited per IP; another tenant's imports and plans answer 404 ({@link TenantGuardFilter}).
+ * the {@code XSRF-TOKEN} cookie, echoed by the SPA in {@code X-XSRF-TOKEN}; errors as problem+json; login,
+ * registration and password change rate-limited per IP; another tenant's imports and plans answer 404 ({@link TenantGuardFilter}).
  * "Keep me logged in" with persistent remember-me tokens ({@link TenantRememberMeServices}, A13).
  * Session cookie attributes are in application.yml ({@code server.servlet.session}).
  */

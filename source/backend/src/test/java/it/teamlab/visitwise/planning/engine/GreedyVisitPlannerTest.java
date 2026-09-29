@@ -20,11 +20,11 @@ class GreedyVisitPlannerTest {
 
     private PlannerParameters parameters(PlanningMode mode, int days) {
         return new PlannerParameters(LocalDate.of(2026, 12, 4), LocalDate.of(2026, 12, 7), days,
-                Map.of(1L, 1.0), Set.of(), mode, base, VisitConstraints.DEFAULT, TravelModel.DEFAULT, 2, 0);
+                Map.of(1L, 1.0), Set.of(), mode, base, VisitConstraints.DEFAULT, TravelModel.DEFAULT, 2, 0, null);
     }
 
     private PlannerPoint point(long id, String address, String agent, double revenue) {
-        return new PlannerPoint(id, "Customer " + id, "Point " + id, address, "Rome", agent,
+        return new PlannerPoint(id, "Customer " + id, address, "Rome", agent,
                 base, Map.of(1L, revenue));
     }
 
@@ -75,11 +75,11 @@ class GreedyVisitPlannerTest {
                                      double minimum, Map<Long, Double> weights, Set<String> agents) {
         return new PlannerParameters(LocalDate.of(2026, 12, 4), LocalDate.of(2026, 12, 7), days,
                 weights, agents, PlanningMode.SINGLE_VISITOR, base,
-                new VisitConstraints(duration, minutes, 80), TravelModel.DEFAULT, penalty, minimum);
+                new VisitConstraints(duration, minutes, 80), TravelModel.DEFAULT, penalty, minimum, null);
     }
 
     private PlannerPoint located(long id, double longitude, double revenue) {
-        return new PlannerPoint(id, "Customer " + id, "Point " + id, "Address " + id, "Rome", "A",
+        return new PlannerPoint(id, "Customer " + id, "Address " + id, "Rome", "A",
                 new GeoPoint(0, longitude), Map.of(1L, revenue));
     }
 
@@ -95,9 +95,9 @@ class GreedyVisitPlannerTest {
 
     @Test
     void weightsSelectTargetsButKpisUseOnlyPositiveUnweightedSelectedRevenue() {
-        var a = new PlannerPoint(1, "C1", "P1", "One", "Rome", "A", base,
+        var a = new PlannerPoint(1, "C1", "One", "Rome", "A", base,
                 Map.of(1L, 100.0, 2L, -50.0, 3L, 10000.0));
-        var b = new PlannerPoint(2, "C2", "P2", "Two", "Rome", "A", base,
+        var b = new PlannerPoint(2, "C2", "Two", "Rome", "A", base,
                 Map.of(1L, 0.0, 2L, 60.0));
         var result = planner.plan(List.of(a, b), custom(480, 480, 1, 0, 0,
                 Map.of(1L, 1.0, 2L, 2.0, 3L, 0.0), Set.of()));
@@ -110,7 +110,7 @@ class GreedyVisitPlannerTest {
 
     @Test
     void filtersAgentsBeforeCountingExclusionsAndAppliesStrictMinimum() {
-        var missing = new PlannerPoint(3, "C", "P", "Missing", "Rome", "A", null, Map.of(1L, 90.0));
+        var missing = new PlannerPoint(3, "C", "Missing", "Rome", "A", null, Map.of(1L, 90.0));
         var result = planner.plan(List.of(point(1, "One", "A", 100), point(2, "Two", "B", 500),
                 missing, located(4, 1, 300), point(5, "Five", "A", 50), located(6, .3, 200)),
                 custom(480, 480, 1, 2, 50, Map.of(1L, 1.0), Set.of("A")));
@@ -124,7 +124,7 @@ class GreedyVisitPlannerTest {
     @Test
     void clipsNegativeRowsBeforeGroupingAndUsesCityAndAgentInTheGroupingKey() {
         var same = point(2, " one ", "A", -50);
-        var otherCity = new PlannerPoint(3, "C", "P", "One", "Milan", "A", base, Map.of(1L, 100.0));
+        var otherCity = new PlannerPoint(3, "C", "One", "Milan", "A", base, Map.of(1L, 100.0));
         var result = planner.plan(List.of(point(1, "One", "A", 100), same, otherCity,
                 point(4, "One", "B", 100)), custom(30, 480, 1, 0, 0, Map.of(1L, 1.0), Set.of()));
         assertThat(result.kpis().plannedVisits()).isEqualTo(3);
@@ -214,16 +214,27 @@ class GreedyVisitPlannerTest {
         assertThat(result.days().getLast().targets()).extracting(VisitTarget::id).containsExactly(1L);
     }
 
+    /** Length of the route base -> stops in this order -> base. */
+    private double roundTripKm(TravelModel travel, List<PlannerPoint> order) {
+        double km = 0;
+        GeoPoint previous = base;
+        for (PlannerPoint stop : order) {
+            km += travel.roadDistanceKm(previous, stop.location());
+            previous = stop.location();
+        }
+        return km + travel.roadDistanceKm(previous, base);
+    }
+
     @Test
     void findsTheShortestOrderForThreeStops() {
         var a = located(1, .02, 300);
         var b = located(2, -.01, 200);
-        var c = new PlannerPoint(3, "C3", "P3", "Third", "Rome", "A", new GeoPoint(.01, .01), Map.of(1L, 100.0));
+        var c = new PlannerPoint(3, "C3", "Third", "Rome", "A", new GeoPoint(.01, .01), Map.of(1L, 100.0));
         var p = custom(30, 480, 1, 0, 0, Map.of(1L, 1.0), Set.of());
         var result = planner.plan(List.of(a, b, c), p);
         double best = List.of(List.of(a, b, c), List.of(a, c, b), List.of(b, a, c),
                 List.of(b, c, a), List.of(c, a, b), List.of(c, b, a)).stream()
-                .mapToDouble(order -> p.travel().roundTripKm(base, order.stream().map(PlannerPoint::location).toList()))
+                .mapToDouble(order -> roundTripKm(p.travel(), order))
                 .min().orElseThrow();
         assertThat(result.days().getFirst().km()).isCloseTo(best, within(1e-10));
     }

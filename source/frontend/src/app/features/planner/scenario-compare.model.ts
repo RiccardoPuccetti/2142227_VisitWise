@@ -6,9 +6,9 @@ import type {
   PlanSummary,
   WhatIfRow,
 } from '../../core/models/api.models';
+import { MAX_WORKING_DAYS } from './planner.model';
 
 const MAX_HORIZONS = 5;
-const MAX_WORKING_DAYS = 260;
 
 /** Mirrors the what-if rules of the planning API: 1 to 5 distinct horizons, each 1..260 working days. */
 export function parseHorizons(text: string): { horizons: number[] } | { error: string } {

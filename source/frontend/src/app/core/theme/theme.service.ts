@@ -1,4 +1,5 @@
 import { computed, DOCUMENT, effect, inject, Service, signal } from '@angular/core';
+import { readStored, writeStored } from '../storage';
 
 export type Theme = 'light' | 'dark';
 
@@ -26,19 +27,11 @@ export class ThemeService {
   toggle(): void {
     const next: Theme = this.theme() === 'dark' ? 'light' : 'dark';
     this.chosen.set(next);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, next);
-    } catch {
-      // Storage refused (private mode, blocked site data): the choice lasts until the page is closed.
-    }
+    writeStored(THEME_STORAGE_KEY, next);
   }
 
   private readChoice(): Theme | null {
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      return stored === 'light' || stored === 'dark' ? stored : null;
-    } catch {
-      return null;
-    }
+    const stored = readStored(THEME_STORAGE_KEY);
+    return stored === 'light' || stored === 'dark' ? stored : null;
   }
 }

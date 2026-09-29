@@ -50,10 +50,6 @@ public class GeocodeCacheEntry {
         return id;
     }
 
-    public String getQueryKey() {
-        return queryKey;
-    }
-
     public Double getLatitude() {
         return latitude;
     }
@@ -64,14 +60,6 @@ public class GeocodeCacheEntry {
 
     public boolean isFound() {
         return found;
-    }
-
-    public String getProvider() {
-        return provider;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
     }
 
     /** Overwrites a cached miss after a successful retry (keeps the unique key, no delete + insert). */

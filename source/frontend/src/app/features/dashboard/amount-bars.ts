@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { EurPipe } from '../../shared';
+import { EurPipe, formatPercent } from '../../shared';
 
 export interface BarItem {
   key: string;
@@ -10,7 +10,6 @@ export interface BarItem {
   color?: string;
 }
 
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 });
 
 /**
  * Ranked horizontal bars of revenue, largest first as received (US-18). Each row gives the rank, the label, the amount
@@ -75,6 +74,6 @@ export class AmountBars {
   }
 
   protected shareOf(item: BarItem): string {
-    return this.total() > 0 ? PERCENT.format(item.revenue / this.total()) : '–';
+    return this.total() > 0 ? formatPercent(item.revenue / this.total(), 0) : '–';
   }
 }

@@ -118,7 +118,7 @@
                 <h2 hlmCardTitle class="line-clamp-2 min-w-0 sm:min-h-14 text-lg leading-7 break-words" [attr.title]="item.name">
                   <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
                 </h2>
-                <span hlmBadge class="mt-1" [variant]="item.status === 'FAILED' ? 'destructive' : item.status === 'READY' ? 'outline' : 'secondary'">
+                <span hlmBadge class="mt-1" [variant]="statusVariant(item.status)">
                   {{ item.statusLabel }}
                 </span>
               </div>
@@ -206,7 +206,7 @@
                     <td hlmTd class="text-muted-foreground">{{ item.sourceFileName }}</td>
                     <td hlmTd class="text-right tabular-nums">{{ item.importedRows }}</td>
                     <td hlmTd>
-                      <span hlmBadge [variant]="item.status === 'FAILED' ? 'destructive' : item.status === 'READY' ? 'outline' : 'secondary'">
+                      <span hlmBadge [variant]="statusVariant(item.status)">
                         {{ item.statusLabel }}
                       </span>
                     </td>

@@ -2,24 +2,17 @@ package it.teamlab.visitwise.planning.engine;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  * Weights omitted from the map are excluded; an empty agent set selects all agents. {@code roads} gives the distances
- * and times used for range, workday and route length: the {@code travel} estimate unless road figures are supplied.
+ * and times used for range, workday and route length: the {@code travel} estimate when null.
  */
 public record PlannerParameters(LocalDate startDate, LocalDate deadline, int workingDays,
                                 Map<Long, Double> enterpriseWeights, Set<String> agents,
                                 PlanningMode planningMode, GeoPoint base, VisitConstraints constraints,
                                 TravelModel travel, double travelCostPerKm, double minRevenue, Travel roads) {
-
-    public PlannerParameters(LocalDate startDate, LocalDate deadline, int workingDays,
-                             Map<Long, Double> enterpriseWeights, Set<String> agents,
-                             PlanningMode planningMode, GeoPoint base, VisitConstraints constraints,
-                             TravelModel travel, double travelCostPerKm, double minRevenue) {
-        this(startDate, deadline, workingDays, enterpriseWeights, agents, planningMode, base, constraints, travel,
-                travelCostPerKm, minRevenue, travel);
-    }
 
     public PlannerParameters {
         if (roads == null) {
@@ -40,7 +33,7 @@ public record PlannerParameters(LocalDate startDate, LocalDate deadline, int wor
                 throw new IllegalArgumentException("Enterprise weights must be finite and non-negative with positive ids");
             }
         }
-        if (agents.stream().anyMatch(java.util.Objects::isNull)) {
+        if (agents.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("Agent filters cannot contain null");
         }
         enterpriseWeights = Map.copyOf(enterpriseWeights);

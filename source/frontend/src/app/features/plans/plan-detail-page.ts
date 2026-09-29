@@ -10,7 +10,6 @@ import {
   lucideChevronRight,
   lucideClock,
   lucideDownload,
-  lucideEuro,
   lucideFlag,
   lucideInfo,
   lucideMapPin,
@@ -25,29 +24,21 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, type KpiDetail, KpiSummary, minimumLoading, PageHeader } from '../../shared';
+import {
+  EurPipe,
+  formatDate,
+  formatDay,
+  formatDecimal,
+  formatEur,
+  formatPercent,
+  type KpiDetail,
+  KpiSummary,
+  minimumLoading,
+  PageHeader,
+  valueOf,
+} from '../../shared';
 import { agentLabel, calendarWeeks, exportUrl, planAgents, readableName, visitStops } from './plan.model';
 import { PlansService } from './plans.service';
-
-// Dates of the API are YYYY-MM-DD: formatted in UTC so the day never moves with the time zone.
-const DAY = new Intl.DateTimeFormat('en-GB', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-});
-const FULL_DATE = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-const KM = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
-
-function formatDate(date: string, format: Intl.DateTimeFormat): string {
-  return format.format(new Date(`${date}T00:00:00Z`));
-}
 
 function visitCountLabel(count: number): string {
   return count === 1 ? '1 visit' : `${count} visits`;
@@ -83,7 +74,6 @@ function visitCountLabel(count: number): string {
       lucideChevronRight,
       lucideClock,
       lucideDownload,
-      lucideEuro,
       lucideFlag,
       lucideInfo,
       lucideMapPin,
@@ -114,9 +104,7 @@ export class PlanDetailPage {
     loader: ({ params }) => this.api.plan(params),
   });
 
-  protected readonly plan = computed(() =>
-    this.planResource.hasValue() ? this.planResource.value() : undefined,
-  );
+  protected readonly plan = computed(() => valueOf(this.planResource));
   protected readonly error = computed(() => {
     const error = this.planResource.error();
     return error ? problemDetail(error) : null;
@@ -134,11 +122,11 @@ export class PlanDetailPage {
       return [];
     }
     const items = [
-      { icon: 'lucideCalendarRange', text: `From ${formatDate(parameters.startDate, FULL_DATE)}` },
+      { icon: 'lucideCalendarRange', text: `From ${formatDate(parameters.startDate)}` },
       { icon: 'lucideClock', text: `${parameters.workingDays} working days` },
     ];
     if (parameters.deadline) {
-      items.push({ icon: 'lucideFlag', text: `Deadline ${formatDate(parameters.deadline, FULL_DATE)}` });
+      items.push({ icon: 'lucideFlag', text: `Deadline ${formatDate(parameters.deadline)}` });
     }
     return items;
   });
@@ -154,10 +142,10 @@ export class PlanDetailPage {
       visits: `${kpis.plannedVisits}`,
       customers: `${kpis.uniqueCustomers} customers`,
       revenue: formatEur(kpis.coveredRevenue),
-      coverage: `${PERCENT.format(kpis.coverage)} of the eligible revenue`,
+      coverage: `${formatPercent(kpis.coverage)} of the eligible revenue`,
       days: `${kpis.workingDaysUsed}`,
-      km: `${KM.format(kpis.totalKm)} km`,
-      travel: `${KM.format(kpis.travelHours)} hours of travel`,
+      km: `${formatDecimal(kpis.totalKm)} km`,
+      travel: `${formatDecimal(kpis.travelHours)} hours of travel`,
     };
   });
 
@@ -170,15 +158,15 @@ export class PlanDetailPage {
     const { base, deadline, planningMode } = plan.parameters;
     return calendarWeeks(plan.days, this.agent()).map((week) => ({
       monday: week.monday,
-      title: `Week of ${formatDate(week.monday, FULL_DATE)}`,
+      title: `Week of ${formatDate(week.monday)}`,
       days: week.days.map((day) => ({
         date: day.date,
-        title: formatDate(day.date, DAY),
+        title: formatDay(day.date),
         afterDeadline: !!deadline && day.date > deadline,
         visits: visitCountLabel(day.entries.reduce((sum, entry) => sum + entry.visits.length, 0)),
         entries: day.entries.map((entry) => ({
           agent: agentLabel(entry.agent, planningMode),
-          km: `${KM.format(entry.km)} km`,
+          km: `${formatDecimal(entry.km)} km`,
           stops: visitStops(entry, base),
         })),
       })),

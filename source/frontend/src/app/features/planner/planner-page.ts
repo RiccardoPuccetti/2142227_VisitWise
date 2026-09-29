@@ -16,7 +16,6 @@ import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
-  lucideEuro,
   lucideInfo,
   lucideMapPin,
   lucideMapPinOff,
@@ -24,7 +23,6 @@ import {
   lucideSave,
   lucideSlidersHorizontal,
   lucideSparkles,
-  lucideUser,
 } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -50,7 +48,18 @@ import type {
   StartingBase,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, KpiSummary, MapView, PageHeader } from '../../shared';
+import {
+  EurPipe,
+  formatDate,
+  formatDecimal,
+  formatPercent,
+  type KpiDetail,
+  KpiSummary,
+  MapView,
+  minimumLoading,
+  PageHeader,
+  valueOf,
+} from '../../shared';
 import {
   DEFAULT_BASE,
   baseMarker,
@@ -60,21 +69,12 @@ import {
   revealDelay,
   travelBasis,
   validateParameters,
+  MAX_WORKING_DAYS,
 } from './planner.model';
 import { PlannerService } from './planner.service';
 import { workingDaysBetween } from './working-calendar';
 
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
-const DECIMAL = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
-const DATE = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 const GEOCODING_POLL_MS = 3000;
-/** The planning API's upper bound, used as the horizon when there is no deadline. */
-const MAX_WORKING_DAYS = 260;
 const NO_WORKING_DAYS = 'No working days between the start date and the deadline.';
 
 /** Minimum time the "planning" view stays up, so the switch to the plan reads as a transition (0 in tests). */
@@ -83,7 +83,7 @@ export const PLAN_REVEAL_MS = new InjectionToken<number>('PLAN_REVEAL_MS', { pro
 type PlannerTab = 'setup' | 'plan';
 
 function dateLabel(value: string | null): string {
-  return value ? DATE.format(new Date(`${value}T00:00:00Z`)) : '–';
+  return value ? formatDate(value) : '–';
 }
 
 /**
@@ -117,7 +117,6 @@ function dateLabel(value: string | null): string {
   providers: [
     provideIcons({
       lucideCalendarRange,
-      lucideEuro,
       lucideInfo,
       lucideMapPin,
       lucideMapPinOff,
@@ -125,7 +124,6 @@ function dateLabel(value: string | null): string {
       lucideSave,
       lucideSlidersHorizontal,
       lucideSparkles,
-      lucideUser,
     }),
   ],
   templateUrl: './planner-page.html',
@@ -249,9 +247,9 @@ export class PlannerPage {
   });
   private readonly baseResource = resource({ loader: () => this.api.startingBase() });
 
-  protected readonly campaigns = computed(() => this.campaignsResource.value() ?? []);
-  protected readonly enterprises = computed(() => this.optionsResource.value()?.byEnterprise ?? []);
-  protected readonly agents = computed(() => this.optionsResource.value()?.byAgent ?? []);
+  protected readonly campaigns = computed(() => valueOf(this.campaignsResource) ?? []);
+  protected readonly enterprises = computed(() => valueOf(this.optionsResource)?.byEnterprise ?? []);
+  protected readonly agents = computed(() => valueOf(this.optionsResource)?.byAgent ?? []);
   protected readonly weights = signal<Record<number, number>>({});
   protected readonly selectedAgents = signal<string[]>([]);
   protected readonly result = signal<PlanResult | null>(null);
@@ -283,7 +281,13 @@ export class PlannerPage {
   private readonly roadRoutes = signal<Record<string, RouteResponse>>({});
   protected readonly routing = signal(false);
 
-  protected readonly loading = computed(
+  /** The key figures of a plan, shown empty while one is generated. */
+  protected readonly loadingDetails: KpiDetail[] = [
+    { label: 'Visits', value: '', icon: 'lucideMapPin' },
+    { label: 'Working days', value: '', icon: 'lucideCalendarRange' },
+    { label: 'Distance', value: '', icon: 'lucideRoute' },
+  ];
+  protected readonly loading = minimumLoading(
     () =>
       this.campaignsResource.isLoading() ||
       this.optionsResource.isLoading() ||
@@ -305,15 +309,17 @@ export class PlannerPage {
   protected readonly dayGroups = computed(() => groupDays(this.result()?.days ?? []));
   /** The starting point alone, for the map of step 1. */
   protected readonly baseMarkers = computed(() => baseMarker(this.base()));
-  protected readonly markers = computed(() =>
-    this.result() ? planMarkers(this.result(), this.selectedDayIndex()) : baseMarker(this.base()),
-  );
+  /** Rendered only with a result: step 1 shows the base alone through `baseMarkers`. */
+  protected readonly markers = computed(() => planMarkers(this.result(), this.selectedDayIndex()));
   protected readonly routes = computed(() =>
     planRoutes(this.result(), this.selectedDayIndex(), this.road()),
   );
-  protected readonly geocodingActive = computed(() => {
+  /** Only a running job: points left PENDING on a READY import wait for a retry (US-09), they are not being located. */
+  protected readonly geocodingActive = computed(() => this.progress()?.status === 'GEOCODING');
+  /** Addresses without coordinates that the retry asks for again: never tried (PENDING) and not found. */
+  protected readonly missingAddresses = computed(() => {
     const progress = this.progress();
-    return !!progress && (progress.status === 'GEOCODING' || progress.pending > 0);
+    return progress ? progress.pending + progress.notFound : 0;
   });
 
   constructor() {
@@ -344,7 +350,7 @@ export class PlannerPage {
       }
     });
     effect(() => {
-      const saved = this.baseResource.value();
+      const saved = valueOf(this.baseResource);
       if (saved) {
         this.base.set(saved);
         this.baseForm.patchValue({ address: saved.address, city: saved.city });
@@ -499,11 +505,11 @@ export class PlannerPage {
   }
 
   protected percent(value: number): string {
-    return PERCENT.format(value);
+    return formatPercent(value);
   }
 
   protected decimal(value: number): string {
-    return DECIMAL.format(value);
+    return formatDecimal(value);
   }
 
   protected readonly travelBasis = travelBasis;

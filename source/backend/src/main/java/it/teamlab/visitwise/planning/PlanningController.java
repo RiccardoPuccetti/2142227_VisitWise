@@ -51,7 +51,7 @@ public class PlanningController {
         return planning.whatIf(importId, request);
     }
 
-    /** Endpoint 18 (US-24): road route of one planned day, real (OSRM) when available, estimated otherwise. */
+    /** Endpoint 18b (US-24): road route of one planned day, real (OSRM) when available, estimated otherwise. */
     @PostMapping("/imports/{importId}/plans/route")
     RouteResponse route(@PathVariable Long importId, @RequestBody RouteRequest request) {
         return planning.route(request);

@@ -9,7 +9,6 @@ import {
   input,
   linkedSignal,
   resource,
-  Resource,
   signal,
   viewChild,
 } from '@angular/core';
@@ -18,7 +17,6 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
   lucideCircleDot,
-  lucideEuro,
   lucideFilter,
   lucideMapPin,
   lucideMousePointerClick,
@@ -45,17 +43,21 @@ import {
   EnterpriseLegend,
   EurPipe,
   formatEur,
+  formatPercent,
   KpiSummary,
   MapView,
   minimumLoading,
   createPaging,
   PageHeader,
   POPUP_GAP,
+  prefersReducedMotion,
   TablePager,
+  valueOf,
 } from '../../shared';
 import { AmountBars, BarItem } from './amount-bars';
 import {
   DashboardFilter,
+  EMPTY_FILTER,
   filterFromParams,
   filterOptions,
   filterPoints,
@@ -75,13 +77,7 @@ const WIDE_QUERY = '(min-width: 64rem)';
 /** Width of the popup (w-80) plus its gap to the marker and a margin to the map edge, in pixels. */
 const POPUP_SPACE = 320 + POPUP_GAP + 16;
 
-/** A resource's value, or undefined while it loads or when it failed (value() throws in the error state). */
-function valueOf<T>(resource: Resource<T | undefined>): T | undefined {
-  return resource.hasValue() ? resource.value() : undefined;
-}
 
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
-const WHOLE_PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 });
 /** Points of the concentration curve: enough to show the bend, few enough to label. */
 const PARETO_STEPS = 6;
 
@@ -121,7 +117,6 @@ const PARETO_STEPS = 6;
     provideIcons({
       lucideCalendarRange,
       lucideCircleDot,
-      lucideEuro,
       lucideFilter,
       lucideMapPin,
       lucideMousePointerClick,
@@ -189,7 +184,12 @@ export class MapDashboardPage {
   /** A filtered summary is loading while the previous figures stay on screen. */
   protected readonly refreshing = computed(() => this.filteredSummary.isLoading());
 
-  protected readonly loading = minimumLoading(() => this.pointsResource.isLoading() || !this.summary());
+  /** Until the points and the first indicators are there; a failed request ends it (the alert shows instead). */
+  protected readonly loading = minimumLoading(
+    () =>
+      this.pointsResource.isLoading() ||
+      (!this.summary() && !this.baseSummary.error() && !this.filteredSummary.error()),
+  );
 
   protected readonly error = computed(() => {
     const error =
@@ -229,18 +229,9 @@ export class MapDashboardPage {
 
   protected readonly topShare = computed(() => {
     const share = shareOfTopFraction(this.summary()?.pareto ?? [], 0.2);
-    return share === null ? '–' : PERCENT.format(share);
+    return share === null ? '–' : formatPercent(share);
   });
 
-  protected readonly enterpriseBars = computed<BarItem[]>(() =>
-    (this.summary()?.byEnterprise ?? []).map((e) => ({
-      key: String(e.enterpriseId),
-      label: e.name,
-      revenue: e.revenue,
-      pointCount: e.pointCount,
-      color: e.color,
-    })),
-  );
   protected readonly agentBars = computed<BarItem[]>(() =>
     (this.summary()?.byAgent ?? []).map((a) => ({ ...a, label: a.key })),
   );
@@ -269,7 +260,7 @@ export class MapDashboardPage {
     for (let step = 1; step <= steps; step++) {
       const index = Math.min(total - 1, Math.round((step / steps) * total) - 1);
       const entry = pareto[index];
-      points.push({ label: WHOLE_PERCENT.format(entry.points / total), value: entry.revenueShare });
+      points.push({ label: formatPercent(entry.points / total, 0), value: entry.revenueShare });
     }
     return points;
   });
@@ -302,7 +293,7 @@ export class MapDashboardPage {
 
   protected readonly formatEur = formatEur;
   protected readonly formatCompact = (value: number): string => formatEur(value, 'compact');
-  protected readonly formatPercent = (value: number): string => WHOLE_PERCENT.format(value);
+  protected readonly wholePercent = (value: number): string => formatPercent(value, 0);
 
   protected isSelected(enterpriseId: number): boolean {
     return this.filter().enterpriseIds.includes(enterpriseId);
@@ -330,7 +321,7 @@ export class MapDashboardPage {
   }
 
   protected resetFilters(): void {
-    this.update({ enterpriseIds: [], agent: null, city: null, minRevenue: 0 });
+    this.update(EMPTY_FILTER);
   }
 
   constructor() {
@@ -367,10 +358,9 @@ export class MapDashboardPage {
     const header = scroller.querySelector('thead')?.getBoundingClientRect().height ?? 0;
     const rowTop = row.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     const visible = scroller.clientHeight - header;
-    const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     scroller.scrollTo({
       top: Math.max(0, rowTop - header - (visible - row.offsetHeight) / 2),
-      behavior: reduceMotion ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
     });
   }
 

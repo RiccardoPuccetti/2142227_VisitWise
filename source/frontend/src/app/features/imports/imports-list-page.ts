@@ -12,7 +12,6 @@ import {
   lucideLayoutGrid,
   lucideList,
   lucideMap,
-  lucideMapPin,
   lucideTrash2,
   lucideUpload,
 } from '@ng-icons/lucide';
@@ -28,9 +27,9 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { type KpiDetail, KpiSummary, minimumLoading, PageHeader } from '../../shared';
+import { formatDateTime, type KpiDetail, KpiSummary, minimumLoading, PageHeader, valueOf } from '../../shared';
 import { locatedPercent } from './import-detail.model';
-import { formatCreatedAt, importStatusLabel } from './import-status';
+import { importStatusLabel, importStatusVariant } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
 import { ImportsService } from './imports.service';
 
@@ -70,7 +69,6 @@ import { ImportsService } from './imports.service';
       lucideLayoutGrid,
       lucideList,
       lucideMap,
-      lucideMapPin,
       lucideTrash2,
       lucideUpload,
     }),
@@ -93,11 +91,10 @@ export class ImportsListPage {
   private readonly importsResource = resource({ loader: () => this.api.list() });
 
   /** The loaded list, without the imports deleted since. */
-  private readonly imports = linkedSignal(() =>
-    this.importsResource.hasValue() ? this.importsResource.value() : [],
-  );
+  private readonly imports = linkedSignal(() => valueOf(this.importsResource) ?? []);
 
   protected readonly loading = minimumLoading(this.importsResource.isLoading);
+  protected readonly statusVariant = importStatusVariant;
   protected readonly loadError = computed(() => {
     const error = this.importsResource.error();
     return error ? problemDetail(error) : null;
@@ -106,7 +103,7 @@ export class ImportsListPage {
   protected readonly items = computed(() =>
     this.imports().map((item) => ({
       ...item,
-      created: formatCreatedAt(item.createdAt),
+      created: formatDateTime(item.createdAt),
       statusLabel: importStatusLabel(item.status),
       locatedPercent: locatedPercent({ total: item.importedRows, located: item.geocodedRows }),
     })),

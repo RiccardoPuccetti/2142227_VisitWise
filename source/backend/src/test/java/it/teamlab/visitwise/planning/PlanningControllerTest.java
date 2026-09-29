@@ -131,6 +131,38 @@ class PlanningControllerTest {
     }
 
     @Test
+    void theRangeWarningWritesTheDistanceLikeTheInterface() throws Exception {
+        // Both points are about 0.75 and 1.2 km from the base by the road estimate.
+        mvc.perform(post(importUrl("/plans/simulate"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(parameters(1).replace("\"maxDistanceKm\":80", "\"maxDistanceKm\":0.5")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0]")
+                        .value("2 delivery points are farther than 0,5 km from the base and were excluded"));
+
+        mvc.perform(post(importUrl("/plans/simulate"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(parameters(1).replace("\"maxDistanceKm\":80", "\"maxDistanceKm\":1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0]")
+                        .value("1 delivery point is farther than 1 km from the base and was excluded"));
+    }
+
+    @Test
+    void theWarningOnPointsWithoutCoordinatesAgreesWithTheirNumber() throws Exception {
+        points.saveAndFlush(new DeliveryPoint(batch, 4, "GAMMA SRL", "BAR GAMMA", "VIA IGNOTA 1", "ROMA",
+                "AGENT NORTH"));
+
+        mvc.perform(post(importUrl("/plans/simulate"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(parameters(1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0]").value("1 delivery point without coordinates was excluded"));
+    }
+
+    @Test
     void simulationUsesRoadDistancesAndTimesWhenTheRoadNetworkAnswers() throws Exception {
         FakeRoadMatrixProvider.answerEveryPair(10, 15);
         try {
@@ -214,6 +246,16 @@ class PlanningControllerTest {
                 .andExpect(jsonPath("$.rows[*].workingDays", contains(1, 2)))
                 .andExpect(jsonPath("$.rows[0].marginalRevenue").value(1850.50))
                 .andExpect(jsonPath("$.rows[1].marginalRevenue").value(0.0));
+    }
+
+    @Test
+    void whatIfRejectsAMissingHorizon() throws Exception {
+        String request = "{\"base\":" + parameters(1) + ",\"horizons\":[2,null]}";
+
+        mvc.perform(post(importUrl("/plans/what-if"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

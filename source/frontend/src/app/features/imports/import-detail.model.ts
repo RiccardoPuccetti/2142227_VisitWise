@@ -5,7 +5,7 @@ import type {
   GeocodeStatus,
   GeocodingProgress,
 } from '../../core/models/api.models';
-import type { MapMarker } from '../../shared';
+import { mainEnterpriseColor, type MapMarker } from '../../shared';
 
 /** A coordinate typed by the analyst: the number, or the message to show under the field. */
 export type ParsedCoordinate = { value: number } | { error: string };
@@ -90,12 +90,9 @@ export function mappingRows(mapping: ColumnMapping): MappingRow[] {
   ];
 }
 
-/** Color of a point that has no positive revenue: none of the enterprises can claim it. */
-const NO_REVENUE_COLOR = '#8a9099';
-
 /**
  * The territory preview of the import (US-11, US-38): one small marker per located point, in the color of the
- * enterprise with the largest revenue there (the same rule as the map dashboard). Points without coordinates are left
+ * enterprise with the largest revenue there (`mainEnterpriseColor`, as on the map dashboard). Points without coordinates are left
  * out.
  */
 export function territoryMarkers(points: readonly DeliveryPoint[], enterprises: readonly Enterprise[]): MapMarker[] {
@@ -103,17 +100,11 @@ export function territoryMarkers(points: readonly DeliveryPoint[], enterprises: 
   return points
     .filter((point) => point.latitude !== null && point.longitude !== null)
     .map((point) => {
-      const top = point.revenues
-        .filter((line) => line.amount > 0)
-        .reduce<{ enterpriseId: number; amount: number } | null>(
-          (best, line) => (best === null || line.amount > best.amount ? line : best),
-          null,
-        );
       return {
         id: point.id,
         latitude: point.latitude as number,
         longitude: point.longitude as number,
-        color: (top && colors.get(top.enterpriseId)) ?? NO_REVENUE_COLOR,
+        color: mainEnterpriseColor(point.revenues, colors),
         radius: 5,
         title: point.pointName,
       };

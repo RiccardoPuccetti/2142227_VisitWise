@@ -10,12 +10,12 @@ import {
   lucideTrendingUp,
 } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
-import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import type {
@@ -25,7 +25,17 @@ import type {
   WhatIfResult,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, PageHeader } from '../../shared';
+import {
+  EurPipe,
+  formatDate,
+  formatDateTime,
+  formatDecimal,
+  formatEur,
+  formatPercent,
+  minimumLoading,
+  PageHeader,
+  valueOf,
+} from '../../shared';
 import { DEFAULT_BASE } from './planner.model';
 import { PlannerService } from './planner.service';
 import {
@@ -37,14 +47,6 @@ import {
   parseHorizons,
 } from './scenario-compare.model';
 
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
-const DECIMAL = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
-const DATE = new Intl.DateTimeFormat('en-GB', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
 /** Drawing box of the coverage curve (SVG user units; the element scales to its container). */
 const CHART = { width: 320, height: 120 } as const;
 /** Room around the drawing for the labels above the points and under the axis. */
@@ -64,12 +66,12 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     NgIcon,
     PageHeader,
     HlmAlertImports,
-    HlmBadgeImports,
     HlmButtonImports,
     HlmCardImports,
     HlmFieldImports,
     HlmInputImports,
     HlmNativeSelectImports,
+    HlmSkeletonImports,
     HlmSpinnerImports,
     HlmTableImports,
     EurPipe,
@@ -135,8 +137,8 @@ export class ScenarioComparePage {
     loader: ({ params }) => this.api.plans(params),
   });
 
-  protected readonly campaigns = computed(() => this.campaignsResource.value() ?? []);
-  protected readonly loading = computed(
+  protected readonly campaigns = computed(() => valueOf(this.campaignsResource) ?? []);
+  protected readonly loading = minimumLoading(
     () =>
       this.campaignsResource.isLoading() ||
       this.optionsResource.isLoading() ||
@@ -186,7 +188,7 @@ export class ScenarioComparePage {
 
   constructor() {
     effect(() => {
-      const plans = this.plansResource.value();
+      const plans = valueOf(this.plansResource);
       if (plans) {
         this.scenarios.set(plans);
         this.selectedIds.set(plans.slice(0, MAX_COMPARED).map((plan) => plan.id));
@@ -275,26 +277,31 @@ export class ScenarioComparePage {
       case 'eur':
         return formatEur(value, 'rounded');
       case 'percent':
-        return PERCENT.format(value);
+        return formatPercent(value);
       case 'km':
-        return `${DECIMAL.format(value)} km`;
+        return `${formatDecimal(value)} km`;
       case 'hours':
-        return `${DECIMAL.format(value)} h`;
+        return `${formatDecimal(value)} h`;
       default:
         return String(value);
     }
   }
 
   protected percent(value: number): string {
-    return PERCENT.format(value);
+    return formatPercent(value);
   }
 
   protected decimal(value: number): string {
-    return DECIMAL.format(value);
+    return formatDecimal(value);
   }
 
   protected date(value: string): string {
-    return DATE.format(new Date(value));
+    return formatDateTime(value);
+  }
+
+  /** A calendar day of the plan (start date, deadline), e.g. "2 Nov 2026". */
+  protected calendarDate(value: string): string {
+    return formatDate(value);
   }
 
   protected campaignLabel(parameters: PlanParameters): string {
@@ -316,13 +323,13 @@ export class ScenarioComparePage {
     if (!weighted.length) {
       return 'All enterprises, same priority';
     }
-    const enterprises = this.optionsResource.value()?.byEnterprise ?? [];
+    const enterprises = valueOf(this.optionsResource)?.byEnterprise ?? [];
     return weighted
       .map((item) => {
         const name =
           enterprises.find((enterprise) => enterprise.enterpriseId === item.enterpriseId)?.name ??
           `Enterprise ${item.enterpriseId}`;
-        return item.weight === 0 ? `${name} excluded` : `${name} ×${DECIMAL.format(item.weight)}`;
+        return item.weight === 0 ? `${name} excluded` : `${name} ×${formatDecimal(item.weight)}`;
       })
       .join(', ');
   }
@@ -336,8 +343,8 @@ export class ScenarioComparePage {
     if (!preset) {
       return null;
     }
-    const saved = this.baseResource.value();
-    const enterpriseIds = (this.optionsResource.value()?.byEnterprise ?? []).map(
+    const saved = valueOf(this.baseResource);
+    const enterpriseIds = (valueOf(this.optionsResource)?.byEnterprise ?? []).map(
       (enterprise) => enterprise.enterpriseId,
     );
     return defaultParameters(preset, saved ?? DEFAULT_BASE, enterpriseIds);

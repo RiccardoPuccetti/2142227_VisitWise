@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -133,7 +132,7 @@ public class ImportService {
         for (int i = 0; i < enterprises.size(); i++) {
             BigDecimal amount = row.amounts().get(i);
             if (amount.signum() != 0) {
-                point.addRevenue(Objects.requireNonNull(enterprises.get(i)), amount);
+                point.addRevenue(enterprises.get(i), amount);
             }
         }
         return point;
