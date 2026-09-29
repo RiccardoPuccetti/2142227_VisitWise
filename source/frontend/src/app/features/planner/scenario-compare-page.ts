@@ -25,7 +25,17 @@ import type {
   WhatIfResult,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatDateTime, formatDecimal, formatEur, formatPercent, minimumLoading, PageHeader, valueOf } from '../../shared';
+import {
+  EurPipe,
+  formatDate,
+  formatDateTime,
+  formatDecimal,
+  formatEur,
+  formatPercent,
+  minimumLoading,
+  PageHeader,
+  valueOf,
+} from '../../shared';
 import { DEFAULT_BASE } from './planner.model';
 import { PlannerService } from './planner.service';
 import {
@@ -287,6 +297,11 @@ export class ScenarioComparePage {
 
   protected date(value: string): string {
     return formatDateTime(value);
+  }
+
+  /** A calendar day of the plan (start date, deadline), e.g. "2 Nov 2026". */
+  protected calendarDate(value: string): string {
+    return formatDate(value);
   }
 
   protected campaignLabel(parameters: PlanParameters): string {

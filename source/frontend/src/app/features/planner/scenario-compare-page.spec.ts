@@ -236,6 +236,9 @@ describe('ScenarioComparePage', () => {
       expect(kmRow.querySelector('[data-best="true"]')!.textContent).toContain('420,5');
       expect(table.textContent).toContain('Only AGENT NORTH');
       expect(table.textContent).toContain('Single visitor');
+      // Campaign dates written like the rest of the app, not as the API's ISO strings.
+      expect(table.textContent).toContain('2 Nov 2026 → 19 Dec 2026');
+      expect(table.textContent).not.toContain('2026-11-02');
     });
 
     it('drops a scenario from the comparison when unticked', () => {

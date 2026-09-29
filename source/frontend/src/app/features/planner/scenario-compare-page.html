@@ -338,7 +338,8 @@
                         <td hlmTd class="text-right whitespace-normal" [class.pr-4]="last">
                           {{ campaignLabel(scenario.parameters) }}
                           <span class="text-muted-foreground block text-xs">
-                            {{ scenario.parameters.startDate }} → {{ scenario.parameters.deadline ?? 'no deadline' }}
+                            {{ calendarDate(scenario.parameters.startDate) }} →
+                            {{ scenario.parameters.deadline ? calendarDate(scenario.parameters.deadline) : 'no deadline' }}
                           </span>
                         </td>
                       }
