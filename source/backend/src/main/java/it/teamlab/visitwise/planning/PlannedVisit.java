@@ -47,7 +47,7 @@ public class PlannedVisit {
     @Column(name = "expected_revenue", nullable = false, precision = 14, scale = 2)
     private BigDecimal expectedRevenue;
 
-    /** Estimated km from the previous stop (or from the base for slot 1). */
+    /** Km from the previous stop (or from the base for slot 1): road-measured with the OSRM matrix, else estimated. */
     @Column(name = "travel_km", nullable = false, precision = 8, scale = 2)
     private BigDecimal travelKm;
 
@@ -70,10 +70,6 @@ public class PlannedVisit {
         return id;
     }
 
-    public VisitPlan getPlan() {
-        return plan;
-    }
-
     public DeliveryPoint getDeliveryPoint() {
         return deliveryPoint;
     }
@@ -84,10 +80,6 @@ public class PlannedVisit {
 
     public LocalDate getVisitDate() {
         return visitDate;
-    }
-
-    public int getDayIndex() {
-        return dayIndex;
     }
 
     public int getSlot() {

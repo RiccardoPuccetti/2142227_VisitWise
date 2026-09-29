@@ -57,27 +57,25 @@ public class PlanningService {
     private final EnterpriseRepository enterprises;
     private final DeliveryPointRepository points;
     private final VisitPlanRepository plans;
-    private final PlannedVisitRepository visits;
     private final JsonMapper json;
     private final RouteProvider routes;
     private final RoadMatrixProvider matrices;
     private final VisitPlanner planner = new GreedyVisitPlanner();
 
     PlanningService(ImportBatchRepository imports, EnterpriseRepository enterprises,
-            DeliveryPointRepository points, VisitPlanRepository plans, PlannedVisitRepository visits,
+            DeliveryPointRepository points, VisitPlanRepository plans,
             JsonMapper json, RouteProvider routes, RoadMatrixProvider matrices) {
         this.imports = imports;
         this.enterprises = enterprises;
         this.points = points;
         this.plans = plans;
-        this.visits = visits;
         this.json = json;
         this.routes = routes;
         this.matrices = matrices;
     }
 
     /**
-     * Endpoint 18: real road route of one day when the provider answers, otherwise the same straight-line estimate
+     * Endpoint 18b: real road route of one day when the provider answers, otherwise the same straight-line estimate
      * used by the planner, so the two never disagree on the fallback. Max 30 stops to respect public OSRM limits.
      */
     public RouteResponse route(RouteRequest request) {
@@ -87,8 +85,10 @@ public class PlanningService {
         if (request.stops().size() > MAX_ROUTE_STOPS) {
             throw new IllegalArgumentException("A route can have at most " + MAX_ROUTE_STOPS + " stops");
         }
-        TravelModel travel = new TravelModel(request.averageSpeedKmh() > 0 ? request.averageSpeedKmh() : 25,
-                request.roadFactor() >= 1 ? request.roadFactor() : 1.3);
+        // Missing (0) or invalid values fall back to the planner defaults.
+        TravelModel travel = new TravelModel(
+                request.averageSpeedKmh() > 0 ? request.averageSpeedKmh() : TravelModel.DEFAULT.averageSpeedKmh(),
+                request.roadFactor() >= 1 ? request.roadFactor() : TravelModel.DEFAULT.roadFactor());
         List<GeoPoint> path = new ArrayList<>(request.stops().size() + 2);
         path.add(toEngine(request.base()));
         request.stops().forEach(stop -> path.add(toEngine(stop)));
@@ -115,13 +115,15 @@ public class PlanningService {
     private static RouteResponse estimate(TravelModel travel, List<GeoPoint> path) {
         List<RouteLeg> legs = new ArrayList<>();
         double km = 0;
+        double minutes = 0;
         for (int i = 1; i < path.size(); i++) {
             double legKm = travel.roadDistanceKm(path.get(i - 1), path.get(i));
+            double legMinutes = travel.travelMinutes(path.get(i - 1), path.get(i));
             km += legKm;
-            legs.add(new RouteLeg(round1(legKm), round1(legKm / travel.averageSpeedKmh() * 60)));
+            minutes += legMinutes;
+            legs.add(new RouteLeg(round1(legKm), round1(legMinutes)));
         }
-        return new RouteResponse(RouteSource.ESTIMATE, round1(km), round1(km / travel.averageSpeedKmh() * 60),
-                legs, toDto(path));
+        return new RouteResponse(RouteSource.ESTIMATE, round1(km), round1(minutes), legs, toDto(path));
     }
 
     private static double round1(double value) {
@@ -166,18 +168,15 @@ public class PlanningService {
         VisitPlan plan = plans.save(new VisitPlan(computed.importBatch(), name,
                 json.writeValueAsString(request.parameters()), json.writeValueAsString(computed.response().kpis())));
 
+        // The plan is managed: its visits are saved with it (cascade).
         Map<Long, DeliveryPoint> byId = computed.pointsById();
-        List<PlannedVisit> savedVisits = new ArrayList<>();
         for (PlanDay day : computed.response().days()) {
             for (PlannedVisitResponse visit : day.visits()) {
-                PlannedVisit savedVisit = new PlannedVisit(plan, byId.get(visit.deliveryPointId()), visit.agent(),
+                plan.addVisit(new PlannedVisit(plan, byId.get(visit.deliveryPointId()), visit.agent(),
                         visit.date(), visit.dayIndex(), visit.slot(), BigDecimal.valueOf(visit.expectedRevenue()),
-                        BigDecimal.valueOf(visit.travelKm()));
-                plan.addVisit(savedVisit);
-                savedVisits.add(savedVisit);
+                        BigDecimal.valueOf(visit.travelKm())));
             }
         }
-        visits.saveAll(savedVisits);
         return new PlanSummary(plan.getId(), plan.getName(), plan.getCreatedAt(),
                 request.parameters(), computed.response().kpis());
     }
