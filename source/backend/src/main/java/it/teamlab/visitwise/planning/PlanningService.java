@@ -324,12 +324,16 @@ public class PlanningService {
         List<DeliveryPointResponse> notPlanned = result.notPlanned().stream()
                 .map(target -> DeliveryPointResponse.of(byId.get(target.id()))).toList();
         List<String> warnings = new ArrayList<>();
-        if (result.excludedNotGeocoded() > 0) {
-            warnings.add(result.excludedNotGeocoded() + " delivery points without coordinates were excluded");
+        int notGeocoded = result.excludedNotGeocoded();
+        if (notGeocoded > 0) {
+            warnings.add(notGeocoded == 1 ? "1 delivery point without coordinates was excluded"
+                    : notGeocoded + " delivery points without coordinates were excluded");
         }
-        if (result.kpis().excludedOutOfRange() > 0) {
-            warnings.add(result.kpis().excludedOutOfRange() + " delivery points are farther than "
-                    + kilometres(parameters.maxDistanceKm()) + " km from the base and were excluded");
+        int outOfRange = result.kpis().excludedOutOfRange();
+        if (outOfRange > 0) {
+            String range = kilometres(parameters.maxDistanceKm()) + " km from the base";
+            warnings.add(outOfRange == 1 ? "1 delivery point is farther than " + range + " and was excluded"
+                    : outOfRange + " delivery points are farther than " + range + " and were excluded");
         }
         return new PlanResult(id, name, parameters, kpis(result.kpis(), travelSource), days, notPlanned, warnings);
     }

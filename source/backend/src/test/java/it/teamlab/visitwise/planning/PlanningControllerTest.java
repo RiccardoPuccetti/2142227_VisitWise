@@ -147,7 +147,19 @@ class PlanningControllerTest {
                         .content(parameters(1).replace("\"maxDistanceKm\":80", "\"maxDistanceKm\":1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.warnings[0]")
-                        .value("1 delivery points are farther than 1 km from the base and were excluded"));
+                        .value("1 delivery point is farther than 1 km from the base and was excluded"));
+    }
+
+    @Test
+    void theWarningOnPointsWithoutCoordinatesAgreesWithTheirNumber() throws Exception {
+        points.saveAndFlush(new DeliveryPoint(batch, 4, "GAMMA SRL", "BAR GAMMA", "VIA IGNOTA 1", "ROMA",
+                "AGENT NORTH"));
+
+        mvc.perform(post(importUrl("/plans/simulate"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(parameters(1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0]").value("1 delivery point without coordinates was excluded"));
     }
 
     @Test
