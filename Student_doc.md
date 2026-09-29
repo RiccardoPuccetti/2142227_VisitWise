@@ -1,12 +1,12 @@
 # SYSTEM DESCRIPTION:
 
-VisitWise is a web dashboard for a federation of companies that supply bars, restaurants, hotels and shops. Each company sells to customers at one or more delivery points, and each delivery point is followed by a sales agent. In this business, revenue grows when an agent visits the customer in person; a visit takes 3 to 4 hours, so only a few visits fit in a working day, and they matter most right before the periods of highest interest (before Christmas, before Easter, at the end of summer).
+VisitWise is a web dashboard for federations of companies supplying customers at delivery points. It uses historical revenue to prioritize sales visits, with configurable visit duration, enterprise weights and seasonal campaign dates; it does not predict additional sales.
 
 The analyst uploads the yearly revenue file exported from the company ERP through an import wizard: the file can change every year, its columns can have any name and any order, and the analyst chooses which columns contain the revenue of each company of the federation. A template can be downloaded. Each import is named by the analyst, stored in the database with its creation date, and listed as cards or as a table. Delivery addresses are geolocated automatically.
 
-Each federation registers as a tenant with its own login, and its imports and plans are invisible to other tenants. In the planner the analyst sets the tenant's starting base once, by typing its address: every plan starts and ends each working day there.
+Each federation shares one tenant account, with no separate agent roles; its imports and plans are hidden from other tenants. The planner saves a starting base by address and city, falling back to Rome when unset. Each plan retains the base supplied in its parameters.
 
-On an OpenStreetMap map the analyst sees the customers of each company, filters them by company, agent, city and revenue, and reads the main indicators. The planner proposes which customers to visit, in which order and on which working day (Monday to Friday, public holidays excluded) in order to maximize the revenue covered within a maximum number of days chosen by the analyst, inside a commercial campaign window. The analyst can run what-if analyses, save plans as scenarios and compare them; agents can consult and export their own visit calendar.
+The map filters delivery points by enterprise, agent, city and revenue. A deterministic heuristic selects and schedules visits on working days, excluding the configured Italian holidays. The planner form limits the horizon to its date window; the engine/API treats the deadline as a soft limit and counts late visits. Users can compare what-if horizons and saved scenarios, filter calendars by agent and export visits to Excel; an optimal plan is not guaranteed.
 
 # USER STORIES:
 
@@ -59,7 +59,7 @@ On an OpenStreetMap map the analyst sees the customers of each company, filters 
 Single page web application used by analysts, sales managers and sales agents. It is served by nginx, which also forwards every `/api` request to the backend container and adds the browser security headers (Content Security Policy, Referrer-Policy, Permissions-Policy, X-Frame-Options).
 
 ### USER STORIES:
-1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 35
+1-39 (tenant isolation is enforced by the backend)
 
 ### PORTS: 
 4200:80
@@ -77,25 +77,25 @@ The browser downloads map tiles from the OpenStreetMap tile servers (attribution
 
 #### MICROSERVICE: visitwise-frontend
 - TYPE: frontend
-- DESCRIPTION: Angular single page application: import wizard, imports list and detail, map dashboard, visit planner, what-if analysis and scenarios, with a light and a dark theme (toggle in the header, US-36).
+- DESCRIPTION: Angular single page application with imports, map dashboard, planning/scenarios and account pages. Light/dark mode is available in the sidebar when logged in and in the header on public pages.
 - PORTS: 80
 - TECHNOLOGICAL SPECIFICATION:
 Angular 22 (standalone components, signals, lazy routes), TypeScript in strict mode, spartan-ng (brain/helm) UI components, Tailwind CSS 4, OpenLayers with OpenStreetMap tiles for maps, Vitest for unit tests, nginx for serving.
 - SERVICE ARCHITECTURE: 
-`core/` holds the API models (mirror of the API contract) and shared services, `features/<feature>/` holds one folder per functional area (imports, dashboard, planner, plans) with its pages and API service, `shared/` holds reusable presentational components.
+`core/` holds API models, auth and preferences; `features/` contains imports, dashboard, planner, plans, auth and profile pages/services; `shared/` contains reusable views and `libs/ui/` the Helm components.
 
 - PAGES:
 
 	| Name | Description | Related Microservice | User Stories |
 	| ---- | ----------- | -------------------- | ------------ |
-	| Log in | Email and password login; brings the user back to the page they asked for | visitwise-backend | 32 |
+	| Log in | Email/password login, optional remember-me; returns to the requested page | visitwise-backend | 32, 37 |
 	| Register | Registration of a federation (tenant) with name, email and password; logs in right after | visitwise-backend | 31 |
-	| Profile | Rename the federation, change the password (logs out the other devices) | visitwise-backend | 34 |
+	| Profile | Rename the federation; change password, expire other sessions and revoke remembered devices | visitwise-backend | 34, 37 |
 	| Imports list | Imports as cards or table (choice kept in the browser) with name, creation date, file, points, status and enterprises; delete after confirmation | visitwise-backend | 10, 12 |
 	| Import wizard | Upload, preview, column mapping, enterprise columns, name, report; template download | visitwise-backend | 1, 2, 3, 4, 5, 6, 7 |
-	| Import detail | Import report and column mapping, geocoding progress refreshed every 3 s while running, retry of the missing addresses, delivery points table (filter on points not located, 50 per page), manual position fix, delete after confirmation | visitwise-backend | 7, 8, 9, 11, 12 |
+	| Import detail | Report, mapping, territory map, geocoding progress/retry, manual coordinates, deletion and point table (25/50/100 rows per page; default 50) | visitwise-backend | 7, 8, 9, 11, 12 |
 	| Map dashboard | OpenStreetMap map of delivery points with filters and summary indicators | visitwise-backend | 13, 14, 15, 16, 17, 18 |
-	| Visit planner | Starting base by address, campaign and parameters, geocoding progress, proposed plan (calendar, real road itinerary of the selected day on the map, indicators), scenario save | visitwise-backend | 8, 9, 19, 20, 21, 22, 23, 24, 25, 27, 35 |
+	| Visit planner | Starting base, campaign/parameters, geocoding progress, calendar, KPIs, day route with estimate fallback and scenario save | visitwise-backend | 8, 9, 19-25, 27, 35, 39 |
 	| What-if and scenarios | Coverage over different horizons, saved scenarios compared side by side | visitwise-backend | 26, 27 |
 	| Plan detail | Saved plan week by week (Monday to Friday) with the visits of each day in order, filter by agent, OpenStreetMap directions from the previous stop, Excel export of the whole plan or of one agent | visitwise-backend | 28, 29, 30 |
 
@@ -105,21 +105,23 @@ Angular 22 (standalone components, signals, lazy routes), TypeScript in strict m
 REST API that registers and logs in the tenants (federations), imports the Excel files, stores and geolocates the data, computes the analytics and the visit plans. Each tenant sees only its own data.
 
 ### USER STORIES:
-1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 31, 32, 33, 34, 35, 39
+1-13, 18-29, 31-35, 37, 39
 
 ### PORTS: 
 127.0.0.1:8080:8080 (published only on the host itself: users reach the API through the frontend container)
 
 ### DESCRIPTION:
-A Spring Boot application organized by feature (imports, geocoding, analytics, planning). The database schema is created and versioned by Liquibase at startup. The planning engine is plain Java code with no framework dependency, so it is fast and fully unit tested.
+A Spring Boot application organized by feature. Liquibase applies schema migrations at startup; the deterministic planning engine is plain Java, without Spring, JPA or network dependencies.
 
 ### PERSISTENCE EVALUATION
-Every tenant, import, delivery point, revenue, geocoding result and saved plan is stored in the visitwise-db container. Only the login sessions are kept in the backend memory: restarting the backend logs everybody out. Uploaded Excel files (.xlsx, at most 20 MB, 20,000 rows and 200 columns) are streamed through a temporary file that is deleted as soon as the sheet is read: they are not kept.
+Domain data and remember-me tokens persist in PostgreSQL; sessions, IP rate counters and road-matrix caches are in memory. Restarting removes sessions, but valid remember-me cookies can authenticate again. Uploaded XLSX files (20 MB, 20,000 rows, 200 columns maximum) are parsed through temporary files and not retained.
+
+Saved plans store parameters, KPIs and visits. Listing reads stored summaries; opening a plan recomputes using saved parameters and current import/routing data, while Excel export reads stored visits. These results can differ after geocoding or routing changes.
 
 ### EXTERNAL SERVICES CONNECTIONS
-Nominatim (OpenStreetMap geocoding, https://nominatim.openstreetmap.org) to turn addresses into coordinates: at most 1 request per second with an identifying User-Agent, as required by its usage policy. Every result is cached in the database, so an address is geocoded only once. Only address and city are sent: customer names and revenues never leave the system.
+Nominatim resolves address/city, with an identifying User-Agent and a default 1100 ms delay between requests. Successes and misses are cached; explicit retry bypasses cached misses. Customer names and revenues are not sent. Geocoding can finish as `READY` with unresolved points and an error message, so progress counts must also be checked.
 
-OSRM (OpenStreetMap routing) to compute the real road route of the day selected in the planner. By default this is the public demo server https://router.project-osrm.org (a few requests per session, never a full distance matrix). With the optional `osrm` Docker Compose profile the backend uses the visitwise-osrm container instead, and also asks it for the road distances and driving times between the base and all the located points of an import, which the planner uses to choose and order the visits (US-39); no coordinate then leaves the machine. When routing is disabled (`ROUTING_ENABLED=false`) or unreachable the backend falls back to the straight-line estimate used by the planning engine. Only coordinates are sent.
+By default, planning estimates travel with Haversine distance, a road factor and average speed; the displayed day's route separately uses public OSRM (`https://router.project-osrm.org`). For local road-based planning, enable the `osrm` profile, set `ROUTING_BASE_URL=http://osrm:5000` and `ROUTING_MATRIX_ENABLED=true`. Missing road pairs, points snapped over 1 km and provider failures fall back to estimates; `travelSource=OSRM` may therefore include estimated legs. Only coordinates are sent to routing providers; day-route values do not replace planning KPIs.
 
 ### MICROSERVICES:
 
@@ -128,7 +130,7 @@ OSRM (OpenStreetMap routing) to compute the real road route of the day selected 
 - DESCRIPTION: Import of Excel files, geocoding, analytics and visit planning.
 - PORTS: 8080
 - TECHNOLOGICAL SPECIFICATION:
-Java 21, Spring Boot 4.1 (Web MVC, Data JPA, Validation, Actuator, Security), BouncyCastle for Argon2id password hashing, Liquibase for database migrations, PostgreSQL JDBC driver, Apache POI for reading and writing Excel files, springdoc-openapi for the Swagger UI (`/swagger-ui.html`), Maven as build tool, JUnit 5 for tests.
+Java 21, Spring Boot 4.1.1 (Web MVC, Data JPA, Validation, Actuator, Security), Argon2id/BouncyCastle, Liquibase, PostgreSQL JDBC, Apache POI, springdoc-openapi (`/swagger-ui.html`), Maven and JUnit 5.
 - SERVICE ARCHITECTURE: 
 Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle), `geocoding` (background geocoding with cache), `analytics` (aggregated indicators), `planning` (REST API and persistence of plans) with `planning.engine` (working calendar, campaign windows, travel model, visit planner heuristic), `tenant` (registration, login, profile, security configuration, tenant isolation guard), `common` (error handling as RFC 9457 problem details).
 
@@ -144,7 +146,7 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| DELETE | /api/imports/{id} | Delete an import with its points and plans | 12 |
 	| GET | /api/imports/{id}/points | Delivery points of an import with coordinates and revenues | 9, 11, 13 |
 	| PATCH | /api/imports/{id}/points/{pointId}/location | Set the position of a point manually | 9 |
-	| POST | /api/imports/{id}/geocoding/retry | Retry geocoding of points not found | 9 |
+	| POST | /api/imports/{id}/geocoding/retry | Retry pending/not-found points, bypassing cached misses | 9 |
 	| GET | /api/imports/{id}/geocoding | Geocoding progress of an import (total, located, pending, not found) | 8, 9 |
 	| GET | /api/imports/{id}/analytics/summary | Indicators by enterprise, agent and city, top points, revenue concentration | 18 |
 	| GET | /api/planning/campaigns | Campaign windows (Christmas, Easter, end of summer) for a year | 19 |
@@ -153,9 +155,9 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 	| POST | /api/imports/{id}/plans/what-if | Compute the plan indicators for several horizons | 26 |
 	| POST | /api/imports/{id}/plans | Compute and save a plan as a named scenario | 27 |
 	| GET | /api/imports/{id}/plans | List saved plans of an import | 27 |
-	| GET | /api/plans/{planId} | Saved plan with days and visits | 27, 28 |
+	| GET | /api/plans/{planId} | Recompute detail from saved parameters and current import/routing data | 27, 28 |
 	| DELETE | /api/plans/{planId} | Delete a saved plan | 27 |
-	| GET | /api/plans/{planId}/export | Download a plan (optionally one agent) as Excel | 29 |
+	| GET | /api/plans/{planId}/export | Export stored visits to Excel; optional agent filter | 29 |
 	| GET | /api/auth/csrf | Public. Issue the CSRF token cookie used by the web app on every state-changing request | 31, 32 |
 	| POST | /api/auth/register | Public. Register a tenant with its name, email and password (hashed with Argon2id) | 31 |
 	| POST | /api/auth/login | Public. Log in with email and password (form-encoded); starts the session; optional `remember-me=true` keeps the device logged in | 32, 37 |
@@ -172,7 +174,7 @@ Packages per feature: `imports` (Excel parsing, column mapping, import lifecycle
 Relational database of the system.
 
 ### USER STORIES:
-2, 6, 7, 8, 9, 10, 11, 12, 27, 28, 31, 33, 34, 35
+2, 6-12, 27-29, 31-35, 37
 
 ### PORTS: 
 5432:5432
@@ -232,10 +234,10 @@ Optional road routing server (Docker Compose profile `osrm`) that gives the plan
 OSRM v6 (`osrm-routed`, contraction hierarchies, car profile) on the OpenStreetMap extract of central Italy. A one-off companion container, visitwise-osrm-data, downloads the extract from Geofabrik and prepares the road network the first time; the server starts when it has finished. The backend calls its route service (road route of one day) and its table service (distances and times between many points, in blocks of 500 x 500).
 
 ### PERSISTENCE EVALUATION
-The prepared road network (about 1 GB) is kept in the named Docker volume `visitwise-osrm-data`, so it is downloaded and prepared only once; it is prepared again only when `OSRM_PBF_URL` changes. The server itself keeps no state.
+The prepared network persists in `visitwise-osrm-data`. Preparation runs when the network is missing or `OSRM_PBF_URL` changes; the routing server itself is stateless.
 
 ### EXTERNAL SERVICES CONNECTIONS
-Geofabrik (https://download.geofabrik.de), only from visitwise-osrm-data and only the first time, to download the OpenStreetMap extract. No application data is sent.
+The companion `visitwise-osrm-data` downloads the extract from Geofabrik when preparation is needed. No application data is sent to Geofabrik.
 
 ### MICROSERVICES:
 

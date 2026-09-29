@@ -1,252 +1,93 @@
-# API Contract (v1)
+# API Contract
 
-> **Source of truth** for frontend-backend integration. TypeScript mirror: `source/frontend/src/app/core/models/api.models.ts`.
-> Change process: open a `docs/api-...` PR that updates **this file and the TS models together**, tag the other owners, merge only after both agree.
-> Each member builds pages on **their own** endpoints. A page that consumes another member's endpoint uses a local fixture copied from these examples until that endpoint is merged (see hand-offs in `booklets/team/TASKS.md`).
+Full field definitions: [TypeScript models](../../source/frontend/src/app/core/models/api.models.ts); backend planning records: [PlanningDtos](../../source/backend/src/main/java/it/teamlab/visitwise/planning/PlanningDtos.java).
 
-Conventions
+## Conventions
 
-- Base path `/api`. JSON in camelCase. Money = number with 2 decimals (EUR). `LocalDate` = `"YYYY-MM-DD"`, timestamps = ISO-8601 with offset.
-- Errors: RFC 9457 `application/problem+json` -> `{ "type", "title", "status", "detail", "instance" }`. 400 validation, 404 not found, 409 conflict, 422 unprocessable file.
-- Authentication (section 4): every endpoint needs a logged-in session except those marked *public*; without it the answer is `401`. State-changing requests (POST, PUT, PATCH, DELETE) carry the CSRF token from cookie `XSRF-TOKEN` in header `X-XSRF-TOKEN` (Angular `HttpClient` does it automatically for relative URLs); missing token -> `403`. Data of another tenant answers `404`.
-- Swagger UI (generated from code) at `http://localhost:8080/swagger-ui.html`: it must stay consistent with this file.
+- Base path `/api`; JSON uses camelCase, dates `YYYY-MM-DD`, timestamps ISO-8601 with offset, amounts numeric EUR.
+- Authentication is required except for the three public auth endpoints below; see [Authentication](AUTHENTICATION.md).
+- POST/PUT/PATCH/DELETE require cookie `XSRF-TOKEN` echoed in `X-XSRF-TOKEN`, including login and registration.
+- API errors use `application/problem+json`: `type`, `title`, `status`, `detail`, `instance`.
+- Statuses: `400` invalid input, `401` unauthenticated, `403` CSRF/access denied, `404` missing or foreign resource, `409` duplicate email, `422` invalid file/address, `429` auth rate limit, `503` geocoder unavailable.
+- Upload size is capped at 20 MB by Spring and nginx; rejection at the proxy can be `413`, outside the JSON error handler.
+- Generated reference: backend `/swagger-ui.html` and `/v3/api-docs`.
 
-## 1. Imports - owner Puccetti (endpoint 7: Rivera)
+## 1. Imports and geocoding
 
-| # | Method | URL | Description | US |
-|---|---|---|---|---|
-| 1 | GET | `/api/imports/template` | Downloads `visitwise-import-template.xlsx` | 1 |
-| 2 | POST | `/api/imports/preview` | multipart `file` -> headers, sample rows, suggested mapping. Nothing is saved | 2, 3, 4, 5 |
-| 3 | POST | `/api/imports` | multipart `file` + part `request` (JSON `CreateImportRequest`) -> parses, saves, starts geocoding. `201` + `ImportSummary` | 2, 4, 5, 6, 7 |
-| 4 | GET | `/api/imports` | `ImportSummary[]`, newest first | 10 |
-| 5 | GET | `/api/imports/{id}` | `ImportDetail` (poll it every 3 s while `status = GEOCODING`) | 7, 8, 11 |
-| 6 | DELETE | `/api/imports/{id}` | Deletes import, points, plans. `204` | 12 |
-| 7 | GET | `/api/imports/{id}/points?geocodeStatus=NOT_FOUND` | `DeliveryPoint[]` (filter optional). Used by map, detail table, planner. **Owner: Rivera** (`analytics` package) | 9, 11, 13 |
-| 8 | PATCH | `/api/imports/{id}/points/{pointId}/location` | body `{ "latitude": 41.9, "longitude": 12.5 }` (lat -90..90, lon -180..180, else `400`) -> status `MANUAL`. Returns `DeliveryPoint` | 9 |
-| 9 | POST | `/api/imports/{id}/geocoding/retry` | Re-queues `NOT_FOUND`/`PENDING` points (cached misses are asked to the provider again). `202` | 9 |
-| 9b | GET | `/api/imports/{id}/geocoding` | `GeocodingProgress`: the planner polls it every 3 s while `status = GEOCODING` or `pending > 0` | 8, 9 |
+Paths below are relative to `/api/imports`; `{id}` identifies an import owned by the current tenant.
 
-**GeocodingProgress** `{ "status": "GEOCODING", "total": 73, "located": 40, "pending": 31, "notFound": 2, "errorMessage": null }`
+| Method | Path | Request / response |
+|---|---|---|
+| GET | `/template` | `200` XLSX template |
+| POST | `/preview` | Multipart `file` -> `200 ImportPreview`; nothing persisted |
+| POST | (base) | Multipart `file` + JSON part `request: {name, mapping}` -> `201 ImportSummary`, Location header |
+| GET | (base) | `200 ImportSummary[]`, newest first, current tenant only |
+| GET | `/{id}` | `200 ImportDetail` |
+| DELETE | `/{id}` | `204`; cascades to enterprises, points, revenues, plans and visits |
+| GET | `/{id}/points` | Optional `geocodeStatus` -> `200 DeliveryPoint[]` |
+| PATCH | `/{id}/points/{pointId}/location` | `{latitude, longitude}` -> `200 DeliveryPoint`, status `MANUAL` |
+| POST | `/{id}/geocoding/retry` | `202`; retries `PENDING` and `NOT_FOUND`, bypassing cached misses |
+| GET | `/{id}/geocoding` | `200 {status, total, located, pending, notFound, errorMessage}` |
 
-- `located` counts `OK`, `FROM_FILE` and `MANUAL` points. `errorMessage` is set when the job stopped because the geocoder was unavailable ("Geocoding interrupted: ... Retry later.").
-- Geocoding runs in the background right after `POST /api/imports` commits (one request per second to Nominatim, results cached in `geocode_cache`); imports left in `GEOCODING` by a restart are resumed at startup.
+- `ImportPreview`: file/sheet names, headers, sample rows, total rows and suggested mapping; unresolved fields are null.
+- `ColumnMapping`: required `customer`, `deliveryPoint`, `address`, `city`; optional `agent`, paired `latitude`/`longitude`; `enterprises: [{sourceColumn, name, color}]`.
+- `.xlsx`, first sheet, first non-empty row as headers; duplicate headers receive numbered suffixes. Limits: 20,000 data rows and 200 columns.
+- Import name: 1..150 characters; at least one enterprise; mapped headers must exist. Enterprise columns cannot reuse another mapped column; names are case-insensitively unique (1..100), source headers at most 150 characters.
+- Enterprise colors are `#RRGGBB`, with at least 3:1 contrast on white. Latitude and longitude must be mapped together.
+- Rows with missing required values, invalid amounts or overlong text are skipped. Empty/`-` revenue is zero; negative amounts are retained; only non-zero amounts are stored.
+- Valid file coordinates, except the pair `(0,0)`, yield `FROM_FILE`; otherwise the point awaits geocoding. Manual coordinates allow latitude -90..90 and longitude -180..180.
+- `ImportSummary`: identity, name, filename, creation time, status, row counters and enterprises; `ImportDetail` adds mapping, agents, cities, missing-location count and error message.
+- `DeliveryPoint`: source row, customer/point names, address/city, nullable agent/coordinates, geocode status, total revenue and `{enterpriseId, amount}[]`.
+- Imports return `READY` if all coordinates are supplied, otherwise `GEOCODING`. The background job finishes as `READY` even on interruption: inspect pending counts and `errorMessage`, not status alone.
+- `located` includes `OK`, `FROM_FILE`, `MANUAL`. The UI polls progress every 3 seconds while work remains; imports left `GEOCODING` resume at startup.
 
-**POST /api/imports/preview** -> 200
+## 2. Analytics
 
-```json
-{
-  "fileName": "sample-erp-layout.xlsx",
-  "sheetName": "Sheet1",
-  "headers": ["Ragione Sociale", "Punto Vendita", "Indirizzo", "Comune", "Agente", "Totale", "ENTERPRISE A", "ENTERPRISE B", "ENTERPRISE C"],
-  "sampleRows": [["ACME SRL (10001)", "RISTORANTE ACME", "VIA DEL CORSO 300", "ROMA", "AGENT NORTH", "2080.5", "1250.5", "-", "830"]],
-  "totalRows": 129,
-  "suggestedMapping": {
-    "customer": "Ragione Sociale",
-    "deliveryPoint": "Punto Vendita",
-    "address": "Indirizzo",
-    "city": "Comune",
-    "agent": "Agente",
-    "latitude": null,
-    "longitude": null,
-    "enterprises": [
-      { "sourceColumn": "ENTERPRISE A", "name": "ENTERPRISE A", "color": "#2563eb" },
-      { "sourceColumn": "ENTERPRISE B", "name": "ENTERPRISE B", "color": "#16a34a" },
-      { "sourceColumn": "ENTERPRISE C", "name": "ENTERPRISE C", "color": "#dc2626" }
-    ]
-  }
-}
-```
+`GET /api/imports/{id}/analytics/summary?enterpriseIds=21,23&agents=A,B` -> `200 AnalyticsSummary`.
+Empty filters mean all; an enterprise filter retains points having a revenue entry for at least one selected enterprise.
+The response contains total revenue, point/customer counts, breakdowns by enterprise/agent/city, top 10 points and Pareto shares.
+Analytics sums net revenue, including credit notes; planner revenue instead clips negative entries to zero.
 
-In `suggestedMapping` a field is `null` when no header of the file matched it (TS type `SuggestedMapping`); the import request needs the four required fields.
+## 3. Planning
 
-Parsing rules (both preview and import):
+| Method | Path (relative to `/api`) | Request / response |
+|---|---|---|
+| GET | `/planning/campaigns?year=2026` | `CampaignPreset[]`; year 1583..9999 |
+| POST | `/imports/{id}/plans/simulate` | `PlanParameters` -> `PlanResult`, null id/name; not saved |
+| POST | `/imports/{id}/plans/what-if` | `{base: PlanParameters, horizons: number[]}` -> `{rows}` |
+| POST | `/imports/{id}/plans/route` | `RouteRequest` -> `RouteResponse` for one ordered day |
+| POST | `/imports/{id}/plans` | `{name, parameters}` -> `201 PlanSummary`, Location header |
+| GET | `/imports/{id}/plans` | `PlanSummary[]`, newest first; stored parameters and KPIs |
+| GET | `/plans/{planId}` | `PlanResult` recomputed from saved parameters and current import/routing data |
+| DELETE | `/plans/{planId}` | `204` |
+| GET | `/plans/{planId}/export?agent=...` | XLSX from stored visits; optional agent filter, `404` if no match |
 
-- First sheet, first non-empty row = headers. Duplicate headers are made unique by appending ` (2)`, ` (3)`.
-- Mapping is **by header name**, so column order does not matter.
-- Suggested mapping: case/accent-insensitive synonyms (IT + EN), e.g. customer = `cliente|rag. soc|ragione sociale|customer`, address = `indirizzo|address`, city = `città|citta|comune|city`, agent = `agente|agent`, deliveryPoint = `cliente di consegna|punto|delivery point|point of sale`. Numeric columns not mapped to anything else are suggested as enterprises, **except** columns named like `total|totale|totali`.
-- A row is **skipped** (and counted in `skippedRows`) when a required field (customer, deliveryPoint, address, city) is empty: this removes the `... Totale` subtotal rows and the grand total automatically.
-- Revenue cells: empty or `-` = 0; numbers or numeric strings with `,` or `.` decimals; negative allowed. Only non-zero amounts are stored.
-- If latitude/longitude are mapped and valid, the point is `FROM_FILE` and is not geocoded.
-- A row is also skipped when a revenue cell is not a number or a value is longer than its column (255 characters, 120 for city and agent).
-- Limits: `.xlsx` only, 20 MB, 20,000 data rows, 200 columns; beyond them, or for an unreadable file, `422` with the reason in `detail`. A file with no importable row is `422` too and saves nothing.
-- Import request checks (`400`, `detail` = `field: message`, e.g. `mapping.city: column 'Città' is not in the file`): name 1-150 characters; customer, delivery point, address, city mapped; at least one enterprise; every mapped column exists in the file and is used once; enterprise names unique ignoring case, 1-100 characters; latitude and longitude mapped together; colors `#RRGGBB` with at least 3:1 contrast on white.
+- `PlanParameters`: `campaign`, `startDate`, nullable `deadline`, `workingDays`, `enterpriseWeights`, `agents`, `planningMode`, `visitDurationMinutes`, `workdayMinutes`, `averageSpeedKmh`, `roadFactor`, `maxDistanceKm`, `base`, `travelCostPerKm`, `minRevenue`.
+- `base` is `{latitude, longitude}` and must be supplied; the frontend uses the tenant base or its Rome fallback. Campaign codes: `CHRISTMAS`, `EASTER`, `END_OF_SUMMER`, `CUSTOM`; modes: `PER_AGENT`, `SINGLE_VISITOR`.
+- Working days 1..260; visit duration 30..480; workday >= visit duration; speed > 0; road factor >= 1; distance, weights, penalty and minimum revenue finite and non-negative.
+- Enterprise ids must belong to the import and occur once. Empty agents selects all; omitted/zero enterprise weights exclude those enterprises. A null deadline imposes no deadline.
+- `PlanResult`: id/name, parameters, KPIs, days, up to 20 unplanned target representatives and warnings. Each day has date, nullable agent, visits and km; `dayIndex` is zero-based, visit `slot` one-based.
+- KPIs: visits/customers, covered/eligible/upper-bound revenue, coverage, km, travel hours, distinct working dates used, last date, late visits, range exclusions and `travelSource`.
+- `travelSource` is `OSRM` when a matrix is supplied (individual pairs can still be estimated), otherwise `ESTIMATE`; older stored KPIs may omit it.
+- Save recomputes the plan; name is 1..150 characters. Detail recomputation can differ from stored summary/export after coordinates or routing availability change.
+- What-if accepts 1..5 horizons (each 1..260), deduplicates and sorts them; rows contain working days, KPIs and covered-revenue change from the previous row (first compared with zero).
+- `RouteRequest`: `{base, stops, averageSpeedKmh, roadFactor}`, 1..30 ordered stops excluding the base. Nonpositive speed and road factor below 1 use defaults 25 and 1.3.
+- `RouteResponse`: `{source, km, minutes, legs: [{km, minutes}], geometry: GeoPoint[]}`; includes departure/return to base. OSRM failure/disablement yields `ESTIMATE` without changing the plan.
 
-**POST /api/imports** request part `request`:
+## 4. Authentication and profile
 
-```json
-{ "name": "Sample 2025 - full year", "mapping": { "...": "same shape as suggestedMapping" } }
-```
+| Method | Path (relative to `/api`) | Request / response |
+|---|---|---|
+| GET | `/auth/csrf` | Public; `204`, CSRF cookie |
+| POST | `/auth/register` | Public; `{tenantName, email, password}` -> `201 CurrentTenant`; does not log in |
+| POST | `/auth/login` | Public; form `username` (email), `password`, optional `remember-me=true` -> `200 CurrentTenant` |
+| POST | `/auth/logout` | `204`; invalidates session and forgets this remembered device |
+| GET | `/auth/me` | `200 CurrentTenant` or `401` |
+| PATCH | `/profile` | `{name}` -> `200 CurrentTenant` |
+| PUT | `/profile/password` | `{currentPassword, newPassword}` -> `204`; rotates session, expires others, revokes remembered devices |
+| GET | `/profile/base` | `200 StartingBase`, or `204` if unset |
+| PUT | `/profile/base` | `{address, city}` -> `200 StartingBase`; `422` unknown address, `503` provider failure |
 
-**ImportSummary** (response of 3 and items of 4)
-
-```json
-{
-  "id": 7, "name": "Sample 2025 - full year", "sourceFileName": "sample-erp-layout.xlsx",
-  "createdAt": "2026-09-28T10:15:00+02:00", "status": "GEOCODING",
-  "totalRows": 129, "importedRows": 73, "skippedRows": 56, "geocodedRows": 40,
-  "enterprises": [{ "id": 21, "name": "ENTERPRISE A", "color": "#2563eb", "sourceColumn": "ENTERPRISE A" }]
-}
-```
-
-**ImportDetail** = ImportSummary + `{ "mapping": ColumnMapping, "agents": ["..."], "cities": ["ROMA", "..."], "notFoundCount": 2, "errorMessage": null }`
-
-**DeliveryPoint**
-
-```json
-{
-  "id": 1001, "sourceRow": 2, "customerName": "ACME SRL (10001)", "pointName": "RISTORANTE ACME",
-  "address": "VIA DEL CORSO 300", "city": "ROMA", "agent": "AGENT NORTH",
-  "latitude": 41.9031, "longitude": 12.4794, "geocodeStatus": "OK",
-  "totalRevenue": 2080.5,
-  "revenues": [{ "enterpriseId": 21, "amount": 1250.5 }, { "enterpriseId": 23, "amount": 830.0 }]
-}
-```
-
-## 2. Analytics - owner Rivera
-
-| # | Method | URL | Description | US |
-|---|---|---|---|---|
-| 10 | GET | `/api/imports/{id}/analytics/summary?enterpriseIds=21,23&agents=A,B` | KPIs of the (filtered) import | 18 |
-
-```json
-{
-  "totalRevenue": 571053.35, "pointCount": 73, "customerCount": 55,
-  "byEnterprise": [{ "enterpriseId": 21, "name": "ENTERPRISE A", "color": "#2563eb", "revenue": 104141.02, "pointCount": 46 }],
-  "byAgent": [{ "key": "AGENT NORTH", "revenue": 112621.24, "pointCount": 20 }],
-  "byCity": [{ "key": "ROMA", "revenue": 531815.92, "pointCount": 69 }],
-  "topPoints": ["DeliveryPoint (top 10 by revenue)"],
-  "pareto": [{ "points": 10, "revenueShare": 0.51 }, { "points": 20, "revenueShare": 0.74 }]
-}
-```
-
-## 3. Planning - owner Marzella (endpoint 18: Rivera)
-
-| # | Method | URL | Description | US |
-|---|---|---|---|---|
-| 11 | GET | `/api/planning/campaigns?year=2026` | `CampaignPreset[]` with computed windows | 19 |
-| 12 | POST | `/api/imports/{id}/plans/simulate` | body `PlanParameters` -> `PlanResult` (not saved, `id: null`) | 20-25 |
-| 13 | POST | `/api/imports/{id}/plans/what-if` | body `WhatIfRequest` -> `WhatIfResult` | 26 |
-| 14 | POST | `/api/imports/{id}/plans` | body `CreatePlanRequest` -> computes + saves, `201` `PlanSummary` | 27 |
-| 15 | GET | `/api/imports/{id}/plans` | `PlanSummary[]` newest first | 27 |
-| 16 | GET | `/api/plans/{planId}` | `PlanResult` of a saved plan | 27, 28 |
-| 17 | DELETE | `/api/plans/{planId}` | `204` | 27 |
-| 18 | GET | `/api/plans/{planId}/export?agent=AGENT%20NORTH` | `.xlsx` of the plan (optional agent filter). **Owner: Rivera** (`planning.export` package) | 29 |
-| 18b | POST | `/api/imports/{id}/plans/route` | body `RouteRequest` -> `RouteResponse`: real road route of one day (OSRM) or the straight-line estimate when the road service is down. `400` without stops or with more than 30 | 24 |
-
-**RouteRequest** `{ "base": GeoPoint, "stops": [GeoPoint, "..."], "averageSpeedKmh": 25, "roadFactor": 1.3 }` - the ordered stops of one day, base excluded (it is added at both ends).
-
-**RouteResponse**
-
-```json
-{
-  "source": "OSRM",                      // "ESTIMATE" when OSRM is disabled/unreachable: Haversine x road factor, as the plan KPIs without road network
-  "km": 18.7, "minutes": 46.2,
-  "legs": [{ "km": 2.4, "minutes": 6.1 }, { "km": 3.1, "minutes": 7.5 }],   // base->stop1, stop1->stop2, ..., last->base
-  "geometry": [{ "latitude": 41.896, "longitude": 12.4823 }, "..."]        // polyline to draw; base/stops/base for ESTIMATE
-}
-```
-
-**CampaignPreset**
-
-```json
-{ "code": "CHRISTMAS", "label": "Before Christmas", "startDate": "2026-11-01", "endDate": "2026-12-19", "workingDays": 34 }
-```
-
-**PlanParameters** (defaults shown; the frontend sends every field)
-
-```json
-{
-  "campaign": "CHRISTMAS",
-  "startDate": "2026-11-02",
-  "deadline": "2026-12-19",
-  "workingDays": 20,
-  "enterpriseWeights": [{ "enterpriseId": 21, "weight": 1.0 }, { "enterpriseId": 23, "weight": 1.5 }],
-  "agents": [],
-  "planningMode": "PER_AGENT",
-  "visitDurationMinutes": 210,
-  "workdayMinutes": 480,
-  "averageSpeedKmh": 25,
-  "roadFactor": 1.3,
-  "maxDistanceKm": 80,
-  "base": { "latitude": 41.8960, "longitude": 12.4823 },   // filled by the planner form from the tenant starting base (endpoint 26); the frontend default (Rome, Piazza Venezia) until one is saved
-  "travelCostPerKm": 2.0,
-  "minRevenue": 0
-}
-```
-
-Validation: `workingDays` 1..260, `visitDurationMinutes` 30..480, `workdayMinutes` >= `visitDurationMinutes`, weights >= 0, speed > 0, roadFactor >= 1.
-
-**PlanResult**
-
-```json
-{
-  "id": null, "name": null,
-  "parameters": { "...": "PlanParameters" },
-  "kpis": {
-    "plannedVisits": 40, "uniqueCustomers": 36,
-    "coveredRevenue": 395000.0, "eligibleRevenue": 560000.0, "coverage": 0.71,
-    "upperBoundRevenue": 402000.0,
-    "totalKm": 420.5, "travelHours": 21.9, "workingDaysUsed": 20,
-    "lastVisitDate": "2026-11-27", "visitsAfterDeadline": 0, "excludedOutOfRange": 1,
-    "travelSource": "OSRM"   // km and hours measured on the road network (US-39); "ESTIMATE" = straight line x road factor at the average speed; null in plans saved before 2026-09-28
-  },
-  "days": [
-    {
-      "date": "2026-11-02", "agent": "AGENT NORTH", "km": 18.2,
-      "visits": [
-        {
-          "deliveryPointId": 1001, "customerName": "ACME SRL (10001)", "pointName": "RISTORANTE ACME",
-          "address": "VIA DEL CORSO 300", "city": "ROMA", "agent": "AGENT NORTH",
-          "latitude": 41.9031, "longitude": 12.4794,
-          "date": "2026-11-02", "dayIndex": 0, "slot": 1, "expectedRevenue": 2080.5, "travelKm": 2.1
-        }
-      ]
-    }
-  ],
-  "notPlanned": ["DeliveryPoint (top 20 eligible not planned)"],
-  "warnings": ["1 delivery point is farther than 80 km from the base and was excluded"]
-}
-```
-
-**WhatIfRequest** `{ "base": PlanParameters, "horizons": [10, 20, 30, 40, 60] }`
-
-**WhatIfResult**
-
-```json
-{ "rows": [
-  { "workingDays": 10, "kpis": { "...": "PlanKpis" }, "marginalRevenue": 250000.0 },
-  { "workingDays": 20, "kpis": { "...": "PlanKpis" }, "marginalRevenue": 145000.0 }
-] }
-```
-
-**PlanSummary** `{ "id": 3, "name": "Xmas 20d enterprise A x1.5", "createdAt": "...", "parameters": {}, "kpis": {} }`
-
-## 4. Authentication and profile - owner Puccetti
-
-One account per tenant. See `AUTHENTICATION.md` for the security design.
-
-| # | Method | URL | Description | US |
-|---|---|---|---|---|
-| 19 | GET | `/api/auth/csrf` | *Public.* `204`, sets the `XSRF-TOKEN` cookie. Called once at startup | 31, 32 |
-| 20 | POST | `/api/auth/register` | *Public.* body `RegisterRequest` -> `201` `CurrentTenant` (not logged in: the SPA calls 21 next). `400` password rules, `409` email in use | 31 |
-| 21 | POST | `/api/auth/login` | *Public.* form-encoded `username` (email), `password`, optional `remember-me=true` (US-37: also sets the 14-day `remember-me` cookie) -> `200` `CurrentTenant` and a new session. `401` "Invalid email or password" for any failure | 32 |
-| 22 | POST | `/api/auth/logout` | `204`, session invalidated, cookies cleared, this device's remember-me token deleted | 32, 37 |
-| 23 | GET | `/api/auth/me` | `200` `CurrentTenant`, `401` when not logged in | 32 |
-| 24 | PATCH | `/api/profile` | body `{ "name": "Demo federation" }` -> `200` `CurrentTenant` | 34 |
-| 25 | PUT | `/api/profile/password` | body `ChangePasswordRequest` -> `204`; the tenant's other sessions are logged out. `400` wrong current password or password rules | 34 |
-| 26 | GET | `/api/profile/base` | `200` `StartingBase`, or `204` when the tenant has not saved one yet (the planner then uses its default, Rome, Piazza Venezia) | 35 |
-| 27 | PUT | `/api/profile/base` | body `SaveStartingBaseRequest` -> geocodes address + city (Nominatim, cached) and saves -> `200` `StartingBase`. `422` "Address not found" (saved base unchanged), `503` geocoder unavailable | 35 |
-
-**RegisterRequest** `{ "tenantName": "Demo federation", "email": "demo@visitwise.test", "password": "correct horse battery" }`
-
-- `tenantName` 1-150 chars; `email` valid, max 254, compared case-insensitively; `password` 8-64 characters (minimum configurable), no composition rules.
-
-**CurrentTenant** `{ "id": 1, "name": "Demo federation", "email": "demo@visitwise.test" }`
-
-**ChangePasswordRequest** `{ "currentPassword": "...", "newPassword": "..." }`
-
-**SaveStartingBaseRequest** `{ "address": "Via del Corso 1", "city": "Roma" }` (address 1-255, city 1-120)
-
-**StartingBase** `{ "address": "Via del Corso 1", "city": "Roma", "latitude": 41.9008, "longitude": 12.4817 }`
-
-Validation errors (`400`) are problem+json with the reason in `detail`, e.g. `"detail": "Password must be at least 8 characters"`.
+`CurrentTenant = {id, name, email}`; `StartingBase = {address, city, latitude, longitude}`.
+Tenant name: 1..150 characters; valid email: at most 254, normalized to lower case; password: 8..64 normalized Unicode code points (minimum configurable).
+Base address: 1..255 characters; city: 1..120. Failed geocoding leaves the previous base unchanged.
