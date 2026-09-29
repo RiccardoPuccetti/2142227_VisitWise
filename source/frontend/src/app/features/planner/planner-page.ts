@@ -130,6 +130,11 @@ function dateLabel(value: string | null): string {
   ],
   templateUrl: './planner-page.html',
   styles: `
+    /* The placeholders sit on cards, where the muted skeleton colour almost disappears. */
+    [data-testid='plan-loading'] hlm-skeleton {
+      background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
+    }
+
     /* Generating: the route draws itself and the stops appear along it. */
     .planning-route path {
       fill: none;
