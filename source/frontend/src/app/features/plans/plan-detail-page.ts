@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, resource, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal, resource, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -6,6 +6,8 @@ import {
   lucideArrowUpRight,
   lucideBookmark,
   lucideCalendarRange,
+  lucideChevronLeft,
+  lucideChevronRight,
   lucideDownload,
   lucideEuro,
   lucideInfo,
@@ -73,6 +75,8 @@ function visitCountLabel(count: number): string {
       lucideArrowUpRight,
       lucideBookmark,
       lucideCalendarRange,
+      lucideChevronLeft,
+      lucideChevronRight,
       lucideDownload,
       lucideEuro,
       lucideInfo,
@@ -169,6 +173,40 @@ export class PlanDetailPage {
       })),
     }));
   });
+
+  /**
+   * Day shown under the week pager. It stays on the same date while that date still has visits (e.g. after changing
+   * the agent), otherwise it moves to the first day with visits.
+   */
+  protected readonly selectedDate = linkedSignal({
+    source: this.weeks,
+    computation: (weeks, previous?: { value: string | null }): string | null => {
+      const busy = weeks.flatMap((week) => week.days.filter((day) => day.entries.length).map((day) => day.date));
+      return previous?.value && busy.includes(previous.value) ? previous.value : (busy[0] ?? null);
+    },
+  });
+  protected readonly weekIndex = computed(() =>
+    Math.max(
+      0,
+      this.weeks().findIndex((week) => week.days.some((day) => day.date === this.selectedDate())),
+    ),
+  );
+  protected readonly week = computed(() => this.weeks()[this.weekIndex()]);
+  protected readonly selectedDay = computed(
+    () => this.week()?.days.find((day) => day.date === this.selectedDate()) ?? null,
+  );
+
+  protected selectDay(date: string): void {
+    this.selectedDate.set(date);
+  }
+
+  /** Previous (-1) or next (+1) week, opening its first day with visits. */
+  protected moveWeek(offset: number): void {
+    const week = this.weeks()[this.weekIndex() + offset];
+    if (week) {
+      this.selectedDate.set((week.days.find((day) => day.entries.length) ?? week.days[0]).date);
+    }
+  }
 
   /** Names and addresses in ordinary capitalisation instead of the capitals of the ERP export. */
   protected readonly readable = readableName;

@@ -65,7 +65,7 @@
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-0.5">
           <h2 id="calendar-title" class="panel-title">Calendar</h2>
-          <p class="panel-subtitle">One row per working day, Monday to Friday. Each stop links to the directions from the previous one.</p>
+          <p class="panel-subtitle">One week at a time: pick a day to see its stops. Each stop links to the directions from the previous one.</p>
         </div>
         @if (agents().length) {
           <div class="flex min-w-56 flex-col gap-1.5">
@@ -79,96 +79,139 @@
           </div>
         }
       </div>
-      @for (week of weeks(); track week.monday) {
-        <section data-testid="calendar-week" [attr.aria-labelledby]="'week-' + week.monday" class="flex flex-col gap-3">
-          <h3 [id]="'week-' + week.monday" class="eyebrow flex items-center gap-3">
-            {{ week.title }}
-            <span class="bg-border h-px flex-1" aria-hidden="true"></span>
-          </h3>
-          <!-- A day per row: the day on the left, its stops as a grid of small cards on the right. -->
-          <ol class="flex flex-col gap-3">
+      @if (week(); as week) {
+        <!-- One week at a time: the pager, a strip with its five days, then the stops of the selected day. -->
+        <section data-testid="calendar-week" [attr.aria-labelledby]="'week-' + week.monday" class="flex flex-col gap-4">
+          <div class="flex items-center gap-3">
+            <button
+              hlmBtn
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label="Previous week"
+              [disabled]="weekIndex() === 0"
+              (click)="moveWeek(-1)"
+            >
+              <ng-icon name="lucideChevronLeft" aria-hidden="true" />
+            </button>
+            <h3 [id]="'week-' + week.monday" class="text-sm font-semibold" aria-live="polite">
+              {{ week.title }}
+              <span class="text-muted-foreground font-normal">· week {{ weekIndex() + 1 }} of {{ weeks().length }}</span>
+            </h3>
+            <button
+              hlmBtn
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label="Next week"
+              [disabled]="weekIndex() === weeks().length - 1"
+              (click)="moveWeek(1)"
+            >
+              <ng-icon name="lucideChevronRight" aria-hidden="true" />
+            </button>
+          </div>
+
+          <ol class="grid grid-cols-5 gap-2 max-sm:gap-1" aria-label="Days of the week">
             @for (day of week.days; track day.date) {
-              <li data-testid="calendar-day">
-                @if (day.entries.length) {
-                  <section hlmCard size="sm" class="grid gap-4 md:grid-cols-[9rem_minmax(0,1fr)]" [attr.aria-label]="day.title">
-                    <div class="flex flex-col gap-1 px-(--card-spacing) md:pr-0">
-                      <h4 class="font-semibold">{{ day.title }}</h4>
-                      <p class="text-muted-foreground text-xs">{{ day.visits }}</p>
-                      @if (day.afterDeadline) {
-                        <span hlmBadge variant="destructive" class="self-start">After the deadline</span>
-                      }
-                    </div>
-                    <div class="flex flex-col gap-4 px-(--card-spacing) md:pl-0">
-                      @for (entry of day.entries; track entry.agent) {
-                        <div class="flex flex-col gap-2">
-                          <p class="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                            @if (showAgentNames()) {
-                              <span class="text-foreground inline-flex items-center gap-1.5 font-medium">
-                                <ng-icon name="lucideUser" aria-hidden="true" /> {{ readable(entry.agent) }}
-                              </span>
-                            }
-                            <span class="inline-flex items-center gap-1.5">
-                              <ng-icon name="lucideRoute" aria-hidden="true" /> {{ entry.km }} in the day
-                            </span>
-                          </p>
-                          <ol class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
-                            @for (stop of entry.stops; track stop.visit.slot) {
-                              <!-- Name and value first, then who and where; the directions close the card. -->
-                              <li class="bg-muted/30 flex gap-3 rounded-xl border p-3">
-                                <span
-                                  class="bg-brand-soft text-brand grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold tabular-nums"
-                                  aria-hidden="true"
-                                  >{{ stop.visit.slot }}</span
-                                >
-                                <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                                  <div class="flex items-start justify-between gap-3">
-                                    <span class="font-medium leading-snug">
-                                      <span class="sr-only">{{ stop.visit.slot }}.</span>
-                                      {{ readable(stop.visit.pointName) }}
-                                    </span>
-                                    <span class="shrink-0 text-sm font-semibold tabular-nums">{{
-                                      stop.visit.expectedRevenue | eur: 'rounded'
-                                    }}</span>
-                                  </div>
-                                  <span class="text-muted-foreground text-xs">{{ readable(stop.visit.customerName) }}</span>
-                                  <div class="mt-2 flex items-end justify-between gap-3 border-t pt-2 text-xs">
-                                    <span class="text-muted-foreground flex min-w-0 items-start gap-1.5">
-                                      <ng-icon name="lucideMapPin" class="mt-px shrink-0" aria-hidden="true" />
-                                      {{ readable(stop.visit.address) }}, {{ readable(stop.visit.city) }}
-                                    </span>
-                                    <a
-                                      class="text-brand inline-flex shrink-0 items-center gap-1 font-medium underline-offset-4 hover:underline"
-                                      [href]="stop.directions"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      Directions<span class="sr-only"> to {{ readable(stop.visit.pointName) }} (opens in a new tab)</span>
-                                      <ng-icon name="lucideArrowUpRight" aria-hidden="true" />
-                                    </a>
-                                  </div>
-                                </div>
-                              </li>
-                            }
-                          </ol>
-                        </div>
-                      }
-                    </div>
-                  </section>
-                } @else {
-                  <!-- A day without visits is one quiet line, so the busy days stand out. -->
-                  <p class="text-muted-foreground flex items-center gap-3 rounded-2xl border border-dashed px-4 py-2.5 text-sm">
-                    <span class="w-[calc(9rem-1rem)] font-medium">{{ day.title }}</span>
-                    No visits
-                    @if (day.afterDeadline) {
-                      <span hlmBadge variant="destructive">After the deadline</span>
-                    }
-                  </p>
-                }
+              <li>
+                <button
+                  type="button"
+                  data-testid="calendar-day"
+                  class="hover:bg-muted flex h-full w-full flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left text-sm transition-colors max-sm:px-2 max-sm:text-xs"
+                  [class.border-brand]="day.date === selectedDate()"
+                  [class.bg-brand-soft]="day.date === selectedDate()"
+                  [class.border-dashed]="!day.entries.length"
+                  [class.text-muted-foreground]="!day.entries.length"
+                  [class.border-destructive]="day.afterDeadline && day.date !== selectedDate()"
+                  [attr.aria-pressed]="day.date === selectedDate()"
+                  (click)="selectDay(day.date)"
+                >
+                  <span class="font-medium">{{ day.title }}</span>&ngsp;<span class="text-muted-foreground text-xs tabular-nums">{{ day.entries.length ? day.visits : 'No visits' }}</span>
+                  @if (day.afterDeadline) {
+                    <span class="sr-only">after the deadline</span>
+                  }
+                </button>
               </li>
             }
           </ol>
+
+          @if (selectedDay(); as day) {
+            <section
+              hlmCard
+              size="sm"
+              data-testid="calendar-selected-day"
+              [attr.aria-label]="day.title"
+              class="gap-4"
+            >
+              <div hlmCardHeader class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h4 hlmCardTitle>{{ day.title }}</h4>
+                <span class="text-muted-foreground text-sm">{{ day.entries.length ? day.visits : 'No visits' }}</span>
+                @if (day.afterDeadline) {
+                  <span hlmBadge variant="destructive">After the deadline</span>
+                }
+              </div>
+              <div hlmCardContent class="flex flex-col gap-4">
+                  @for (entry of day.entries; track entry.agent) {
+                    <div class="flex flex-col gap-2">
+                      <p class="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                        @if (showAgentNames()) {
+                          <span class="text-foreground inline-flex items-center gap-1.5 font-medium">
+                            <ng-icon name="lucideUser" aria-hidden="true" /> {{ readable(entry.agent) }}
+                          </span>
+                        }
+                        <span class="inline-flex items-center gap-1.5">
+                          <ng-icon name="lucideRoute" aria-hidden="true" /> {{ entry.km }} in the day
+                        </span>
+                      </p>
+                      <ol class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+                        @for (stop of entry.stops; track stop.visit.slot) {
+                          <!-- Name and value first, then who and where; the directions close the card. -->
+                          <li class="bg-muted/30 flex gap-3 rounded-xl border p-3">
+                            <span
+                              class="bg-brand-soft text-brand grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold tabular-nums"
+                              aria-hidden="true"
+                              >{{ stop.visit.slot }}</span
+                            >
+                            <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                              <div class="flex items-start justify-between gap-3">
+                                <span class="font-medium leading-snug">
+                                  <span class="sr-only">{{ stop.visit.slot }}.</span>
+                                  {{ readable(stop.visit.pointName) }}
+                                </span>
+                                <span class="shrink-0 text-sm font-semibold tabular-nums">{{
+                                  stop.visit.expectedRevenue | eur: 'rounded'
+                                }}</span>
+                              </div>
+                              <span class="text-muted-foreground text-xs">{{ readable(stop.visit.customerName) }}</span>
+                              <div class="mt-2 flex items-end justify-between gap-3 border-t pt-2 text-xs">
+                                <span class="text-muted-foreground flex min-w-0 items-start gap-1.5">
+                                  <ng-icon name="lucideMapPin" class="mt-px shrink-0" aria-hidden="true" />
+                                  {{ readable(stop.visit.address) }}, {{ readable(stop.visit.city) }}
+                                </span>
+                                <a
+                                  class="text-brand inline-flex shrink-0 items-center gap-1 font-medium underline-offset-4 hover:underline"
+                                  [href]="stop.directions"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Directions<span class="sr-only"> to {{ readable(stop.visit.pointName) }} (opens in a new tab)</span>
+                                  <ng-icon name="lucideArrowUpRight" aria-hidden="true" />
+                                </a>
+                              </div>
+                            </div>
+                          </li>
+                        }
+                      </ol>
+                    </div>
+                  }
+                @if (!day.entries.length) {
+                  <p class="text-muted-foreground text-sm">No visits on this day.</p>
+                }
+              </div>
+            </section>
+          }
         </section>
-      } @empty {
+      } @else {
         <p class="text-muted-foreground text-sm">No visits planned for this selection.</p>
       }
     </section>
