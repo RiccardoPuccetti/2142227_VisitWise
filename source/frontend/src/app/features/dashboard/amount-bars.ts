@@ -35,7 +35,7 @@ const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFracti
             </div>
             <div class="bg-muted ml-6 h-2 overflow-hidden rounded-full" aria-hidden="true">
               <div
-                class="h-full rounded-full transition-[width] duration-500"
+                class="amount-bar h-full rounded-full"
                 [style.width.%]="widthOf(item)"
                 [style.background-color]="item.color ?? 'var(--chart-1)'"
               ></div>
@@ -45,6 +45,18 @@ const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFracti
       </ol>
       @if (hidden() > 0) {
         <p class="text-muted-foreground mt-3 text-xs">and {{ hidden() }} more</p>
+      }
+    }
+  `,
+  styles: `
+    /* The bars grow from zero when they appear, then slide to their new length when the filters change. The width
+       is an inline style, hence !important on the start. */
+    .amount-bar {
+      transition: width 600ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    @starting-style {
+      .amount-bar {
+        width: 0 !important;
       }
     }
   `,

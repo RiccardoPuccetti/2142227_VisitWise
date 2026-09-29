@@ -85,6 +85,32 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     }),
   ],
   templateUrl: './scenario-compare-page.html',
+  styles: `
+    /* After each Compare the coverage curve draws itself, like the planner's route, then its points appear. */
+    .whatif-line {
+      stroke-dasharray: 1;
+      animation: whatif-draw 700ms cubic-bezier(0.2, 0, 0, 1) both;
+    }
+    .whatif-area {
+      animation: whatif-fade 500ms ease-out 250ms both;
+    }
+    .whatif-point {
+      animation: whatif-fade 250ms ease-out both;
+    }
+    @keyframes whatif-draw {
+      from {
+        stroke-dashoffset: 1;
+      }
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+    @keyframes whatif-fade {
+      from {
+        opacity: 0;
+      }
+    }
+  `,
 })
 export class ScenarioComparePage {
   readonly importId = input.required<string>();

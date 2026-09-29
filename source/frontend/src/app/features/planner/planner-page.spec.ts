@@ -182,6 +182,59 @@ describe('PlannerPage', () => {
     expect(text()).toContain('No starting point yet');
   });
 
+  describe('working days slider', () => {
+    const thumb = () => page().querySelector<HTMLElement>('#planner-working-days [role="slider"]')!;
+    const setDeadline = async (value: string) => {
+      type('#planner-deadline', value);
+      await harness.fixture.whenStable();
+    };
+
+    it('spans the working days of the campaign and starts with all of them', () => {
+      expect(thumb().getAttribute('aria-valuemin')).toBe('1');
+      expect(thumb().getAttribute('aria-valuemax')).toBe('34');
+      expect(thumb().getAttribute('aria-valuenow')).toBe('34');
+      expect(text()).toContain('34 of 34');
+    });
+
+    it('moves with the keyboard and plans the chosen number of days', async () => {
+      thumb().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      await harness.fixture.whenStable();
+
+      expect(thumb().getAttribute('aria-valuenow')).toBe('33');
+      expect(text()).toContain('33 of 34');
+      button('Generate plan').click();
+      TestBed.tick();
+      const request = http.expectOne('/api/imports/42/plans/simulate');
+      expect(request.request.body.workingDays).toBe(33);
+      request.flush({ ...RESULT, days: [] });
+      await harness.fixture.whenStable();
+    });
+
+    it('follows a shorter time frame, never offering days after the deadline', async () => {
+      await setDeadline('2026-11-06');
+
+      expect(thumb().getAttribute('aria-valuemax')).toBe('5');
+      expect(thumb().getAttribute('aria-valuenow')).toBe('5');
+      expect(text()).toContain('5 of 5');
+    });
+
+    it('keeps a free horizon when there is no deadline', async () => {
+      await setDeadline('');
+
+      expect(thumb().getAttribute('aria-valuemax')).toBe('260');
+      expect(thumb().getAttribute('aria-valuenow')).toBe('34');
+    });
+
+    it('does not plan a time frame without working days', async () => {
+      await setDeadline('2026-10-30');
+
+      expect(text()).toContain('No working days between the start date and the deadline.');
+      button('Generate plan').click();
+      TestBed.tick();
+      http.expectNone('/api/imports/42/plans/simulate');
+    });
+  });
+
   it('geocodes the typed address and uses it as the plan base', async () => {
     type('#planner-base-address', 'Via del Corso 300');
     type('#planner-base-city', 'Roma');
@@ -229,7 +282,7 @@ describe('PlannerPage', () => {
     expect(request.request.body).toMatchObject({
       campaign: 'CHRISTMAS',
       startDate: '2026-11-02',
-      workingDays: 20,
+      workingDays: 34,
       enterpriseWeights: [{ enterpriseId: 21, weight: 1 }],
       base: { latitude: 41.896, longitude: 12.4823 },
     });

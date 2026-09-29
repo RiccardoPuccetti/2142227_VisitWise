@@ -26,12 +26,14 @@ import {
   lucideTrendingUp,
   lucideUsers,
 } from '@ng-icons/lucide';
+import { NgTemplateOutlet } from '@angular/common';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { problemDetail } from '../../core/auth/problem-detail';
 import type { AnalyticsSummary } from '../../core/models/api.models';
@@ -45,6 +47,7 @@ import {
   formatEur,
   KpiSummary,
   MapView,
+  minimumLoading,
   createPaging,
   PageHeader,
   POPUP_GAP,
@@ -92,6 +95,7 @@ const PARETO_STEPS = 6;
   // Same rhythm as every page: the header and the sections 1.75rem apart.
   host: { class: 'flex flex-col gap-7' },
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     NgIcon,
     HlmAlertImports,
@@ -100,6 +104,7 @@ const PARETO_STEPS = 6;
     HlmInputImports,
     HlmLabelImports,
     HlmNativeSelectImports,
+    HlmSkeletonImports,
     HlmTableImports,
     MapView,
     KpiSummary,
@@ -184,7 +189,7 @@ export class MapDashboardPage {
   /** A filtered summary is loading while the previous figures stay on screen. */
   protected readonly refreshing = computed(() => this.filteredSummary.isLoading());
 
-  protected readonly loading = computed(() => this.pointsResource.isLoading() || !this.summary());
+  protected readonly loading = minimumLoading(() => this.pointsResource.isLoading() || !this.summary());
 
   protected readonly error = computed(() => {
     const error =

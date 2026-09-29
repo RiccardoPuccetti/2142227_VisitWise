@@ -58,7 +58,11 @@ describe('KpiSummary', () => {
     const el = await render({ label: 'Revenue', value: '1.000 €', details: DETAILS, loading: true });
 
     expect(el.querySelector('section')?.getAttribute('aria-busy')).toBe('true');
-    expect(el.querySelectorAll('hlm-skeleton').length).toBe(3);
+    // The loading shape keeps the lines of the result, so nothing jumps when the figures arrive:
+    // value, bar and hint in the headline, value and hint in each detail.
+    expect(el.querySelectorAll('[data-testid="kpi-headline"] hlm-skeleton').length).toBe(3);
+    const rows = [...el.querySelectorAll('[data-testid="kpi-details"] > div')];
+    expect(rows.map((row) => row.querySelectorAll('hlm-skeleton').length)).toEqual(rows.map(() => 2));
     expect(el.textContent).not.toContain('1.000 €');
     expect(el.textContent).not.toContain('1601 km');
   });

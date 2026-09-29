@@ -8,6 +8,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideSpartanHlm } from '@spartan-ng/helm/utils';
 import { routes } from './app.routes';
+import { LOADING_MIN_MS } from './shared/minimum-loading';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
 
@@ -22,5 +23,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(AuthService).loadSession()),
     // Spartan overlays (dialog, select, tooltip...) must render below the toaster.
     provideSpartanHlm(),
+    // Loading placeholders stay up at least this long, so a fast (local) answer does not flash them.
+    { provide: LOADING_MIN_MS, useValue: 450 },
   ],
 };

@@ -226,6 +226,19 @@ describe('PlanDetailPage', () => {
     expect(text()).not.toContain('Caffe Gamma');
   });
 
+  it('shows the shape of the page while the plan loads', async () => {
+    await harness.navigateByUrl('/imports/42/plans/3');
+
+    expect(page().querySelector('[role="status"]')?.textContent).toContain('Loading the plan');
+    expect(page().querySelector('h1 hlm-skeleton')).not.toBeNull();
+    expect(page().querySelector('[data-testid="kpi-headline"] hlm-skeleton')).not.toBeNull();
+    expect(page().querySelectorAll('[data-testid="calendar-day-placeholder"]').length).toBe(5);
+
+    http.expectOne('/api/plans/3').flush(PLAN);
+    await harness.fixture.whenStable();
+    expect(page().querySelector('h1')?.textContent).toContain('Christmas 20 days');
+  });
+
   it('shows the problem when the plan cannot be loaded', async () => {
     await harness.navigateByUrl('/imports/42/plans/3');
     http
