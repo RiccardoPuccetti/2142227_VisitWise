@@ -67,10 +67,8 @@
     }
 
     <section aria-labelledby="calendar-title" class="flex flex-col gap-6">
-      <div class="flex flex-col gap-0.5">
-        <h2 id="calendar-title" class="panel-title">Calendar</h2>
-        <p class="panel-subtitle">One week at a time: pick a day to see its stops. Each stop links to the directions from the previous one.</p>
-      </div>
+      <!-- The pager says what this is; the heading stays for screen readers. -->
+      <h2 id="calendar-title" class="sr-only">Calendar</h2>
       @if (week(); as week) {
         <!-- One week at a time: the pager, a strip with its five days, then the stops of the selected day. -->
         <section data-testid="calendar-week" [attr.aria-labelledby]="'week-' + week.monday" class="flex flex-col gap-4">
