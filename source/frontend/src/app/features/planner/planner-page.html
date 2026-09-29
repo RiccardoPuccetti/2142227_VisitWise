@@ -705,9 +705,11 @@
                       [routes]="routes()"
                       [ariaLabel]="'Itinerary for ' + date(day.date)"
                     />
+                    <!-- One pass per day: the stops come in one after the other when another day is chosen. -->
+                    @for (shown of [selectedDayIndex()]; track shown) {
                     <ol class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                       @for (visit of day.visits; track visit.deliveryPointId) {
-                        <li class="bg-muted/30 rounded-xl border p-4">
+                        <li class="motion-enter bg-muted/30 rounded-xl border p-4" [style.--motion-index]="$index">
                           <div class="flex gap-3">
                             <span
                               class="bg-brand flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
@@ -728,6 +730,7 @@
                         </li>
                       }
                     </ol>
+                    }
                     </div>
                   </section>
                 }

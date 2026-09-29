@@ -76,6 +76,8 @@
         }
 
         @if (whatIf(); as analysis) {
+          <!-- One pass per comparison: the chart is created again, so the curve draws itself after each Compare. -->
+          @for (result of [analysis]; track result) {
           <!-- The curve is never wider than 32rem, so its labels do not grow with the page; beside the table from xl. -->
           <div class="grid gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] xl:items-start">
             <figure class="bg-muted/30 flex w-full max-w-lg flex-col gap-2 rounded-2xl border p-4">
@@ -119,8 +121,10 @@
                   class="stroke-border"
                   stroke-width="1"
                 />
-                <polygon [attr.points]="areaPath()" fill="url(#whatif-fill)" />
+                <polygon class="whatif-area" [attr.points]="areaPath()" fill="url(#whatif-fill)" />
                 <polyline
+                  class="whatif-line"
+                  pathLength="1"
                   [attr.points]="curvePath()"
                   fill="none"
                   stroke="var(--chart-1)"
@@ -128,7 +132,8 @@
                   stroke-linejoin="round"
                   stroke-linecap="round"
                 />
-                @for (point of curve(); track point.workingDays) {
+                @for (point of curve(); track point.workingDays; let i = $index) {
+                  <g class="whatif-point" [style.animation-delay.ms]="300 + i * 120">
                   <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4.5" fill="var(--chart-1)" class="stroke-card" stroke-width="2" />
                   <text
                     [attr.x]="point.x"
@@ -148,6 +153,7 @@
                   >
                     {{ percent(point.coverage) }}
                   </text>
+                  </g>
                 }
               </svg>
               <figcaption id="whatif-curve-caption" class="text-muted-foreground text-xs">
@@ -169,8 +175,8 @@
                   </tr>
                 </thead>
                 <tbody hlmTBody>
-                  @for (row of analysis.rows; track row.workingDays; let first = $first) {
-                    <tr hlmTr>
+                  @for (row of analysis.rows; track row.workingDays; let first = $first; let i = $index) {
+                    <tr hlmTr class="motion-enter" [style.--motion-index]="i">
                       <th hlmTd scope="row" class="pl-4 text-left font-medium">{{ row.workingDays }}</th>
                       <td hlmTd class="text-right tabular-nums">{{ row.kpis.coveredRevenue | eur: 'rounded' }}</td>
                       <td hlmTd class="text-right tabular-nums">{{ percent(row.kpis.coverage) }}</td>
@@ -191,6 +197,7 @@
               </table>
             </div>
           </div>
+          }
         } @else if (!running()) {
           <p class="text-muted-foreground grid h-28 place-items-center rounded-2xl border border-dashed px-4 text-center text-sm">
             Choose a plan and the horizons, then compare them: the coverage curve and the table appear here.
