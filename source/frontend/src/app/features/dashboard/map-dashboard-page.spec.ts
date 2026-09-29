@@ -371,6 +371,8 @@ describe('MapDashboardPage', () => {
     TestBed.tick();
     expect(page().querySelectorAll('[data-testid="points-scroller"] tbody tr[data-point-id]').length).toBe(0);
     expect(page().querySelector('app-enterprise-legend')).toBeNull();
+    expect(page().querySelector('app-map-view')).toBeNull();
+    expect(page().querySelector('[data-testid="map-placeholder"]')).not.toBeNull();
 
     summaryRequests().forEach((r) => r.flush(summary()));
     await harness.fixture.whenStable();

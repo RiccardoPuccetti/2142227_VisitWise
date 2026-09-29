@@ -135,7 +135,12 @@
           <div class="flex flex-col gap-1.5">
             <span hlmLabel id="dashboard-enterprises-label" class="max-xl:sr-only">Enterprises</span>
             <div class="flex flex-wrap items-center gap-2 xl:flex-col xl:items-stretch" role="group" aria-labelledby="dashboard-enterprises-label">
-              @for (enterprise of enterprises(); track enterprise.enterpriseId) {
+              @if (loading()) {
+                @for (pill of [1, 2, 3]; track pill) {
+                  <hlm-skeleton class="h-8 w-28 rounded-full xl:w-full" aria-hidden="true" />
+                }
+              }
+              @for (enterprise of loading() ? [] : enterprises(); track enterprise.enterpriseId) {
                 <button
                   hlmBtn
                   type="button"
@@ -219,10 +224,14 @@
           }
         </div>
         <div class="relative">
+          <!-- As on the import overview: a placeholder of the map's size until the points are there. -->
+          @if (loading()) {
+            <hlm-skeleton data-testid="map-placeholder" class="h-[30rem] w-full rounded-xl xl:h-[44rem]" aria-hidden="true" />
+          } @else {
           <app-map-view
             class="block h-[30rem] overflow-hidden rounded-xl border xl:h-[44rem]"
             ariaLabel="Map of the delivery points"
-            [markers]="loading() ? [] : markers()"
+            [markers]="markers()"
             [highlightedId]="selectedId()"
             [popupId]="popupOnMap() ? selectedId() : null"
             (markerClick)="selectOnMap($event.id)"
@@ -239,6 +248,7 @@
               }
             </div>
           </app-map-view>
+          }
           @if (wide() && !popupOnMap() && selected(); as point) {
             <!-- Desktop, point without position: no marker to anchor to, so the details sit over the map's corner. -->
             <div data-map-corner class="absolute top-3 right-3 z-10">
