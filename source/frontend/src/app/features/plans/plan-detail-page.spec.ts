@@ -118,6 +118,14 @@ describe('PlanDetailPage', () => {
     expect(page().querySelector('h1')?.textContent).toContain('Christmas 20 days');
     expect(text()).toContain(`3751,50${NBSP}€`);
     expect(text()).toContain('36,9 km');
+    // As in the planner: the covered revenue leads, with a bar for its share of the eligible revenue.
+    const headline = page().querySelector('[data-testid="kpi-headline"]')!;
+    expect(headline.querySelector('h3')?.textContent?.trim()).toBe('Covered revenue');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('75');
+    const details = [...page().querySelectorAll('[data-testid="kpi-details"] > div')].map(
+      (row) => `${row.querySelector('dt')?.textContent?.trim()}: ${row.querySelector('dd')?.textContent?.replace(/\s+/g, ' ').trim()}`,
+    );
+    expect(details).toEqual(['Visits: 3 3 customers', 'Working days: 2 of 20 available', 'Distance: 36,9 km 1,5 hours of travel']);
     expect(page().querySelector('[role="status"]')?.textContent).toContain(
       '1 delivery points without coordinates were excluded',
     );

@@ -92,6 +92,21 @@ describe('ImportsListPage (US-10, US-12)', () => {
     expect(text(cards[1])).toContain('Ready');
   });
 
+  it('sums up the imports: the delivery points with the located share, then imports, ready and enterprises', async () => {
+    const fixture = await render();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const headline = root.querySelector('[data-testid="kpi-headline"]')!;
+    expect(text(headline.querySelector('h3'))).toBe('Delivery points');
+    expect(text(headline)).toContain('146');
+    expect(text(headline)).toContain('113 located on the map, across all imports');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('77');
+    const details = Array.from(root.querySelectorAll('[data-testid="kpi-details"] > div')).map(
+      (row) => `${text(row.querySelector('dt'))}: ${text(row.querySelector('dd'))}`,
+    );
+    expect(details).toEqual(['Imports: 2', 'Ready to plan: 1 1 still processing', 'Enterprises: 2 distinct names']);
+  });
+
   it('shows how usable each import is: rows imported, located and skipped, and the located share', async () => {
     const fixture = await render();
     const first = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="import-card"]')!;

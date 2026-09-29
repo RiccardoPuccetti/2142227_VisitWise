@@ -48,12 +48,22 @@
       </div>
     </div>
   } @else {
-    <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-      <app-kpi-card label="Imports" icon="lucideFolderOpen" tone="brand" [value]="'' + items().length" />
-      <app-kpi-card label="Delivery points" icon="lucideMapPin" tone="chart-2" [value]="'' + totals().points" hint="across all imports" />
-      <app-kpi-card label="Ready to plan" icon="lucideCircleCheck" tone="chart-3" [value]="'' + totals().ready" [hint]="totals().pending > 0 ? totals().pending + ' still processing' : 'all imports ready'" />
-      <app-kpi-card label="Enterprises" icon="lucideBuilding2" tone="chart-5" [value]="'' + totals().enterprises" hint="distinct names" />
-    </div>
+    <app-kpi-summary
+      label="Delivery points"
+      [value]="'' + totals().points"
+      [hint]="totals().located + ' located on the map, across all imports'"
+      [progress]="totals().points ? totals().located / totals().points : null"
+      [details]="[
+        { label: 'Imports', value: '' + items().length, icon: 'lucideFolderOpen' },
+        {
+          label: 'Ready to plan',
+          value: '' + totals().ready,
+          hint: totals().pending > 0 ? totals().pending + ' still processing' : 'all imports ready',
+          icon: 'lucideCircleCheck',
+        },
+        { label: 'Enterprises', value: '' + totals().enterprises, hint: 'distinct names', icon: 'lucideBuilding2' },
+      ]"
+    />
 
     @if (view() === 'cards') {
       <!-- Same columns as the KPI row above, so the card edges line up. -->

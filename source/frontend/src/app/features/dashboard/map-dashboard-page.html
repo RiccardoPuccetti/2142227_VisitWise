@@ -23,39 +23,22 @@
 
   <section aria-labelledby="indicators-title" class="flex flex-col gap-3">
     <h2 id="indicators-title" class="sr-only">Indicators</h2>
-    <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-      <app-kpi-card
-        label="Revenue"
-        icon="lucideEuro"
-        tone="brand"
-        [loading]="loading()"
-        [value]="formatEur(summary()?.totalRevenue)"
-        [hint]="filterHint()"
-      />
-      <app-kpi-card
-        label="Delivery points"
-        icon="lucideMapPin"
-        tone="chart-2"
-        [loading]="loading()"
-        [value]="'' + (summary()?.pointCount ?? '–')"
-        [hint]="markers().length + ' on the map'"
-      />
-      <app-kpi-card
-        label="Customers"
-        icon="lucideUsers"
-        tone="chart-3"
-        [loading]="loading()"
-        [value]="'' + (summary()?.customerCount ?? '–')"
-      />
-      <app-kpi-card
-        label="Top 20% of points"
-        icon="lucideTrendingUp"
-        tone="chart-4"
-        [loading]="loading()"
-        [value]="topShare()"
-        hint="share of the revenue they hold"
-      />
-    </div>
+    <app-kpi-summary
+      label="Revenue"
+      [loading]="loading()"
+      [value]="formatEur(summary()?.totalRevenue)"
+      [hint]="filterHint()"
+      [details]="[
+        {
+          label: 'Delivery points',
+          value: '' + (summary()?.pointCount ?? '–'),
+          hint: markers().length + ' on the map',
+          icon: 'lucideMapPin',
+        },
+        { label: 'Customers', value: '' + (summary()?.customerCount ?? '–'), icon: 'lucideUsers' },
+        { label: 'Top 20% of points', value: topShare(), hint: 'of the revenue', icon: 'lucideTrendingUp' },
+      ]"
+    />
   </section>
 
   <section aria-labelledby="charts-title" class="flex flex-col gap-4" [attr.aria-busy]="refreshing()">

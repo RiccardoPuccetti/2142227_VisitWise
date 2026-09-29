@@ -22,7 +22,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, KpiCard, PageHeader } from '../../shared';
+import { EurPipe, formatEur, KpiSummary, PageHeader } from '../../shared';
 import { agentLabel, calendarWeeks, exportUrl, planAgents, readableName, visitStops } from './plan.model';
 import { PlansService } from './plans.service';
 
@@ -63,7 +63,7 @@ function visitCountLabel(count: number): string {
     HlmCardImports,
     HlmLabelImports,
     HlmNativeSelectImports,
-    KpiCard,
+    KpiSummary,
     NgIcon,
     PageHeader,
     RouterLink,
@@ -140,6 +140,8 @@ export class PlanDetailPage {
       return null;
     }
     return {
+      share: kpis.coverage,
+      available: `of ${this.plan()!.parameters.workingDays} available`,
       visits: `${kpis.plannedVisits}`,
       customers: `${kpis.uniqueCustomers} customers`,
       revenue: formatEur(kpis.coveredRevenue),

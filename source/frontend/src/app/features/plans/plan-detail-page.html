@@ -52,12 +52,17 @@
     @if (indicators(); as kpis) {
       <section aria-labelledby="plan-indicators-title">
         <h2 id="plan-indicators-title" class="sr-only">Indicators</h2>
-        <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          <app-kpi-card label="Planned visits" icon="lucideMapPin" tone="brand" [value]="kpis.visits" [hint]="kpis.customers" />
-          <app-kpi-card label="Covered revenue" icon="lucideEuro" tone="chart-2" [value]="kpis.revenue" [hint]="kpis.coverage" />
-          <app-kpi-card label="Working days used" icon="lucideCalendarRange" tone="chart-3" [value]="kpis.days" />
-          <app-kpi-card label="Distance" icon="lucideRoute" tone="chart-4" [value]="kpis.km" [hint]="kpis.travel" />
-        </div>
+        <app-kpi-summary
+          label="Covered revenue"
+          [value]="kpis.revenue"
+          [hint]="kpis.coverage"
+          [progress]="kpis.share"
+          [details]="[
+            { label: 'Visits', value: kpis.visits, hint: kpis.customers, icon: 'lucideMapPin' },
+            { label: 'Working days', value: kpis.days, hint: kpis.available, icon: 'lucideCalendarRange' },
+            { label: 'Distance', value: kpis.km, hint: kpis.travel, icon: 'lucideRoute' },
+          ]"
+        />
       </section>
     }
 

@@ -139,6 +139,12 @@ describe('MapDashboardPage', () => {
     expect(text()).toContain('1 point without position');
     // Top 34% of points (1 of 3) hold 74.8% of revenue.
     expect(text()).toContain('74,8%');
+    // The revenue leads; the other figures are listed beside it.
+    const headline = page().querySelector('[data-testid="kpi-headline"]')!;
+    expect(headline.querySelector('h3')?.textContent?.trim()).toBe('Revenue');
+    expect(headline.textContent).toContain(`2780,50${NBSP}€`);
+    const labels = [...page().querySelectorAll('[data-testid="kpi-details"] dt')].map((term) => term.textContent?.trim());
+    expect(labels).toEqual(['Delivery points', 'Customers', 'Top 20% of points']);
   });
 
   it('links to the import detail to place the points without position', async () => {

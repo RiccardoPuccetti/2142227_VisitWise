@@ -49,7 +49,7 @@ import type {
   StartingBase,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, KpiCard, MapView, PageHeader } from '../../shared';
+import { EurPipe, KpiSummary, MapView, PageHeader } from '../../shared';
 import {
   DEFAULT_BASE,
   baseMarker,
@@ -104,7 +104,7 @@ function dateLabel(value: string | null): string {
     HlmTableImports,
     HlmTabsImports,
     EurPipe,
-    KpiCard,
+    KpiSummary,
     MapView,
     PageHeader,
   ],

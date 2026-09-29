@@ -49,11 +49,15 @@
     <!-- Same order as the map dashboard: key figures, then the map with a rail beside it, then the table. -->
     <section data-testid="report" aria-labelledby="report-title">
       <h2 id="report-title" class="sr-only">Import report</h2>
-      <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        @for (figure of figures(); track figure.label) {
-          <app-kpi-card [label]="figure.label" [value]="figure.value" [hint]="figure.hint" [icon]="figure.icon" [tone]="figure.tone" />
-        }
-      </div>
+      @if (figures(); as figures) {
+        <app-kpi-summary
+          label="Imported"
+          [value]="figures.value"
+          [hint]="figures.hint"
+          [progress]="figures.share"
+          [details]="figures.details"
+        />
+      }
     </section>
 
     <!-- Small screens: the map, then the two cards side by side. From xl: the cards in a left rail, the map beside it

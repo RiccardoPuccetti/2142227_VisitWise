@@ -40,8 +40,8 @@ import {
   createPaging,
   EnterpriseLegend,
   EurPipe,
-  KpiCard,
-  KpiTone,
+  type KpiDetail,
+  KpiSummary,
   MapView,
   PageHeader,
   TablePager,
@@ -89,7 +89,7 @@ type PointFilter = 'all' | 'missing';
     MapView,
     PageHeader,
     TablePager,
-    KpiCard,
+    KpiSummary,
     EnterpriseLegend,
     PointLocationForm,
   ],
@@ -147,32 +147,29 @@ export class ImportDetailPage {
     const detail = this.detail();
     return detail ? importStatusLabel(detail.status) : '';
   });
-  /** The report figures, as key figure cards like the map dashboard (US-07, US-11). */
-  protected readonly figures = computed<{ label: string; value: string; hint: string | null; icon: string; tone: KpiTone }[]>(
-    () => {
-      const detail = this.detail();
-      return detail
-        ? [
-            {
-              label: 'Imported',
-              value: String(detail.importedRows),
-              hint: `of ${detail.totalRows} rows in the file`,
-              icon: 'lucideCircleCheck',
-              tone: 'brand',
-            },
-            {
-              label: 'Skipped',
-              value: String(detail.skippedRows),
-              hint: 'subtotals, totals and incomplete rows',
-              icon: 'lucideCircleSlash',
-              tone: 'neutral',
-            },
-            { label: 'Agents', value: String(detail.agents.length), hint: null, icon: 'lucideUsers', tone: 'chart-2' },
-            { label: 'Cities', value: String(detail.cities.length), hint: null, icon: 'lucideMapPin', tone: 'chart-3' },
-          ]
-        : [];
-    },
-  );
+  /** The report figures, as the key figures of the map dashboard: the imported rows lead (US-07, US-11). */
+  protected readonly figures = computed(() => {
+    const detail = this.detail();
+    if (!detail) {
+      return null;
+    }
+    const details: KpiDetail[] = [
+      {
+        label: 'Skipped',
+        value: String(detail.skippedRows),
+        hint: 'subtotals, totals and incomplete rows',
+        icon: 'lucideCircleSlash',
+      },
+      { label: 'Agents', value: String(detail.agents.length), icon: 'lucideUsers' },
+      { label: 'Cities', value: String(detail.cities.length), icon: 'lucideMapPin' },
+    ];
+    return {
+      value: String(detail.importedRows),
+      hint: `of ${detail.totalRows} rows in the file`,
+      share: detail.totalRows ? detail.importedRows / detail.totalRows : null,
+      details,
+    };
+  });
   protected readonly mapping = computed(() => {
     const mapping = this.detail()?.mapping;
     return mapping ? mappingRows(mapping) : [];

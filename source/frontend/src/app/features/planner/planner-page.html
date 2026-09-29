@@ -480,36 +480,32 @@
 
           <section aria-labelledby="planner-results-title" class="flex flex-col gap-6">
             <h2 id="planner-results-title" class="sr-only">Plan result</h2>
-            <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-              <app-kpi-card
-                label="Covered revenue"
-                icon="lucideEuro"
-                tone="brand"
-                [value]="plan.kpis.coveredRevenue | eur: 'rounded'"
-                [hint]="percent(plan.kpis.coverage) + ' of eligible revenue'"
-              />
-              <app-kpi-card
-                label="Visits"
-                icon="lucideMapPin"
-                tone="chart-2"
-                [value]="'' + plan.kpis.plannedVisits"
-                [hint]="plan.kpis.uniqueCustomers + ' customers'"
-              />
-              <app-kpi-card
-                label="Working days"
-                icon="lucideCalendarRange"
-                tone="chart-3"
-                [value]="'' + plan.kpis.workingDaysUsed"
-                [hint]="'last visit ' + date(plan.kpis.lastVisitDate)"
-              />
-              <app-kpi-card
-                label="Distance"
-                icon="lucideRoute"
-                tone="chart-4"
-                [value]="decimal(plan.kpis.totalKm) + ' km'"
-                [hint]="decimal(plan.kpis.travelHours) + ' h on the road (' + travelBasis(plan.kpis.travelSource) + ')'"
-              />
-            </div>
+            <app-kpi-summary
+              label="Covered revenue"
+              [value]="plan.kpis.coveredRevenue | eur: 'rounded'"
+              [hint]="percent(plan.kpis.coverage) + ' of eligible revenue'"
+              [progress]="plan.kpis.coverage"
+              [details]="[
+                {
+                  label: 'Visits',
+                  value: '' + plan.kpis.plannedVisits,
+                  hint: plan.kpis.uniqueCustomers + ' customers',
+                  icon: 'lucideMapPin',
+                },
+                {
+                  label: 'Working days',
+                  value: '' + plan.kpis.workingDaysUsed,
+                  hint: 'last visit ' + date(plan.kpis.lastVisitDate),
+                  icon: 'lucideCalendarRange',
+                },
+                {
+                  label: 'Distance',
+                  value: decimal(plan.kpis.totalKm) + ' km',
+                  hint: decimal(plan.kpis.travelHours) + ' h on the road (' + travelBasis(plan.kpis.travelSource) + ')',
+                  icon: 'lucideRoute',
+                },
+              ]"
+            />
 
             @if (plan.days.length) {
               <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">

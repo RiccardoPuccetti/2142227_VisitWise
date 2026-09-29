@@ -249,6 +249,12 @@ describe('PlannerPage', () => {
 
     expect(text()).toContain('Covered revenue');
     expect(text()).toContain('85%');
+    // The covered revenue leads, with a bar for its share of the eligible revenue.
+    const headline = page().querySelector('[data-testid="kpi-headline"]')!;
+    expect(headline.querySelector('h3')?.textContent?.trim()).toBe('Covered revenue');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('85');
+    const labels = [...page().querySelectorAll('[data-testid="kpi-details"] dt')].map((term) => term.textContent?.trim());
+    expect(labels).toEqual(['Visits', 'Working days', 'Distance']);
     expect(text()).toContain('POINT 1');
     expect(page().querySelector('[aria-label="Itinerary for 2 November 2026"]')).not.toBeNull();
     const summary = page().querySelector('[data-testid="planner-road-summary"]')!.textContent!;

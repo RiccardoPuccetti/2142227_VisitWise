@@ -27,7 +27,7 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { KpiCard, PageHeader } from '../../shared';
+import { KpiSummary, PageHeader } from '../../shared';
 import { locatedPercent } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
@@ -53,7 +53,7 @@ import { ImportsService } from './imports.service';
     HlmTableImports,
     HlmToggleGroupImports,
     NgIcon,
-    KpiCard,
+    KpiSummary,
     PageHeader,
   ],
   providers: [
@@ -106,6 +106,7 @@ export class ImportsListPage {
     const imports = this.imports();
     return {
       points: imports.reduce((sum, item) => sum + item.importedRows, 0),
+      located: imports.reduce((sum, item) => sum + item.geocodedRows, 0),
       ready: imports.filter((item) => item.status === 'READY').length,
       pending: imports.filter((item) => item.status === 'PROCESSING' || item.status === 'GEOCODING').length,
       enterprises: new Set(imports.flatMap((item) => item.enterprises.map((enterprise) => enterprise.name))).size,

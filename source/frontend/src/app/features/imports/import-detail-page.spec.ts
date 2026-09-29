@@ -148,18 +148,16 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
     expect(page.querySelector('nav[aria-label="Breadcrumb"] a[href="/imports"]')).not.toBeNull();
     expect(text(page)).toContain('sample-erp-layout.xlsx');
     expect(page.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-28T10:15:00+02:00');
-    // Same key figure cards as the map dashboard; the rows of the file and what "skipped" means are hints.
-    const figures = Array.from(page.querySelectorAll('[data-testid="report"] app-kpi-card')).map((card) =>
-      Array.from(card.querySelectorAll('h3, p'))
-        .map((part) => text(part))
-        .join(' '),
+    // Same key figures as the map dashboard: the imported rows lead, with the share of the file they cover.
+    const headline = page.querySelector('[data-testid="report"] [data-testid="kpi-headline"]')!;
+    expect(text(headline.querySelector('h3'))).toBe('Imported');
+    expect(text(headline)).toContain('73');
+    expect(text(headline)).toContain('of 129 rows in the file');
+    expect(headline.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('57');
+    const details = Array.from(page.querySelectorAll('[data-testid="report"] [data-testid="kpi-details"] > div')).map(
+      (row) => `${text(row.querySelector('dt'))}: ${text(row.querySelector('dd'))}`,
     );
-    expect(figures).toEqual([
-      'Imported 73 of 129 rows in the file',
-      'Skipped 56 subtotals, totals and incomplete rows',
-      'Agents 2',
-      'Cities 2',
-    ]);
+    expect(details).toEqual(['Skipped: 56 subtotals, totals and incomplete rows', 'Agents: 2', 'Cities: 2']);
     // The enterprise colors are the legend of the territory map, as on the map dashboard.
     const legend = page.querySelectorAll('[data-testid="territory"] [aria-label="Enterprises"] li');
     expect(Array.from(legend).map((entry) => text(entry))).toEqual(['Wine', 'Beer']);
@@ -197,14 +195,14 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
     it('shows the progress while addresses are located and refreshes it until the end', async () => {
       const fixture = await render({ ...DETAIL, status: 'GEOCODING' }, POINTS, RUNNING);
 
-      const bar = root(fixture).querySelector('[role="progressbar"]');
+      const bar = root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]');
       expect(bar?.getAttribute('aria-valuenow')).toBe('55');
       expect(text(root(fixture).querySelector('[data-testid="geocoding"]'))).toContain('40 of 73 addresses located');
 
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush({ ...RUNNING, located: 60, pending: 11 });
       await settle(fixture);
-      expect(root(fixture).querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('82');
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('82');
 
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush({ ...RUNNING, status: 'READY', located: 71, pending: 0 });
@@ -215,7 +213,7 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       http.expectOne('/api/imports/7/points').flush(POINTS);
       await settle(fixture);
 
-      expect(root(fixture).querySelector('[role="progressbar"]')).toBeNull();
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')).toBeNull();
       expect(text(root(fixture).querySelector('[data-testid="geocoding"]'))).toContain('71 of 73 addresses located');
       await nextPoll();
       http.expectNone('/api/imports/7/geocoding');
@@ -238,7 +236,7 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush({ ...DONE, status: 'GEOCODING', pending: 1, notFound: 0 });
       await settle(fixture);
-      expect(root(fixture).querySelector('[role="progressbar"]')).not.toBeNull();
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')).not.toBeNull();
 
       await nextPoll();
       http.expectOne('/api/imports/7/geocoding').flush(DONE);
@@ -273,7 +271,7 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
       const fixture = await render(DETAIL, POINTS, stopped);
       const geocoding = root(fixture).querySelector('[data-testid="geocoding"]')!;
 
-      expect(root(fixture).querySelector('[role="progressbar"]')).toBeNull();
+      expect(root(fixture).querySelector('[data-testid="geocoding"] [role="progressbar"]')).toBeNull();
       expect(text(geocoding)).toContain('2 addresses not located yet');
       expect(button('Retry the missing addresses', geocoding).disabled).toBe(false);
       await nextPoll();
