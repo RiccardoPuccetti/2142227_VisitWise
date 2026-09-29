@@ -45,10 +45,6 @@ public class GeocodingService {
         return located;
     }
 
-    public Optional<GeocodedLocation> locate(String address, String city) {
-        return locate(address, city, false);
-    }
-
     /** Cache key: "ADDRESS, CITY" without accents, upper case, single spaces (column {@code query_key}, 400 chars). */
     public static String queryKey(String address, String city) {
         String key = normalize(address) + ", " + normalize(city);
