@@ -1,7 +1,6 @@
 package it.teamlab.visitwise.planning;
 
 import it.teamlab.visitwise.analytics.DeliveryPointResponse;
-import it.teamlab.visitwise.analytics.RevenueLine;
 import it.teamlab.visitwise.common.NotFoundException;
 import it.teamlab.visitwise.imports.DeliveryPoint;
 import it.teamlab.visitwise.imports.DeliveryPointRepository;
@@ -319,7 +318,7 @@ public class PlanningService {
             days.add(new PlanDay(day.date(), blankToNull(day.agent()), dayVisits, day.km()));
         }
         List<DeliveryPointResponse> notPlanned = result.notPlanned().stream()
-                .map(target -> deliveryPoint(byId.get(target.id()))).toList();
+                .map(target -> DeliveryPointResponse.of(byId.get(target.id()))).toList();
         List<String> warnings = new ArrayList<>();
         if (result.excludedNotGeocoded() > 0) {
             warnings.add(result.excludedNotGeocoded() + " delivery points without coordinates were excluded");
@@ -336,14 +335,6 @@ public class PlanningService {
                 source.eligibleRevenue(), source.coverage(), source.upperBoundRevenue(), source.totalKm(),
                 source.travelHours(), source.workingDaysUsed(), source.lastVisitDate(), source.visitsAfterDeadline(),
                 source.excludedOutOfRange(), travelSource);
-    }
-
-    private static DeliveryPointResponse deliveryPoint(DeliveryPoint point) {
-        List<RevenueLine> revenues = point.getRevenues().stream()
-                .map(revenue -> new RevenueLine(revenue.getEnterprise().getId(), revenue.getAmount())).toList();
-        return new DeliveryPointResponse(point.getId(), point.getSourceRow(), point.getCustomerName(),
-                point.getPointName(), point.getAddress(), point.getCity(), point.getAgent(), point.getLatitude(),
-                point.getLongitude(), point.getGeocodeStatus(), point.getTotalRevenue(), revenues);
     }
 
     private static PlanParameters withWorkingDays(PlanParameters base, int days) {
