@@ -62,53 +62,54 @@
     }
 
     <section aria-labelledby="calendar-title" class="flex flex-col gap-6">
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div class="flex flex-col gap-0.5">
-          <h2 id="calendar-title" class="panel-title">Calendar</h2>
-          <p class="panel-subtitle">One week at a time: pick a day to see its stops. Each stop links to the directions from the previous one.</p>
-        </div>
-        @if (agents().length) {
-          <div class="flex min-w-56 flex-col gap-1.5">
-            <label hlmLabel for="plan-agent" class="text-xs">Agent</label>
-            <hlm-native-select selectId="plan-agent" [value]="agent() ?? ''" (valueChange)="setAgent($event)">
-              <option hlmNativeSelectOption value="">All agents</option>
-              @for (name of agents(); track name) {
-                <option hlmNativeSelectOption [value]="name">{{ name }}</option>
-              }
-            </hlm-native-select>
-          </div>
-        }
+      <div class="flex flex-col gap-0.5">
+        <h2 id="calendar-title" class="panel-title">Calendar</h2>
+        <p class="panel-subtitle">One week at a time: pick a day to see its stops. Each stop links to the directions from the previous one.</p>
       </div>
       @if (week(); as week) {
         <!-- One week at a time: the pager, a strip with its five days, then the stops of the selected day. -->
         <section data-testid="calendar-week" [attr.aria-labelledby]="'week-' + week.monday" class="flex flex-col gap-4">
-          <div class="flex items-center gap-3">
-            <button
-              hlmBtn
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label="Previous week"
-              [disabled]="weekIndex() === 0"
-              (click)="moveWeek(-1)"
-            >
-              <ng-icon name="lucideChevronLeft" aria-hidden="true" />
-            </button>
-            <h3 [id]="'week-' + week.monday" class="text-sm font-semibold" aria-live="polite">
-              {{ week.title }}
-              <span class="text-muted-foreground font-normal">· week {{ weekIndex() + 1 }} of {{ weeks().length }}</span>
-            </h3>
-            <button
-              hlmBtn
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              aria-label="Next week"
-              [disabled]="weekIndex() === weeks().length - 1"
-              (click)="moveWeek(1)"
-            >
-              <ng-icon name="lucideChevronRight" aria-hidden="true" />
-            </button>
+          <!-- One toolbar: the week pager on the left, the agent filter on the right. -->
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <button
+                hlmBtn
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                aria-label="Previous week"
+                [disabled]="weekIndex() === 0"
+                (click)="moveWeek(-1)"
+              >
+                <ng-icon name="lucideChevronLeft" aria-hidden="true" />
+              </button>
+              <h3 [id]="'week-' + week.monday" class="text-sm font-semibold" aria-live="polite">
+                {{ week.title }}
+                <span class="text-muted-foreground font-normal">· week {{ weekIndex() + 1 }} of {{ weeks().length }}</span>
+              </h3>
+              <button
+                hlmBtn
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                aria-label="Next week"
+                [disabled]="weekIndex() === weeks().length - 1"
+                (click)="moveWeek(1)"
+              >
+                <ng-icon name="lucideChevronRight" aria-hidden="true" />
+              </button>
+            </div>
+            @if (agents().length) {
+              <div class="flex items-center gap-2">
+                <label hlmLabel for="plan-agent" class="text-muted-foreground font-normal">Agent</label>
+                <hlm-native-select selectId="plan-agent" size="sm" [value]="agent() ?? ''" (valueChange)="setAgent($event)">
+                  <option hlmNativeSelectOption value="">All agents</option>
+                  @for (name of agents(); track name) {
+                    <option hlmNativeSelectOption [value]="name">{{ readable(name) }}</option>
+                  }
+                </hlm-native-select>
+              </div>
+            }
           </div>
 
           <ol class="grid grid-cols-5 gap-2 max-sm:gap-1" aria-label="Days of the week">
