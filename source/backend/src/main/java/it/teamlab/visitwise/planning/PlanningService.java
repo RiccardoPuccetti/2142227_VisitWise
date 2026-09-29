@@ -34,6 +34,7 @@ import it.teamlab.visitwise.planning.engine.VisitConstraints;
 import it.teamlab.visitwise.planning.engine.VisitPlanner;
 import it.teamlab.visitwise.planning.engine.WorkingCalendar;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,6 +43,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -327,12 +329,19 @@ public class PlanningService {
         }
         if (result.kpis().excludedOutOfRange() > 0) {
             warnings.add(result.kpis().excludedOutOfRange() + " delivery points are farther than "
-                    + parameters.maxDistanceKm() + " km from the base and were excluded");
+                    + kilometres(parameters.maxDistanceKm()) + " km from the base and were excluded");
         }
         return new PlanResult(id, name, parameters, kpis(result.kpis(), travelSource), days, notPlanned, warnings);
     }
 
-    private static PlanKpis kpis(PlannerResult.Kpis source, RouteSource travelSource) {
+    /** Written like the interface's numbers: Italian decimal comma, at most one decimal ("80", "0,5"). */
+    private static String kilometres(double km) {
+        NumberFormat format = NumberFormat.getNumberInstance(Locale.ITALY);
+        format.setMaximumFractionDigits(1);
+        return format.format(km);
+    }
+
+        private static PlanKpis kpis(PlannerResult.Kpis source, RouteSource travelSource) {
         return new PlanKpis(source.plannedVisits(), source.uniqueCustomers(), source.coveredRevenue(),
                 source.eligibleRevenue(), source.coverage(), source.upperBoundRevenue(), source.totalKm(),
                 source.travelHours(), source.workingDaysUsed(), source.lastVisitDate(), source.visitsAfterDeadline(),

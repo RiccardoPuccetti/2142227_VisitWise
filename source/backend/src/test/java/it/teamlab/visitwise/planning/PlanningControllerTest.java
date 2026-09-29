@@ -131,6 +131,26 @@ class PlanningControllerTest {
     }
 
     @Test
+    void theRangeWarningWritesTheDistanceLikeTheInterface() throws Exception {
+        // Both points are about 0.75 and 1.2 km from the base by the road estimate.
+        mvc.perform(post(importUrl("/plans/simulate"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(parameters(1).replace("\"maxDistanceKm\":80", "\"maxDistanceKm\":0.5")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0]")
+                        .value("2 delivery points are farther than 0,5 km from the base and were excluded"));
+
+        mvc.perform(post(importUrl("/plans/simulate"))
+                        .with(asTenant(tenantId)).with(xsrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(parameters(1).replace("\"maxDistanceKm\":80", "\"maxDistanceKm\":1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.warnings[0]")
+                        .value("1 delivery points are farther than 1 km from the base and were excluded"));
+    }
+
+    @Test
     void simulationUsesRoadDistancesAndTimesWhenTheRoadNetworkAnswers() throws Exception {
         FakeRoadMatrixProvider.answerEveryPair(10, 15);
         try {
