@@ -46,10 +46,9 @@
           @for (section of importSections(); track section.label) {
             <a
               [routerLink]="section.link"
-              routerLinkActive="active"
-              [routerLinkActiveOptions]="{ exact: section.exact }"
-              ariaCurrentWhenActive="page"
               class="nav-item"
+              [class.active]="section.current"
+              [attr.aria-current]="section.current ? 'page' : null"
               [attr.title]="sidebar.collapsed() ? section.label : null"
               ><ng-icon [name]="section.icon" aria-hidden="true" /><span class="label">{{ section.label }}</span></a
             >

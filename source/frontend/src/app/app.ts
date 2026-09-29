@@ -26,13 +26,16 @@ import { SidebarPreference } from './core/layout/sidebar-preference';
 import type { ImportSummary } from './core/models/api.models';
 import { ThemeService } from './core/theme/theme.service';
 
-/** Pages of one import, shown in the navigation when the URL is `/imports/:importId/...`. */
-const IMPORT_SECTIONS = [
-  { path: '', label: 'Overview', icon: 'lucideLayoutDashboard', exact: true },
-  { path: 'map', label: 'Map', icon: 'lucideMap', exact: false },
-  { path: 'planner', label: 'Planner', icon: 'lucideCalendarRange', exact: false },
-  { path: 'scenarios', label: 'Scenarios', icon: 'lucideGitCompareArrows', exact: false },
-] as const;
+/**
+ * Pages of one import, shown in the navigation when the URL is `/imports/:importId/...`. A section is current on its
+ * own path and below it, and on the `also` paths: a saved plan (`plans/:planId`) is opened from the scenarios.
+ */
+const IMPORT_SECTIONS: readonly { path: string; label: string; icon: string; also?: readonly string[] }[] = [
+  { path: '', label: 'Overview', icon: 'lucideLayoutDashboard' },
+  { path: 'map', label: 'Map', icon: 'lucideMap' },
+  { path: 'planner', label: 'Planner', icon: 'lucideCalendarRange' },
+  { path: 'scenarios', label: 'Scenarios', icon: 'lucideGitCompareArrows', also: ['plans'] },
+];
 
 /** Extracts the numeric import id from a URL such as `/imports/42/map`; `/imports/new` has none. */
 export function importIdFromUrl(url: string): number | null {
@@ -102,12 +105,16 @@ export class App {
 
   protected readonly importSections = computed(() => {
     const id = this.importId();
-    return id === null
-      ? []
-      : IMPORT_SECTIONS.map((section) => ({
-          ...section,
-          link: section.path ? ['/imports', id, section.path] : ['/imports', id],
-        }));
+    if (id === null) {
+      return [];
+    }
+    // The first segment after /imports/:id ('' on the overview), without query or fragment.
+    const segment = this.url().split(/[?#]/)[0].split('/')[3] ?? '';
+    return IMPORT_SECTIONS.map((section) => ({
+      ...section,
+      link: section.path ? ['/imports', id, section.path] : ['/imports', id],
+      current: segment === section.path || (section.also?.includes(segment) ?? false),
+    }));
   });
 
   /**

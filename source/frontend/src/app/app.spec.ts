@@ -189,6 +189,21 @@ describe('App', () => {
       'Map',
     );
   });
+
+  it('keeps Scenarios current on a saved plan, opened from the scenarios', async () => {
+    auth.setCurrentTenant(TENANT);
+    const fixture = TestBed.createComponent(App);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    await TestBed.inject(Router).navigateByUrl('/imports/42/plans/7');
+    TestBed.tick();
+    TestBed.inject(HttpTestingController).expectOne('/api/imports/42').flush({ id: 42, name: 'Sample 2025' });
+    await fixture.whenStable();
+
+    const current = compiled.querySelectorAll('nav[aria-label="Import 42"] a[aria-current="page"]');
+    expect(Array.from(current).map((a) => a.textContent?.trim())).toEqual(['Scenarios']);
+    expect(current[0].classList).toContain('active');
+  });
 });
 
 describe('importIdFromUrl', () => {
