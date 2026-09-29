@@ -301,3 +301,34 @@ describe('ScenarioComparePage when its data cannot be loaded', () => {
     http.verify();
   });
 });
+
+describe('ScenarioComparePage before its data arrives', () => {
+  it('shows placeholders in the shape of the page, then the page', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter(
+          [{ path: 'imports/:importId/scenarios', component: ScenarioComparePage }],
+          withComponentInputBinding(),
+        ),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/scenarios');
+    const page = () => harness.routeNativeElement as HTMLElement;
+
+    expect(page().querySelector('[data-testid="scenarios-loading"]')).not.toBeNull();
+
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http.expectOne('/api/imports/42/analytics/summary').flush(OPTIONS);
+    http.expectOne('/api/profile/base').flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne('/api/imports/42/plans').flush([]);
+    await harness.fixture.whenStable();
+
+    expect(page().querySelector('[data-testid="scenarios-loading"]')).toBeNull();
+    expect(page().querySelector('#whatif-title')).not.toBeNull();
+    http.verify();
+  });
+});

@@ -556,3 +556,32 @@ describe('PlannerPage when its data cannot be loaded', () => {
     http.verify();
   });
 });
+
+describe('PlannerPage before its data arrives', () => {
+  it('shows placeholders in the shape of the setup, then the setup', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PLAN_REVEAL_MS, useValue: 0 },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'imports/:importId/planner', component: PlannerPage }], withComponentInputBinding()),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/planner');
+    const page = () => harness.routeNativeElement as HTMLElement;
+
+    expect(page().querySelector('[data-testid="planner-loading"]')).not.toBeNull();
+
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http.expectOne('/api/imports/42/analytics/summary').flush(OPTIONS);
+    http.expectOne('/api/profile/base').flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne('/api/imports/42/geocoding').flush(PROGRESS_DONE);
+    await harness.fixture.whenStable();
+
+    expect(page().querySelector('[data-testid="planner-loading"]')).toBeNull();
+    expect(page().querySelector('select#planner-campaign')).not.toBeNull();
+    http.verify();
+  });
+});

@@ -15,6 +15,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import type {
@@ -24,7 +25,7 @@ import type {
   WhatIfResult,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatDateTime, formatDecimal, formatEur, formatPercent, PageHeader, valueOf } from '../../shared';
+import { EurPipe, formatDateTime, formatDecimal, formatEur, formatPercent, minimumLoading, PageHeader, valueOf } from '../../shared';
 import { DEFAULT_BASE } from './planner.model';
 import { PlannerService } from './planner.service';
 import {
@@ -60,6 +61,7 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     HlmFieldImports,
     HlmInputImports,
     HlmNativeSelectImports,
+    HlmSkeletonImports,
     HlmSpinnerImports,
     HlmTableImports,
     EurPipe,
@@ -126,7 +128,7 @@ export class ScenarioComparePage {
   });
 
   protected readonly campaigns = computed(() => valueOf(this.campaignsResource) ?? []);
-  protected readonly loading = computed(
+  protected readonly loading = minimumLoading(
     () =>
       this.campaignsResource.isLoading() ||
       this.optionsResource.isLoading() ||

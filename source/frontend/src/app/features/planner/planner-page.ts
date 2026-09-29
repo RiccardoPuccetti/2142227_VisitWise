@@ -53,8 +53,10 @@ import {
   formatDate,
   formatDecimal,
   formatPercent,
+  type KpiDetail,
   KpiSummary,
   MapView,
+  minimumLoading,
   PageHeader,
   valueOf,
 } from '../../shared';
@@ -280,7 +282,13 @@ export class PlannerPage {
   private readonly roadRoutes = signal<Record<string, RouteResponse>>({});
   protected readonly routing = signal(false);
 
-  protected readonly loading = computed(
+  /** The key figures of a plan, shown empty while one is generated. */
+  protected readonly loadingDetails: KpiDetail[] = [
+    { label: 'Visits', value: '', icon: 'lucideMapPin' },
+    { label: 'Working days', value: '', icon: 'lucideCalendarRange' },
+    { label: 'Distance', value: '', icon: 'lucideRoute' },
+  ];
+  protected readonly loading = minimumLoading(
     () =>
       this.campaignsResource.isLoading() ||
       this.optionsResource.isLoading() ||
