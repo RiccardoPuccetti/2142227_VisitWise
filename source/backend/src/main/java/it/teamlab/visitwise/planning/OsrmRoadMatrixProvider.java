@@ -3,10 +3,8 @@ package it.teamlab.visitwise.planning;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import it.teamlab.visitwise.planning.engine.GeoPoint;
 import it.teamlab.visitwise.planning.engine.RoadMatrix;
-import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -16,9 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -44,8 +39,7 @@ public class OsrmRoadMatrixProvider implements RoadMatrixProvider {
 
     @Autowired
     public OsrmRoadMatrixProvider(RoutingProperties routing, RoadMatrixProperties properties) {
-        this(routing, properties, RestClient.builder().baseUrl(routing.baseUrl())
-                .requestFactory(requestFactory(routing.timeoutMs())).build());
+        this(routing, properties, OsrmRequests.client(routing));
     }
 
     OsrmRoadMatrixProvider(RoutingProperties routing, RoadMatrixProperties properties, RestClient client) {
@@ -58,12 +52,6 @@ public class OsrmRoadMatrixProvider implements RoadMatrixProvider {
                 return size() > properties.cacheSize();
             }
         };
-    }
-
-    private static JdkClientHttpRequestFactory requestFactory(long timeoutMs) {
-        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory();
-        factory.setReadTimeout(Duration.ofMillis(timeoutMs));
-        return factory;
     }
 
     @Override
@@ -131,23 +119,14 @@ public class OsrmRoadMatrixProvider implements RoadMatrixProvider {
                 : Stream.concat(points.subList(from, fromEnd).stream(),
                         points.subList(to, toEnd).stream()).toList();
         StringBuilder uri = new StringBuilder("/table/v1/driving/")
-                .append(coordinates.stream()
-                        .map(point -> String.format(Locale.ROOT, "%.6f,%.6f", point.longitude(), point.latitude()))
-                        .collect(Collectors.joining(";")))
+                .append(OsrmRequests.coordinates(coordinates))
                 .append("?annotations=duration,distance");
         if (!diagonal) {
             int sources = fromEnd - from;
             uri.append("&sources=").append(indices(0, sources))
                     .append("&destinations=").append(indices(sources, sources + toEnd - to));
         }
-        Table table = client.get()
-                .uri(uri.toString())
-                .header(HttpHeaders.USER_AGENT, routing.userAgent())
-                // osrm-routed answers "deflate" in a form the JDK client cannot read (ZipException): gzip only.
-                .header(HttpHeaders.ACCEPT_ENCODING, "gzip")
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .body(Table.class);
+        Table table = OsrmRequests.get(client, uri.toString(), routing.userAgent(), Table.class);
         if (table == null || !"Ok".equals(table.code()) || table.durations() == null || table.distances() == null) {
             throw new IllegalStateException("OSRM table answered " + (table == null ? "nothing" : table.code()));
         }
