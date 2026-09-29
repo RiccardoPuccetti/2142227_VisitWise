@@ -366,7 +366,12 @@ describe('MapDashboardPage', () => {
     expect(page().textContent).not.toContain('No revenue for these filters');
     expect(page().querySelectorAll('[data-testid="points-scroller"] tbody [data-testid="row-placeholder"]').length).toBeGreaterThan(0);
 
+    // The points arrive first: nothing of them shows yet, so the page changes once, when everything is there.
     http.expectOne('/api/imports/42/points').flush(POINTS);
+    TestBed.tick();
+    expect(page().querySelectorAll('[data-testid="points-scroller"] tbody tr[data-point-id]').length).toBe(0);
+    expect(page().querySelector('app-enterprise-legend')).toBeNull();
+
     summaryRequests().forEach((r) => r.flush(summary()));
     await harness.fixture.whenStable();
     expect(page().querySelector('[data-testid="chart-placeholder"]')).toBeNull();

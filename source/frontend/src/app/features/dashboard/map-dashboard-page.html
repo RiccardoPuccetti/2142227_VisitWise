@@ -200,7 +200,12 @@
     <section hlmCard size="sm" class="xl:col-start-2 xl:row-start-1" aria-label="Map of the delivery points">
       <div hlmCardContent class="flex flex-col gap-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
+          <!-- Legend, count, markers, rows and pager wait with the charts: the page changes once, when all is there. -->
+          @if (loading()) {
+            <hlm-skeleton class="h-4 w-56" aria-hidden="true" />
+          } @else {
+            <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
+          }
           @if (loading()) {
             <hlm-skeleton class="h-4 w-44" aria-hidden="true" />
           } @else {
@@ -217,7 +222,7 @@
           <app-map-view
             class="block h-[30rem] overflow-hidden rounded-xl border xl:h-[44rem]"
             ariaLabel="Map of the delivery points"
-            [markers]="markers()"
+            [markers]="loading() ? [] : markers()"
             [highlightedId]="selectedId()"
             [popupId]="popupOnMap() ? selectedId() : null"
             (markerClick)="selectOnMap($event.id)"
@@ -310,7 +315,7 @@
                   <td hlmTd class="pr-6"><hlm-skeleton class="ml-auto h-4 w-20" /></td>
                 </tr>
               }
-            }
+            } @else {
             @for (row of paging.rows(); track row.point.id) {
               <tr hlmTr [attr.data-point-id]="row.point.id" [attr.aria-current]="row.point.id === selectedId() ? 'true' : null" [class.bg-accent]="row.point.id === selectedId()">
                 <td hlmTd class="pl-6 whitespace-normal">
@@ -324,10 +329,13 @@
                 <td hlmTd class="pr-6 text-right tabular-nums">{{ row.revenue | eur }}</td>
               </tr>
             }
+            }
           </tbody>
         </table>
       </div>
-      <app-table-pager [paging]="paging" idPrefix="points" label="Pages of points" [scroller]="scroller" />
+      @if (!loading()) {
+        <app-table-pager [paging]="paging" idPrefix="points" label="Pages of points" [scroller]="scroller" />
+      }
     </div>
   </section>
 </div>
