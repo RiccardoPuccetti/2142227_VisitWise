@@ -21,7 +21,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     // Know who is logged in before the first route guard runs.
     provideAppInitializer(() => inject(AuthService).loadSession()),
-    // Spartan overlays (dialog, select, tooltip...) must render below the toaster.
+    // Spartan overlays (dialog, alert dialog) must render below the toaster.
     provideSpartanHlm(),
     // Loading placeholders stay up at least this long, so a fast (local) answer does not flash them.
     { provide: LOADING_MIN_MS, useValue: 450 },
