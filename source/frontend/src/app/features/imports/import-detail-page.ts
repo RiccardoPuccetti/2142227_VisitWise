@@ -47,6 +47,7 @@ import {
   minimumLoading,
   PageHeader,
   TablePager,
+  valueOf,
 } from '../../shared';
 import {
   geocodeStatusLabel,
@@ -57,7 +58,7 @@ import {
   needsLocation,
   territoryMarkers,
 } from './import-detail.model';
-import { importStatusLabel } from './import-status';
+import { importStatusLabel, importStatusVariant } from './import-status';
 import { ImportsService } from './imports.service';
 import { PointLocationForm } from './point-location-form';
 
@@ -134,10 +135,9 @@ export class ImportDetailPage {
     loader: ({ params }) => this.api.points(params),
   });
 
-  protected readonly detail = computed(() =>
-    this.detailResource.hasValue() ? this.detailResource.value() : undefined,
-  );
+  protected readonly detail = computed(() => valueOf(this.detailResource));
   protected readonly loading = minimumLoading(() => this.detailResource.isLoading() && !this.detail());
+  protected readonly statusVariant = importStatusVariant;
   protected readonly loadError = computed(() => {
     const error = this.detailResource.error();
     return error ? problemDetail(error) : null;

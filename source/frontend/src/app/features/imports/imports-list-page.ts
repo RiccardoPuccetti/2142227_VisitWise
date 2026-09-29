@@ -27,9 +27,9 @@ import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { formatDateTime, type KpiDetail, KpiSummary, minimumLoading, PageHeader } from '../../shared';
+import { formatDateTime, type KpiDetail, KpiSummary, minimumLoading, PageHeader, valueOf } from '../../shared';
 import { locatedPercent } from './import-detail.model';
-import { importStatusLabel } from './import-status';
+import { importStatusLabel, importStatusVariant } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
 import { ImportsService } from './imports.service';
 
@@ -91,11 +91,10 @@ export class ImportsListPage {
   private readonly importsResource = resource({ loader: () => this.api.list() });
 
   /** The loaded list, without the imports deleted since. */
-  private readonly imports = linkedSignal(() =>
-    this.importsResource.hasValue() ? this.importsResource.value() : [],
-  );
+  private readonly imports = linkedSignal(() => valueOf(this.importsResource) ?? []);
 
   protected readonly loading = minimumLoading(this.importsResource.isLoading);
+  protected readonly statusVariant = importStatusVariant;
   protected readonly loadError = computed(() => {
     const error = this.importsResource.error();
     return error ? problemDetail(error) : null;

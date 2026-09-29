@@ -50,6 +50,7 @@ import {
   createPaging,
   PageHeader,
   POPUP_GAP,
+  prefersReducedMotion,
   TablePager,
   valueOf,
 } from '../../shared';
@@ -357,10 +358,9 @@ export class MapDashboardPage {
     const header = scroller.querySelector('thead')?.getBoundingClientRect().height ?? 0;
     const rowTop = row.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     const visible = scroller.clientHeight - header;
-    const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     scroller.scrollTo({
       top: Math.max(0, rowTop - header - (visible - row.offsetHeight) / 2),
-      behavior: reduceMotion ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
     });
   }
 

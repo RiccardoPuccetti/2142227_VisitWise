@@ -33,15 +33,12 @@ import {
   toMarkerFeatures,
   toRouteFeatures,
 } from './map-view.model';
+import { prefersReducedMotion } from '../motion';
 
 /** Pixels between a marker and its popup. */
 export const POPUP_GAP = 14;
 /** How long the map glides to new data. */
 const FIT_DURATION_MS = 450;
-
-function prefersReducedMotion(): boolean {
-  return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-}
 
 /**
  * OpenStreetMap map with markers and routes (OpenLayers). Shared by the map dashboard,

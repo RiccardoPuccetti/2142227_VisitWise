@@ -12,3 +12,8 @@ export function importStatusLabel(status: ImportStatus): string {
   return LABELS[status];
 }
 
+
+/** Badge look of an import status: a failure stands out, a ready import stays quiet, a running one is grey. */
+export function importStatusVariant(status: ImportStatus): 'destructive' | 'outline' | 'secondary' {
+  return status === 'FAILED' ? 'destructive' : status === 'READY' ? 'outline' : 'secondary';
+}

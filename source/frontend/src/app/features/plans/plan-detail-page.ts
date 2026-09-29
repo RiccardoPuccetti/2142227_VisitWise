@@ -35,6 +35,7 @@ import {
   KpiSummary,
   minimumLoading,
   PageHeader,
+  valueOf,
 } from '../../shared';
 import { agentLabel, calendarWeeks, exportUrl, planAgents, readableName, visitStops } from './plan.model';
 import { PlansService } from './plans.service';
@@ -103,9 +104,7 @@ export class PlanDetailPage {
     loader: ({ params }) => this.api.plan(params),
   });
 
-  protected readonly plan = computed(() =>
-    this.planResource.hasValue() ? this.planResource.value() : undefined,
-  );
+  protected readonly plan = computed(() => valueOf(this.planResource));
   protected readonly error = computed(() => {
     const error = this.planResource.error();
     return error ? problemDetail(error) : null;

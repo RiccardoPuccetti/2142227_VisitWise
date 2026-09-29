@@ -37,8 +37,10 @@ export class AuthService {
     }
   }
 
-  /** Spring Security form login: form-encoded `username` (the email) and `password`. */
-  /** `rememberMe` (US-37): the backend keeps this device logged in for 14 days with an HttpOnly cookie. */
+  /**
+   * Spring Security form login: form-encoded `username` (the email) and `password`. `rememberMe` (US-37): the backend
+   * keeps this device logged in for 14 days with an HttpOnly cookie.
+   */
   async login(email: string, password: string, rememberMe = false): Promise<CurrentTenant> {
     let body = new HttpParams({ encoder: STRICT_FORM_ENCODING })
       .set('username', email)
