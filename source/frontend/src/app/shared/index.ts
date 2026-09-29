@@ -1,5 +1,6 @@
 export * from './charts/area-chart';
 export * from './charts/donut-chart';
+export * from './enterprise-color';
 export * from './enterprise-legend';
 export * from './eur.pipe';
 export * from './format';
