@@ -27,13 +27,13 @@
           this finishes
         </span>
       </div>
-    } @else if (geocoding.notFound > 0 || geocoding.errorMessage) {
+    } @else if (missingAddresses() > 0 || geocoding.errorMessage) {
       <div
         role="status"
         class="bg-warning text-warning-foreground flex flex-wrap items-center gap-x-2 gap-y-1 rounded-r-lg border-l-[3px] border-l-(--chart-4) px-3 py-2 text-sm"
       >
         <ng-icon name="lucideMapPinOff" class="shrink-0 text-base text-(--chart-4)" aria-hidden="true" />
-        <span class="font-medium">{{ geocoding.notFound }} of {{ geocoding.total }} addresses not located</span>
+        <span class="font-medium">{{ missingAddresses() }} of {{ geocoding.total }} addresses not located</span>
         <span class="opacity-80">· {{ geocoding.errorMessage ?? 'left out of the plan' }}</span>
         <span class="ml-auto flex items-center gap-4">
           <button

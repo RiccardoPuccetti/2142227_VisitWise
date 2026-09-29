@@ -517,4 +517,15 @@ describe('PlannerPage while addresses are still being geocoded', () => {
     request.flush(null, { status: 202, statusText: 'Accepted' });
     await harness.fixture.whenStable();
   });
+
+  it('offers a retry, instead of locating forever, for addresses left waiting on a ready import', async () => {
+    http.expectOne('/api/imports/42/geocoding').flush({ ...PROGRESS_DONE, located: 7, pending: 3, total: 10 });
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(text()).not.toContain('Locating customer addresses');
+    expect(text()).toContain('3 of 10 addresses not located');
+    const root = harness.routeNativeElement as HTMLElement;
+    expect(root.querySelector('button[aria-label="Retry geocoding"]')).not.toBeNull();
+  });
 });

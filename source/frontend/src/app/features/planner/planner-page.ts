@@ -311,9 +311,12 @@ export class PlannerPage {
   protected readonly routes = computed(() =>
     planRoutes(this.result(), this.selectedDayIndex(), this.road()),
   );
-  protected readonly geocodingActive = computed(() => {
+  /** Only a running job: points left PENDING on a READY import wait for a retry (US-09), they are not being located. */
+  protected readonly geocodingActive = computed(() => this.progress()?.status === 'GEOCODING');
+  /** Addresses without coordinates that the retry asks for again: never tried (PENDING) and not found. */
+  protected readonly missingAddresses = computed(() => {
     const progress = this.progress();
-    return !!progress && (progress.status === 'GEOCODING' || progress.pending > 0);
+    return progress ? progress.pending + progress.notFound : 0;
   });
 
   constructor() {
