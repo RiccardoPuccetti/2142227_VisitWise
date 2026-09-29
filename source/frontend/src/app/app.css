@@ -469,12 +469,3 @@
     --page-pad-y: 2.5rem;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .sidebar,
-  .drawer-backdrop,
-  .nav-item,
-  .account {
-    transition: none;
-  }
-}

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
+import { formatPercent } from '../format';
 
 export interface DonutSlice {
   key: string;
@@ -18,7 +19,6 @@ interface DrawnSlice extends DonutSlice {
 const RADIUS = 42;
 const THICKNESS = 12;
 const CENTER = 50;
-const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
 
 function polar(angle: number, radius: number): [number, number] {
   return [CENTER + radius * Math.cos(angle), CENTER + radius * Math.sin(angle)];
@@ -53,7 +53,6 @@ function arcPath(start: number, end: number): string {
  */
 @Component({
   selector: 'app-donut-chart',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     @if (drawn().length === 0) {
@@ -148,6 +147,6 @@ export class DonutChart {
   });
 
   protected percent(share: number): string {
-    return PERCENT.format(share);
+    return formatPercent(share);
   }
 }

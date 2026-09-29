@@ -1,12 +1,10 @@
 import type { DeliveryPoint, EnterpriseAmount, ParetoPoint } from '../../core/models/api.models';
-import { formatEur, type MapMarker } from '../../shared';
+import { formatEur, mainEnterpriseColor, type MapMarker } from '../../shared';
 
 /** Smallest marker radius in pixels, so that small customers stay visible and clickable. */
 export const MIN_MARKER_RADIUS = 3;
 /** Radius of the point with the largest revenue. */
 export const MAX_MARKER_RADIUS = 18;
-/** Color of a marker whose enterprise has no color. */
-const FALLBACK_COLOR = '#6b7280';
 
 /** Filters of the map dashboard (US-14, US-15). Empty values mean "all". */
 export interface DashboardFilter {
@@ -74,20 +72,6 @@ export function markerRadius(revenue: number, maxRevenue: number): number {
   return Math.max(MIN_MARKER_RADIUS, MAX_MARKER_RADIUS * Math.sqrt(revenue / maxRevenue));
 }
 
-/** The selected enterprise with the largest revenue at this point: it gives the marker its color. */
-function mainEnterpriseId(point: DeliveryPoint, enterpriseIds: readonly number[]): number | null {
-  let best: { enterpriseId: number; amount: number } | null = null;
-  for (const line of point.revenues) {
-    if (
-      inSelection(line.enterpriseId, enterpriseIds) &&
-      (best === null || line.amount > best.amount)
-    ) {
-      best = line;
-    }
-  }
-  return best?.enterpriseId ?? null;
-}
-
 /** Markers of the filtered, geolocated points: color of the main enterprise, area proportional to revenue. */
 export function toMarkers(
   points: readonly DeliveryPoint[],
@@ -100,17 +84,14 @@ export function toMarkers(
   );
   const revenues = placed.map((p) => pointRevenue(p, filter.enterpriseIds));
   const max = Math.max(0, ...revenues);
-  return placed.map((point, i) => {
-    const main = mainEnterpriseId(point, filter.enterpriseIds);
-    return {
-      id: point.id,
-      latitude: point.latitude as number,
-      longitude: point.longitude as number,
-      color: (main !== null && colors.get(main)) || FALLBACK_COLOR,
-      radius: markerRadius(revenues[i], max),
-      title: `${point.pointName} – ${formatEur(revenues[i], 'rounded')}`,
-    };
-  });
+  return placed.map((point, i) => ({
+    id: point.id,
+    latitude: point.latitude as number,
+    longitude: point.longitude as number,
+    color: mainEnterpriseColor(point.revenues, colors, filter.enterpriseIds),
+    radius: markerRadius(revenues[i], max),
+    title: `${point.pointName} – ${formatEur(revenues[i], 'rounded')}`,
+  }));
 }
 
 /** Query string of the filters (US-15): unset filters are removed from the URL. */

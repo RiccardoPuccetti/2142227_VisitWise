@@ -1,4 +1,5 @@
 import type { DeliveryPoint, EnterpriseAmount, ParetoPoint } from '../../core/models/api.models';
+import { NO_REVENUE_COLOR } from '../../shared';
 import {
   EMPTY_FILTER,
   filterFromParams,
@@ -128,6 +129,12 @@ describe('toMarkers', () => {
     expect(markers.map((m) => m.id)).toEqual([1, 2]);
     expect(markers[0].color).toBe('#2563eb');
     expect(markers[1].radius).toBeCloseTo(MAX_MARKER_RADIUS * Math.sqrt(400 / 1000), 6);
+  });
+
+  it('draws a point without positive revenue in grey, like the import detail', () => {
+    const [marker] = toMarkers([point(5, [[21, -20]])], ENTERPRISES, EMPTY_FILTER);
+
+    expect(marker.color).toBe(NO_REVENUE_COLOR);
   });
 });
 

@@ -7,6 +7,8 @@ import it.teamlab.visitwise.imports.ImportBatch;
 import it.teamlab.visitwise.imports.ImportBatchRepository;
 import it.teamlab.visitwise.imports.ImportCreatedEvent;
 import it.teamlab.visitwise.imports.ImportStatus;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,6 +38,8 @@ public class ImportGeocodingJob {
     private final GeocodingService geocoding;
     private final TransactionTemplate transactions;
     private final Set<Long> running = ConcurrentHashMap.newKeySet();
+    /** Retries asked while the import was running: each one runs once the current run ends. */
+    private final Set<Long> retryRequested = ConcurrentHashMap.newKeySet();
 
     public ImportGeocodingJob(DeliveryPointRepository points, ImportBatchRepository imports,
             GeocodingService geocoding, TransactionTemplate transactions) {
@@ -59,7 +63,7 @@ public class ImportGeocodingJob {
         imports.findByStatus(ImportStatus.GEOCODING).forEach(batch -> run(batch.getId(), false));
     }
 
-    /** Endpoint 9 (US-09): NOT_FOUND points are asked to the provider again, ignoring cached misses. */
+    /** Endpoint 9 (US-09): PENDING and NOT_FOUND points are asked to the provider again, ignoring cached misses. */
     @Async(GeocodingConfig.EXECUTOR)
     public void retry(Long importId) {
         run(importId, true);
@@ -68,27 +72,33 @@ public class ImportGeocodingJob {
     /** Synchronous body, package-private for tests. */
     void run(Long importId, boolean retryMisses) {
         if (!running.add(importId)) {
+            if (retryMisses) {
+                retryRequested.add(importId);
+            }
             return;
         }
         try {
             List<DeliveryPoint> pending = pendingPoints(importId, retryMisses);
             log.info("Geocoding import {}: {} addresses to resolve", importId, pending.size());
-            int failed = 0;
+            boolean interrupted = false;
             for (DeliveryPoint point : pending) {
                 try {
                     Optional<GeocodedLocation> location =
                             geocoding.locate(point.getAddress(), point.getCity(), retryMisses);
                     transactions.executeWithoutResult(status -> apply(point.getId(), location));
                 } catch (GeocoderUnavailableException ex) {
-                    failed++;
+                    interrupted = true;
                     log.warn("Geocoding of import {} stopped: {}", importId, ex.getMessage());
                     break;
                 }
             }
-            int stillPending = failed;
-            transactions.executeWithoutResult(status -> finish(importId, stillPending > 0));
+            boolean stopped = interrupted;
+            transactions.executeWithoutResult(status -> finish(importId, stopped));
         } finally {
             running.remove(importId);
+        }
+        if (retryRequested.remove(importId)) {
+            run(importId, true);
         }
     }
 
@@ -102,16 +112,17 @@ public class ImportGeocodingJob {
             batch.setErrorMessage(null);
             List<DeliveryPoint> pending = points.findByImportBatchIdAndGeocodeStatus(importId, GeocodeStatus.PENDING);
             if (includeNotFound) {
-                pending = new java.util.ArrayList<>(pending);
+                pending = new ArrayList<>(pending);
                 pending.addAll(points.findByImportBatchIdAndGeocodeStatus(importId, GeocodeStatus.NOT_FOUND));
             }
-            pending.sort(java.util.Comparator.comparing(DeliveryPoint::getId));
+            pending.sort(Comparator.comparing(DeliveryPoint::getId));
             return pending;
         });
     }
 
+    /** Skips a point that got a position meanwhile, e.g. placed by hand (endpoint 8) while the job waited. */
     private void apply(Long pointId, Optional<GeocodedLocation> location) {
-        points.findById(pointId).ifPresent(point -> {
+        points.findById(pointId).filter(ImportGeocodingJob::stillMissing).ifPresent(point -> {
             if (location.isPresent()) {
                 point.setCoordinates(location.get().latitude(), location.get().longitude(), GeocodeStatus.OK);
                 ImportBatch batch = point.getImportBatch();
@@ -120,6 +131,10 @@ public class ImportGeocodingJob {
                 point.setCoordinates(null, null, GeocodeStatus.NOT_FOUND);
             }
         });
+    }
+
+    private static boolean stillMissing(DeliveryPoint point) {
+        return point.getGeocodeStatus() == GeocodeStatus.PENDING || point.getGeocodeStatus() == GeocodeStatus.NOT_FOUND;
     }
 
     private void finish(Long importId, boolean interrupted) {

@@ -2,12 +2,15 @@ package it.teamlab.visitwise.planning.engine;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 /** Seed-and-fill followed by at most 20 improving replacements per visitor. No shared mutable state. */
@@ -18,7 +21,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
 
     @Override
     public PlannerResult plan(List<PlannerPoint> points, PlannerParameters p) {
-        if (points == null || p == null || points.stream().anyMatch(java.util.Objects::isNull)) {
+        if (points == null || p == null || points.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("Points and parameters are required");
         }
         var ids = new HashSet<Long>();
@@ -26,7 +29,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
             if (!ids.add(point.id())) throw new IllegalArgumentException("Duplicate point id: " + point.id());
         }
         var ordered = points.stream().sorted(Comparator.comparingLong(PlannerPoint::id)).toList();
-        Map<AddressKey, List<PlannerPoint>> addresses = new java.util.LinkedHashMap<>();
+        Map<AddressKey, List<PlannerPoint>> addresses = new LinkedHashMap<>();
         int notGeocoded = 0;
         for (var point : ordered) {
             if (!p.agents().isEmpty() && !p.agents().contains(point.agent())) continue;
@@ -256,9 +259,7 @@ public final class GreedyVisitPlanner implements VisitPlanner {
         }
 
         boolean fits(Route route) {
-            return route.minutes()
-                    + (double) route.targets().size() * p.constraints().visitDurationMinutes()
-                    <= p.constraints().workdayMinutes();
+            return p.constraints().fitsWorkday(route.minutes(), route.targets().size());
         }
 
         Route insert(Route route, VisitTarget target) {
@@ -294,9 +295,9 @@ public final class GreedyVisitPlanner implements VisitPlanner {
                 return best;
             }
             for (int i = index; i < targets.size(); i++) {
-                java.util.Collections.swap(targets, i, index);
+                Collections.swap(targets, i, index);
                 best = permutations(targets, index + 1, best);
-                java.util.Collections.swap(targets, i, index);
+                Collections.swap(targets, i, index);
             }
             return best;
         }

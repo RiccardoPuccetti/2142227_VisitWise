@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
-import java.util.Arrays;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -37,25 +35,6 @@ class TravelModelTest {
                 .isCloseTo(28.9107, within(0.001));
         assertThat(model.roadDistanceKm(base, new GeoPoint(0, 180)))
                 .isCloseTo(26019.6488, within(0.001));
-    }
-
-    @Test
-    void sumsEveryLegInTheSuppliedOrderIncludingReturnToBase() {
-        GeoPoint first = new GeoPoint(0, 0.1);
-        GeoPoint second = new GeoPoint(0.1, 0.1);
-        double expectedKm = model.roadDistanceKm(base, first)
-                + model.roadDistanceKm(first, second) + model.roadDistanceKm(second, base);
-        assertThat(model.roundTripKm(base, List.of(first, second))).isEqualTo(expectedKm);
-        assertThat(model.roundTripMinutes(base, List.of(first, second)))
-                .isCloseTo(expectedKm / 25 * 60, within(1e-10));
-        assertThat(model.roundTripKm(base, List.of(first)))
-                .isEqualTo(2 * model.roadDistanceKm(base, first));
-    }
-
-    @Test
-    void emptyRouteDoesNotTravel() {
-        assertThat(model.roundTripKm(base, List.of())).isZero();
-        assertThat(model.roundTripMinutes(base, List.of())).isZero();
     }
 
     @ParameterizedTest
@@ -97,12 +76,8 @@ class TravelModelTest {
     }
 
     @Test
-    void rejectsMissingLocationsAndRoutes() {
+    void rejectsMissingLocations() {
         assertThatThrownBy(() -> model.roadDistanceKm(null, base)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> model.roadDistanceKm(base, null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> model.roundTripKm(null, List.of())).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> model.roundTripKm(base, null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> model.roundTripKm(base, Arrays.asList(base, null)))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 }

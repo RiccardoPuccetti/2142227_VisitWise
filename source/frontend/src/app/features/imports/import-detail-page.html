@@ -56,7 +56,7 @@
       </li>
       <li><ng-icon name="lucideFileSpreadsheet" aria-hidden="true" /> {{ import.sourceFileName }}</li>
       <li>
-        <span hlmBadge [variant]="import.status === 'FAILED' ? 'destructive' : import.status === 'READY' ? 'outline' : 'secondary'">
+        <span hlmBadge [variant]="statusVariant(import.status)">
           {{ statusLabel() }}
         </span>
       </li>
@@ -118,7 +118,7 @@
             </p>
           </div>
           <app-map-view
-            class="block h-80 overflow-hidden rounded-xl border xl:h-auto xl:min-h-80 xl:flex-1"
+            class="h-80 xl:h-auto xl:min-h-80 xl:flex-1"
             [markers]="territory()"
             ariaLabel="Located delivery points of the import"
           />

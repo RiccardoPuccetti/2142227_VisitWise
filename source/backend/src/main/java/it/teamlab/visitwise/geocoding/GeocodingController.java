@@ -1,7 +1,6 @@
 package it.teamlab.visitwise.geocoding;
 
 import it.teamlab.visitwise.analytics.DeliveryPointResponse;
-import it.teamlab.visitwise.analytics.RevenueLine;
 import it.teamlab.visitwise.common.NotFoundException;
 import it.teamlab.visitwise.imports.DeliveryPoint;
 import it.teamlab.visitwise.imports.DeliveryPointRepository;
@@ -9,7 +8,6 @@ import it.teamlab.visitwise.imports.GeocodeStatus;
 import it.teamlab.visitwise.imports.ImportBatch;
 import it.teamlab.visitwise.imports.ImportBatchRepository;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -70,10 +68,6 @@ public class GeocodingController {
             ImportBatch batch = point.getImportBatch();
             batch.setGeocodedRows(batch.getGeocodedRows() + 1);
         }
-        List<RevenueLine> revenues = point.getRevenues().stream()
-                .map(revenue -> new RevenueLine(revenue.getEnterprise().getId(), revenue.getAmount())).toList();
-        return new DeliveryPointResponse(point.getId(), point.getSourceRow(), point.getCustomerName(),
-                point.getPointName(), point.getAddress(), point.getCity(), point.getAgent(), point.getLatitude(),
-                point.getLongitude(), point.getGeocodeStatus(), point.getTotalRevenue(), revenues);
+        return DeliveryPointResponse.of(point);
     }
 }

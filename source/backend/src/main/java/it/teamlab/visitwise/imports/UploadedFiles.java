@@ -1,5 +1,6 @@
 package it.teamlab.visitwise.imports;
 
+import it.teamlab.visitwise.common.Text;
 import java.io.IOException;
 import java.io.InputStream;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,7 +19,7 @@ final class UploadedFiles {
         String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
         name = name.substring(Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1);
         name = name.replaceAll("\\p{Cntrl}", "").strip();
-        return name.length() > MAX_FILE_NAME ? name.substring(0, MAX_FILE_NAME) : name;
+        return Text.truncate(name, MAX_FILE_NAME);
     }
 
     static InputStream content(MultipartFile file) throws IOException {

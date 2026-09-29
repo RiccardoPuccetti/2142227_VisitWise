@@ -6,18 +6,20 @@ import type {
   RouteResponse,
   RouteSource,
 } from '../../core/models/api.models';
-import type { MapMarker, MapRoute } from '../../shared';
+import { formatDay, type MapMarker, type MapRoute } from '../../shared';
 
 export const DEFAULT_BASE = { latitude: 41.896, longitude: 12.4823 } as const;
 export const BASE_MARKER_ID = 'base';
+/** The planning API's upper bound on working days (a plan, a what-if horizon). */
+export const MAX_WORKING_DAYS = 260;
 const ROUTE_COLOR = '#2563eb';
 const BASE_COLOR = '#dc2626';
 
 /** Client-side feedback mirroring the planning API validation rules. */
 export function validateParameters(parameters: PlanParameters): string[] {
   const errors: string[] = [];
-  if (parameters.workingDays < 1 || parameters.workingDays > 260) {
-    errors.push('Working days must be between 1 and 260.');
+  if (parameters.workingDays < 1 || parameters.workingDays > MAX_WORKING_DAYS) {
+    errors.push(`Working days must be between 1 and ${MAX_WORKING_DAYS}.`);
   }
   if (parameters.visitDurationMinutes < 30 || parameters.visitDurationMinutes > 480) {
     errors.push('Visit duration must be between 30 and 480 minutes.');
@@ -50,14 +52,7 @@ export function planMarkers(result: PlanResult | null, dayIndex: number): MapMar
     return [];
   }
   return [
-    {
-      id: BASE_MARKER_ID,
-      latitude: result.parameters.base.latitude,
-      longitude: result.parameters.base.longitude,
-      color: BASE_COLOR,
-      radius: 8,
-      title: 'Starting base',
-    },
+    ...baseMarker(result.parameters.base),
     ...day.visits.map((visit) => ({
       id: visit.deliveryPointId,
       latitude: visit.latitude,
@@ -114,18 +109,6 @@ export function travelBasis(source: RouteSource | null | undefined): string {
   return source === 'OSRM' ? 'road network' : 'estimate';
 }
 
-const DAY_TITLE = new Intl.DateTimeFormat('en-GB', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  timeZone: 'UTC',
-});
-
-/** Short title of a plan day, e.g. "Mon 2 Nov" (the date is a calendar day, read as UTC). */
-export function dayTitle(date: string): string {
-  return DAY_TITLE.format(new Date(`${date}T00:00:00Z`)).replace(',', '');
-}
-
 /** Revenue expected from the visits of a day. */
 export function dayRevenue(day: PlanDay): number {
   return day.visits.reduce((sum, visit) => sum + visit.expectedRevenue, 0);
@@ -164,14 +147,14 @@ export function groupDays(days: readonly PlanDay[]): DayGroup[] {
   const best = Math.max(0, ...days.map(dayRevenue));
   const groups: DayGroup[] = [];
   days.forEach((day, index) => {
-    const agent = day.agent ?? 'One visitor';
+    const agent = day.agent ?? 'Single visitor';
     if (!agents.includes(agent)) {
       agents.push(agent);
     }
     const revenue = dayRevenue(day);
     let group = groups.at(-1);
     if (!group || group.date !== day.date) {
-      group = { date: day.date, title: dayTitle(day.date), revenue: 0, routes: [] };
+      group = { date: day.date, title: formatDay(day.date), revenue: 0, routes: [] };
       groups.push(group);
     }
     group.revenue += revenue;

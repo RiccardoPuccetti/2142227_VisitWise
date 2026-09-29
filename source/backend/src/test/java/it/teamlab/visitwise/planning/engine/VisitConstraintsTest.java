@@ -3,7 +3,6 @@ package it.teamlab.visitwise.planning.engine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -37,37 +36,25 @@ class VisitConstraintsTest {
     }
 
     @Test
-    void includesVisitsAllTravelAndReturnInDayFeasibility() {
-        GeoPoint near = new GeoPoint(0, 0.01);
-        GeoPoint farther = new GeoPoint(0, 0.1);
-        assertThat(constraints.fitsDay(base, List.of(near, near), travel)).isTrue();
-        // The outbound leg alone fits the remaining hour; the round trip does not.
-        assertThat(constraints.fitsDay(base, List.of(farther, farther), travel)).isFalse();
-        assertThat(constraints.fitsDay(base, List.of(base, base, base), travel)).isFalse();
-        assertThat(constraints.fitsDay(base, List.of(), travel)).isTrue();
-    }
-
-    @Test
-    void honorsTheSuppliedBaseAndExcludesEveryOutOfRangeStop() {
-        GeoPoint otherBase = new GeoPoint(0, 1);
-        GeoPoint point = new GeoPoint(0, 1.01);
-        assertThat(constraints.fitsDay(otherBase, List.of(point), travel)).isTrue();
-        assertThat(constraints.fitsDay(base, List.of(point), travel)).isFalse();
-        VisitConstraints longDay = new VisitConstraints(30, 1440, 80);
-        assertThat(longDay.fitsDay(base, List.of(base, new GeoPoint(0, 0.6)), travel)).isFalse();
+    void aDayHoldsItsVisitsAndAllItsTravel() {
+        // Two default visits take 420 of the 480 minutes: 60 minutes are left for the whole round trip.
+        assertThat(constraints.fitsWorkday(60, 2)).isTrue();
+        assertThat(constraints.fitsWorkday(60.1, 2)).isFalse();
+        assertThat(constraints.fitsWorkday(0, 3)).isFalse();
+        assertThat(constraints.fitsWorkday(0, 0)).isTrue();
     }
 
     @Test
     void acceptsExactWorkdayLimitAndDoesNotRoundAwayExtraTravel() {
         VisitConstraints fullDay = new VisitConstraints(240, 480, 80);
-        assertThat(fullDay.fitsDay(base, List.of(base, base), travel)).isTrue();
-        assertThat(fullDay.fitsDay(base, List.of(base, new GeoPoint(0, 0.000001)), travel)).isFalse();
+        assertThat(fullDay.fitsWorkday(0, 2)).isTrue();
+        assertThat(fullDay.fitsWorkday(0.0001, 2)).isFalse();
     }
 
     @ParameterizedTest
     @ValueSource(ints = {30, 480})
     void acceptsVisitDurationLimits(int minutes) {
-        assertThat(new VisitConstraints(minutes, minutes, 80).fitsDay(base, List.of(base), travel)).isTrue();
+        assertThat(new VisitConstraints(minutes, minutes, 80).fitsWorkday(0, 1)).isTrue();
     }
 
     @ParameterizedTest
@@ -95,13 +82,7 @@ class VisitConstraintsTest {
     }
 
     @Test
-    void rejectsMissingFeasibilityInputsEvenForAnEmptyDay() {
-        assertThatThrownBy(() -> constraints.fitsDay(null, List.of(), travel))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> constraints.fitsDay(base, null, travel))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> constraints.fitsDay(base, List.of(), null))
-                .isInstanceOf(IllegalArgumentException.class);
+    void rejectsAMissingTravelModel() {
         assertThatThrownBy(() -> constraints.isWithinRange(base, base, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }

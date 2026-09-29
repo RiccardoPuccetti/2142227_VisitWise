@@ -45,8 +45,8 @@ class GeocodingServiceTest {
     void hitsAreServedFromTheCacheWithoutCallingTheProvider() {
         FakeGeocoder.knows(address, "Roma", 41.9, 12.5);
 
-        Optional<GeocodedLocation> first = service.locate(address, "Roma");
-        Optional<GeocodedLocation> second = service.locate(address, "Roma");
+        Optional<GeocodedLocation> first = service.locate(address, "Roma", false);
+        Optional<GeocodedLocation> second = service.locate(address, "Roma", false);
 
         assertThat(first).contains(new GeocodedLocation(41.9, 12.5));
         assertThat(second).isEqualTo(first);
@@ -57,14 +57,14 @@ class GeocodingServiceTest {
 
     @Test
     void missesAreCachedAndOnlyRetriedOnRequest() {
-        assertThat(service.locate(address, "Roma")).isEmpty();
-        assertThat(service.locate(address, "Roma")).isEmpty();
+        assertThat(service.locate(address, "Roma", false)).isEmpty();
+        assertThat(service.locate(address, "Roma", false)).isEmpty();
         assertThat(FakeGeocoder.calls()).isEqualTo(1);
 
         FakeGeocoder.knows(address, "Roma", 41.9, 12.5);
         assertThat(service.locate(address, "Roma", true)).contains(new GeocodedLocation(41.9, 12.5));
         assertThat(FakeGeocoder.calls()).isEqualTo(2);
-        assertThat(service.locate(address, "Roma")).contains(new GeocodedLocation(41.9, 12.5));
+        assertThat(service.locate(address, "Roma", false)).contains(new GeocodedLocation(41.9, 12.5));
         assertThat(FakeGeocoder.calls()).isEqualTo(2);
     }
 
@@ -72,7 +72,7 @@ class GeocodingServiceTest {
     void providerFailuresPropagateAndAreNotCached() {
         FakeGeocoder.unavailable(true);
 
-        assertThatThrownBy(() -> service.locate(address, "Roma")).isInstanceOf(GeocoderUnavailableException.class);
+        assertThatThrownBy(() -> service.locate(address, "Roma", false)).isInstanceOf(GeocoderUnavailableException.class);
         assertThat(cache.findByQueryKey(GeocodingService.queryKey(address, "Roma"))).isEmpty();
     }
 }

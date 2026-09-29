@@ -8,6 +8,11 @@ describe('formatEur', () => {
     expect(formatEur(12345.5)).toBe(`12.345,50${NBSP}€`);
   });
 
+  it('groups the thousands of four-digit amounts too, like the larger ones', () => {
+    expect(formatEur(2011.4)).toBe(`2.011,40${NBSP}€`);
+    expect(formatEur(2011.4, 'rounded')).toBe(`2.011${NBSP}€`);
+  });
+
   it('keeps the sign of negative amounts (credit notes)', () => {
     expect(formatEur(-104.66)).toBe(`-104,66${NBSP}€`);
   });

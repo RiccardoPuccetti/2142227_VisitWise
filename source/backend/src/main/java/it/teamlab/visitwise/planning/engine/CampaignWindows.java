@@ -16,10 +16,6 @@ public final class CampaignWindows {
                 window("END_OF_SUMMER", "End of summer", LocalDate.of(year, 8, 25), LocalDate.of(year, 9, 30)));
     }
 
-    public CampaignWindow custom(LocalDate startDate, LocalDate endDate) {
-        return window("CUSTOM", "Custom", startDate, endDate);
-    }
-
     private CampaignWindow window(String code, String label, LocalDate startDate, LocalDate endDate) {
         return new CampaignWindow(code, label, startDate, endDate,
                 calendar.countWorkingDays(startDate, endDate));

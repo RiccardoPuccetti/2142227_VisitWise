@@ -16,7 +16,26 @@
   }
 
   @if (loading()) {
-    <div class="flex items-center gap-2" aria-live="polite"><hlm-spinner /> Loading scenarios…</div>
+    <!-- The shape of the page (the what-if card, then the saved scenarios), so nothing jumps when the data arrives. -->
+    <div data-testid="scenarios-loading" role="status" aria-live="polite" class="flex flex-col gap-7">
+      <span class="sr-only">Loading the scenarios…</span>
+      @for (card of [1, 2]; track card) {
+        <div hlmCard aria-hidden="true">
+          <div hlmCardHeader class="gap-2">
+            <hlm-skeleton class="h-5 w-56" />
+            <hlm-skeleton class="h-4 w-80 max-w-full" />
+          </div>
+          <div hlmCardContent class="grid gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+            <div class="flex flex-col gap-3">
+              @for (line of [1, 2, 3]; track line) {
+                <hlm-skeleton class="h-9 w-full" />
+              }
+            </div>
+            <hlm-skeleton class="h-48 w-full" />
+          </div>
+        </div>
+      }
+    </div>
   } @else {
     <section hlmCard aria-labelledby="whatif-title">
       <div hlmCardHeader>
@@ -319,7 +338,8 @@
                         <td hlmTd class="text-right whitespace-normal" [class.pr-4]="last">
                           {{ campaignLabel(scenario.parameters) }}
                           <span class="text-muted-foreground block text-xs">
-                            {{ scenario.parameters.startDate }} → {{ scenario.parameters.deadline ?? 'no deadline' }}
+                            {{ calendarDate(scenario.parameters.startDate) }} →
+                            {{ scenario.parameters.deadline ? calendarDate(scenario.parameters.deadline) : 'no deadline' }}
                           </span>
                         </td>
                       }

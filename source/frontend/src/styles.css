@@ -50,8 +50,6 @@
   --success-foreground: #14532d;
   --warning: #fef3c7;
   --warning-foreground: #78350f;
-  --info: #dbeafe;
-  --info-foreground: #1e3a8a;
 
   --chart-1: #d33a15;
   --chart-2: #2563eb;
@@ -103,8 +101,6 @@
   --success-foreground: #86efac;
   --warning: rgb(250 204 21 / 16%);
   --warning-foreground: #fde68a;
-  --info: rgb(96 165 250 / 16%);
-  --info-foreground: #bfdbfe;
 
   --chart-1: #ff6a3d;
   --chart-2: #60a5fa;
@@ -135,8 +131,6 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
-  --color-info: var(--info);
-  --color-info-foreground: var(--info-foreground);
   --color-chart-grid: var(--chart-grid);
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);

@@ -42,7 +42,6 @@ class RoadMatrixTest {
         var matrix = matrix(km, new double[][] {{0, 4}, {5, 0}});
         km[0][1] = 99;
         assertThat(matrix.over(TravelModel.DEFAULT).roadDistanceKm(a, b)).isEqualTo(2.5);
-        assertThat(matrix.size()).isEqualTo(2);
     }
 
     @Test

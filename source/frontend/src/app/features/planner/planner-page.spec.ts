@@ -309,7 +309,7 @@ describe('PlannerPage', () => {
     const labels = [...page().querySelectorAll('[data-testid="kpi-details"] dt')].map((term) => term.textContent?.trim());
     expect(labels).toEqual(['Visits', 'Working days', 'Distance']);
     expect(text()).toContain('POINT 1');
-    expect(page().querySelector('[aria-label="Itinerary for 2 November 2026"]')).not.toBeNull();
+    expect(page().querySelector('[aria-label="Itinerary for 2 Nov 2026"]')).not.toBeNull();
     const summary = page().querySelector('[data-testid="planner-road-summary"]')!.textContent!;
     expect(summary.replace(/\s+/g, ' ')).toContain('12,4 km · 31 min (road route)');
   });
@@ -443,7 +443,7 @@ describe('PlannerPage', () => {
     expect(words).toContain('AGENT NORTH');
     expect(words).toContain('1 stop');
     expect(words).toContain('42,5 km');
-    expect(words).toContain('8500');
+    expect(words).toContain('8.500');
     expect(route.getAttribute('aria-pressed')).toBe('true');
   });
 });
@@ -516,5 +516,72 @@ describe('PlannerPage while addresses are still being geocoded', () => {
     expect(request.request.method).toBe('POST');
     request.flush(null, { status: 202, statusText: 'Accepted' });
     await harness.fixture.whenStable();
+  });
+
+  it('offers a retry, instead of locating forever, for addresses left waiting on a ready import', async () => {
+    http.expectOne('/api/imports/42/geocoding').flush({ ...PROGRESS_DONE, located: 7, pending: 3, total: 10 });
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(text()).not.toContain('Locating customer addresses');
+    expect(text()).toContain('3 of 10 addresses not located');
+    const root = harness.routeNativeElement as HTMLElement;
+    expect(root.querySelector('button[aria-label="Retry geocoding"]')).not.toBeNull();
+  });
+});
+
+describe('PlannerPage when its data cannot be loaded', () => {
+  it('shows the error instead of breaking the page', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PLAN_REVEAL_MS, useValue: 0 },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'imports/:importId/planner', component: PlannerPage }], withComponentInputBinding()),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/planner');
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http
+      .expectOne('/api/imports/42/analytics/summary')
+      .flush({ detail: 'Import not found' }, { status: 404, statusText: 'Not Found' });
+    http.expectOne('/api/profile/base').flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne('/api/imports/42/geocoding').flush(PROGRESS_DONE);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.textContent).toContain('Planner data could not be loaded');
+    http.verify();
+  });
+});
+
+describe('PlannerPage before its data arrives', () => {
+  it('shows placeholders in the shape of the setup, then the setup', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PLAN_REVEAL_MS, useValue: 0 },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'imports/:importId/planner', component: PlannerPage }], withComponentInputBinding()),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/planner');
+    const page = () => harness.routeNativeElement as HTMLElement;
+
+    expect(page().querySelector('[data-testid="planner-loading"]')).not.toBeNull();
+
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http.expectOne('/api/imports/42/analytics/summary').flush(OPTIONS);
+    http.expectOne('/api/profile/base').flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne('/api/imports/42/geocoding').flush(PROGRESS_DONE);
+    await harness.fixture.whenStable();
+
+    expect(page().querySelector('[data-testid="planner-loading"]')).toBeNull();
+    expect(page().querySelector('select#planner-campaign')).not.toBeNull();
+    http.verify();
   });
 });

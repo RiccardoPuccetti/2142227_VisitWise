@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +68,7 @@ public class NominatimGeocoder implements Geocoder {
         return "nominatim";
     }
 
-    private Optional<GeocodedLocation> query(java.util.function.UnaryOperator<
+    private Optional<GeocodedLocation> query(UnaryOperator<
             org.springframework.web.util.UriBuilder> params) {
         pace();
         List<Result> results;

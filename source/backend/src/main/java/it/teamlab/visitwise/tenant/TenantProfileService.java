@@ -47,7 +47,7 @@ public class TenantProfileService {
         Tenant tenant = find(tenantId);
         String address = request.address().strip();
         String city = request.city().strip();
-        GeocodedLocation location = geocoding.locate(address, city)
+        GeocodedLocation location = geocoding.locate(address, city, false)
                 .orElseThrow(() -> new AddressNotFoundException(address, city));
         tenant.setStartingBase(address, city, location.latitude(), location.longitude());
         log.info("Starting base saved: tenantId={}", tenant.getId());

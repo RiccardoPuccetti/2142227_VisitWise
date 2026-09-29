@@ -18,7 +18,6 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarDays,
   lucideCalendarRange,
-  lucideCircleCheck,
   lucideCircleSlash,
   lucideFileSpreadsheet,
   lucideMapPin,
@@ -41,12 +40,14 @@ import {
   createPaging,
   EnterpriseLegend,
   EurPipe,
+  formatDateTime,
   type KpiDetail,
   KpiSummary,
   MapView,
   minimumLoading,
   PageHeader,
   TablePager,
+  valueOf,
 } from '../../shared';
 import {
   geocodeStatusLabel,
@@ -57,7 +58,7 @@ import {
   needsLocation,
   territoryMarkers,
 } from './import-detail.model';
-import { formatCreatedAt, importStatusLabel } from './import-status';
+import { importStatusLabel, importStatusVariant } from './import-status';
 import { ImportsService } from './imports.service';
 import { PointLocationForm } from './point-location-form';
 
@@ -101,7 +102,6 @@ type PointFilter = 'all' | 'missing';
     provideIcons({
       lucideCalendarDays,
       lucideCalendarRange,
-      lucideCircleCheck,
       lucideCircleSlash,
       lucideFileSpreadsheet,
       lucideMapPin,
@@ -135,10 +135,9 @@ export class ImportDetailPage {
     loader: ({ params }) => this.api.points(params),
   });
 
-  protected readonly detail = computed(() =>
-    this.detailResource.hasValue() ? this.detailResource.value() : undefined,
-  );
+  protected readonly detail = computed(() => valueOf(this.detailResource));
   protected readonly loading = minimumLoading(() => this.detailResource.isLoading() && !this.detail());
+  protected readonly statusVariant = importStatusVariant;
   protected readonly loadError = computed(() => {
     const error = this.detailResource.error();
     return error ? problemDetail(error) : null;
@@ -146,7 +145,7 @@ export class ImportDetailPage {
 
   protected readonly created = computed(() => {
     const detail = this.detail();
-    return detail ? formatCreatedAt(detail.createdAt) : '';
+    return detail ? formatDateTime(detail.createdAt) : '';
   });
   protected readonly statusLabel = computed(() => {
     const detail = this.detail();

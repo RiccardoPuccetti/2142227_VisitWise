@@ -236,6 +236,9 @@ describe('ScenarioComparePage', () => {
       expect(kmRow.querySelector('[data-best="true"]')!.textContent).toContain('420,5');
       expect(table.textContent).toContain('Only AGENT NORTH');
       expect(table.textContent).toContain('Single visitor');
+      // Campaign dates written like the rest of the app, not as the API's ISO strings.
+      expect(table.textContent).toContain('2 Nov 2026 → 19 Dec 2026');
+      expect(table.textContent).not.toContain('2026-11-02');
     });
 
     it('drops a scenario from the comparison when unticked', () => {
@@ -270,5 +273,65 @@ describe('ScenarioComparePage', () => {
       expect(text()).not.toContain('Christmas 30 days');
       expect(text()).toContain('Christmas 20 days');
     });
+  });
+});
+
+describe('ScenarioComparePage when its data cannot be loaded', () => {
+  it('shows the error instead of breaking the page', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter(
+          [{ path: 'imports/:importId/scenarios', component: ScenarioComparePage }],
+          withComponentInputBinding(),
+        ),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/scenarios');
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http
+      .expectOne('/api/imports/42/analytics/summary')
+      .flush({ detail: 'Import not found' }, { status: 404, statusText: 'Not Found' });
+    http.expectOne('/api/profile/base').flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne('/api/imports/42/plans').flush(null, { status: 500, statusText: 'Server Error' });
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.textContent).toContain('Scenario data could not be loaded');
+    http.verify();
+  });
+});
+
+describe('ScenarioComparePage before its data arrives', () => {
+  it('shows placeholders in the shape of the page, then the page', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter(
+          [{ path: 'imports/:importId/scenarios', component: ScenarioComparePage }],
+          withComponentInputBinding(),
+        ),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/scenarios');
+    const page = () => harness.routeNativeElement as HTMLElement;
+
+    expect(page().querySelector('[data-testid="scenarios-loading"]')).not.toBeNull();
+
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http.expectOne('/api/imports/42/analytics/summary').flush(OPTIONS);
+    http.expectOne('/api/profile/base').flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne('/api/imports/42/plans').flush([]);
+    await harness.fixture.whenStable();
+
+    expect(page().querySelector('[data-testid="scenarios-loading"]')).toBeNull();
+    expect(page().querySelector('#whatif-title')).not.toBeNull();
+    http.verify();
   });
 });

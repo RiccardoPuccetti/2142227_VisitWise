@@ -1,19 +1,20 @@
+/// <reference lib="es2023.intl" />
 import { Pipe, PipeTransform } from '@angular/core';
-
-/** Locale used for every amount in the app: the federation and its data are Italian. */
-const LOCALE = 'it-IT';
+import { LOCALE } from './format';
 
 const FULL = new Intl.NumberFormat(LOCALE, {
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
+  useGrouping: 'always',
 });
 
 const ROUNDED = new Intl.NumberFormat(LOCALE, {
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
+  useGrouping: 'always',
 });
 
 const COMPACT = new Intl.NumberFormat(LOCALE, {

@@ -1,7 +1,5 @@
 package it.teamlab.visitwise.planning.engine;
 
-import java.util.List;
-
 /** Local travel estimates: great-circle distance times road factor, at a constant speed. */
 public record TravelModel(double averageSpeedKmh, double roadFactor) implements Travel {
 
@@ -37,25 +35,6 @@ public record TravelModel(double averageSpeedKmh, double roadFactor) implements 
     @Override
     public double travelMinutes(GeoPoint from, GeoPoint to) {
         return roadDistanceKm(from, to) / averageSpeedKmh * 60;
-    }
-
-    /** Evaluates the given order, including the first and last legs to the supplied base. */
-    public double roundTripKm(GeoPoint base, List<GeoPoint> stops) {
-        requirePoint(base);
-        if (stops == null) {
-            throw new IllegalArgumentException("Stops are required");
-        }
-        double distance = 0;
-        GeoPoint previous = base;
-        for (GeoPoint stop : stops) {
-            distance += roadDistanceKm(previous, stop);
-            previous = stop;
-        }
-        return distance + roadDistanceKm(previous, base);
-    }
-
-    public double roundTripMinutes(GeoPoint base, List<GeoPoint> stops) {
-        return roundTripKm(base, stops) / averageSpeedKmh * 60;
     }
 
     private static void requirePoint(GeoPoint point) {
