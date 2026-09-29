@@ -168,7 +168,7 @@ Parsing rules (both preview and import):
   "averageSpeedKmh": 25,
   "roadFactor": 1.3,
   "maxDistanceKm": 80,
-  "base": { "latitude": 41.8960, "longitude": 12.4823 },   // filled by the planner form from the tenant starting base (endpoint 26); config default until one is saved
+  "base": { "latitude": 41.8960, "longitude": 12.4823 },   // filled by the planner form from the tenant starting base (endpoint 26); the frontend default (Rome, Piazza Venezia) until one is saved
   "travelCostPerKm": 2.0,
   "minRevenue": 0
 }
@@ -234,7 +234,7 @@ One account per tenant. See `AUTHENTICATION.md` for the security design.
 | 23 | GET | `/api/auth/me` | `200` `CurrentTenant`, `401` when not logged in | 32 |
 | 24 | PATCH | `/api/profile` | body `{ "name": "Demo federation" }` -> `200` `CurrentTenant` | 34 |
 | 25 | PUT | `/api/profile/password` | body `ChangePasswordRequest` -> `204`; the tenant's other sessions are logged out. `400` wrong current password or password rules | 34 |
-| 26 | GET | `/api/profile/base` | `200` `StartingBase`, or `204` when the tenant has not saved one yet (the planner then uses the configured default) | 35 |
+| 26 | GET | `/api/profile/base` | `200` `StartingBase`, or `204` when the tenant has not saved one yet (the planner then uses its default, Rome, Piazza Venezia) | 35 |
 | 27 | PUT | `/api/profile/base` | body `SaveStartingBaseRequest` -> geocodes address + city (Nominatim, cached) and saves -> `200` `StartingBase`. `422` "Address not found" (saved base unchanged), `503` geocoder unavailable | 35 |
 
 **RegisterRequest** `{ "tenantName": "Demo federation", "email": "demo@visitwise.test", "password": "correct horse battery" }`

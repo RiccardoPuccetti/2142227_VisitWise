@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-/** HTTP DTOs for planning endpoints 11-17 in API_CONTRACT.md. */
+/** HTTP DTOs for planning endpoints 11-17 and 18b in API_CONTRACT.md. */
 public final class PlanningDtos {
 
     private PlanningDtos() {
@@ -93,7 +93,7 @@ public final class PlanningDtos {
 
     public record CreatePlanRequest(String name, PlanParameters parameters) { }
 
-    /** Endpoint 18: the ordered stops of one day (base excluded), plus the travel model for the estimate fallback. */
+    /** Endpoint 18b: the ordered stops of one day (base excluded), plus the travel model for the estimate fallback. */
     public record RouteRequest(GeoPoint base, List<GeoPoint> stops, double averageSpeedKmh, double roadFactor) { }
 
     public enum RouteSource { OSRM, ESTIMATE }

@@ -61,7 +61,7 @@ public class ImportGeocodingJob {
         imports.findByStatus(ImportStatus.GEOCODING).forEach(batch -> run(batch.getId(), false));
     }
 
-    /** Endpoint 9 (US-09): NOT_FOUND points are asked to the provider again, ignoring cached misses. */
+    /** Endpoint 9 (US-09): PENDING and NOT_FOUND points are asked to the provider again, ignoring cached misses. */
     @Async(GeocodingConfig.EXECUTOR)
     public void retry(Long importId) {
         run(importId, true);

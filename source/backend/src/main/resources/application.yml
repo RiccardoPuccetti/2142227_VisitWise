@@ -64,7 +64,7 @@ visitwise:
     password:
       # AUTHENTICATION.md A2: 8 for the demo; NIST SP 800-63B-4 recommends 15 for password-only login. Max is 64.
       min-length: ${PASSWORD_MIN_LENGTH:8}
-    # AUTHENTICATION.md A9: login + register requests per client IP per minute.
+    # AUTHENTICATION.md A9: login, register and password change requests per client IP per minute.
     rate-limit:
       per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:20}
     # AUTHENTICATION.md A13: "Keep me logged in" lasts this many days on a device (US-37).
@@ -93,7 +93,3 @@ visitwise:
       # Sources (and destinations) per request, at most the --max-table-size of osrm-routed (500 in docker compose).
       block-size: 500
       cache-size: 4
-  planning:
-    # Default starting point of every working day (Rome, Piazza Venezia). Overridable per plan.
-    default-base-latitude: 41.8960
-    default-base-longitude: 12.4823

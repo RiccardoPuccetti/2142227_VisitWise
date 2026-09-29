@@ -120,7 +120,7 @@ These foundations do not select targets, optimize routes or expose HTTP endpoint
 
 ```
 INPUT: delivery points (geocoded), parameters
-1. Build visit targets: group points by (normalized address, agent); value = weighted revenue (section 3).
+1. Build visit targets: group points by (normalized address, city, agent); value = weighted revenue (section 3).
    Drop: not geocoded (count), value <= minRevenue, distance(base) > maxDistanceKm (count as out of range).
 2. Partition targets: by agent (PER_AGENT) or a single group (SINGLE_VISITOR).
 3. Calendar: the first `workingDays` Mon-Fri non-holiday dates from startDate.
