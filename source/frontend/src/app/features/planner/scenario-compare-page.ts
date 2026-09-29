@@ -25,7 +25,7 @@ import type {
   WhatIfResult,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, formatEur, PageHeader } from '../../shared';
+import { EurPipe, formatEur, PageHeader, valueOf } from '../../shared';
 import { DEFAULT_BASE } from './planner.model';
 import { PlannerService } from './planner.service';
 import {
@@ -135,7 +135,7 @@ export class ScenarioComparePage {
     loader: ({ params }) => this.api.plans(params),
   });
 
-  protected readonly campaigns = computed(() => this.campaignsResource.value() ?? []);
+  protected readonly campaigns = computed(() => valueOf(this.campaignsResource) ?? []);
   protected readonly loading = computed(
     () =>
       this.campaignsResource.isLoading() ||
@@ -186,7 +186,7 @@ export class ScenarioComparePage {
 
   constructor() {
     effect(() => {
-      const plans = this.plansResource.value();
+      const plans = valueOf(this.plansResource);
       if (plans) {
         this.scenarios.set(plans);
         this.selectedIds.set(plans.slice(0, MAX_COMPARED).map((plan) => plan.id));
@@ -316,7 +316,7 @@ export class ScenarioComparePage {
     if (!weighted.length) {
       return 'All enterprises, same priority';
     }
-    const enterprises = this.optionsResource.value()?.byEnterprise ?? [];
+    const enterprises = valueOf(this.optionsResource)?.byEnterprise ?? [];
     return weighted
       .map((item) => {
         const name =
@@ -336,8 +336,8 @@ export class ScenarioComparePage {
     if (!preset) {
       return null;
     }
-    const saved = this.baseResource.value();
-    const enterpriseIds = (this.optionsResource.value()?.byEnterprise ?? []).map(
+    const saved = valueOf(this.baseResource);
+    const enterpriseIds = (valueOf(this.optionsResource)?.byEnterprise ?? []).map(
       (enterprise) => enterprise.enterpriseId,
     );
     return defaultParameters(preset, saved ?? DEFAULT_BASE, enterpriseIds);

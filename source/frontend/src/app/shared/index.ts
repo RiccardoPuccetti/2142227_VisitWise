@@ -8,4 +8,5 @@ export * from './map-view/map-view.model';
 export * from './minimum-loading';
 export * from './page-header';
 export * from './paging';
+export * from './resource-value';
 export * from './table-pager';

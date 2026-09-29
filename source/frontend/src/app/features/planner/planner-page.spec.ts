@@ -529,3 +529,30 @@ describe('PlannerPage while addresses are still being geocoded', () => {
     expect(root.querySelector('button[aria-label="Retry geocoding"]')).not.toBeNull();
   });
 });
+
+describe('PlannerPage when its data cannot be loaded', () => {
+  it('shows the error instead of breaking the page', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PLAN_REVEAL_MS, useValue: 0 },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'imports/:importId/planner', component: PlannerPage }], withComponentInputBinding()),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/planner');
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http
+      .expectOne('/api/imports/42/analytics/summary')
+      .flush({ detail: 'Import not found' }, { status: 404, statusText: 'Not Found' });
+    http.expectOne('/api/profile/base').flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne('/api/imports/42/geocoding').flush(PROGRESS_DONE);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.textContent).toContain('Planner data could not be loaded');
+    http.verify();
+  });
+});

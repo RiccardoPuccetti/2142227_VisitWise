@@ -50,7 +50,7 @@ import type {
   StartingBase,
 } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { EurPipe, KpiSummary, MapView, PageHeader } from '../../shared';
+import { EurPipe, KpiSummary, MapView, PageHeader, valueOf } from '../../shared';
 import {
   DEFAULT_BASE,
   baseMarker,
@@ -249,9 +249,9 @@ export class PlannerPage {
   });
   private readonly baseResource = resource({ loader: () => this.api.startingBase() });
 
-  protected readonly campaigns = computed(() => this.campaignsResource.value() ?? []);
-  protected readonly enterprises = computed(() => this.optionsResource.value()?.byEnterprise ?? []);
-  protected readonly agents = computed(() => this.optionsResource.value()?.byAgent ?? []);
+  protected readonly campaigns = computed(() => valueOf(this.campaignsResource) ?? []);
+  protected readonly enterprises = computed(() => valueOf(this.optionsResource)?.byEnterprise ?? []);
+  protected readonly agents = computed(() => valueOf(this.optionsResource)?.byAgent ?? []);
   protected readonly weights = signal<Record<number, number>>({});
   protected readonly selectedAgents = signal<string[]>([]);
   protected readonly result = signal<PlanResult | null>(null);
@@ -347,7 +347,7 @@ export class PlannerPage {
       }
     });
     effect(() => {
-      const saved = this.baseResource.value();
+      const saved = valueOf(this.baseResource);
       if (saved) {
         this.base.set(saved);
         this.baseForm.patchValue({ address: saved.address, city: saved.city });

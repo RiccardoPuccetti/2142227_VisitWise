@@ -9,7 +9,6 @@ import {
   input,
   linkedSignal,
   resource,
-  Resource,
   signal,
   viewChild,
 } from '@angular/core';
@@ -52,6 +51,7 @@ import {
   PageHeader,
   POPUP_GAP,
   TablePager,
+  valueOf,
 } from '../../shared';
 import { AmountBars, BarItem } from './amount-bars';
 import {
@@ -75,10 +75,6 @@ const WIDE_QUERY = '(min-width: 64rem)';
 /** Width of the popup (w-80) plus its gap to the marker and a margin to the map edge, in pixels. */
 const POPUP_SPACE = 320 + POPUP_GAP + 16;
 
-/** A resource's value, or undefined while it loads or when it failed (value() throws in the error state). */
-function valueOf<T>(resource: Resource<T | undefined>): T | undefined {
-  return resource.hasValue() ? resource.value() : undefined;
-}
 
 const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
 const WHOLE_PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 0 });

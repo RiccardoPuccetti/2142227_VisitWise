@@ -272,3 +272,32 @@ describe('ScenarioComparePage', () => {
     });
   });
 });
+
+describe('ScenarioComparePage when its data cannot be loaded', () => {
+  it('shows the error instead of breaking the page', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter(
+          [{ path: 'imports/:importId/scenarios', component: ScenarioComparePage }],
+          withComponentInputBinding(),
+        ),
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/imports/42/scenarios');
+    http.expectOne((request) => request.url === '/api/planning/campaigns').flush([]);
+    http
+      .expectOne('/api/imports/42/analytics/summary')
+      .flush({ detail: 'Import not found' }, { status: 404, statusText: 'Not Found' });
+    http.expectOne('/api/profile/base').flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne('/api/imports/42/plans').flush(null, { status: 500, statusText: 'Server Error' });
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.textContent).toContain('Scenario data could not be loaded');
+    http.verify();
+  });
+});
