@@ -359,6 +359,20 @@ describe('MapDashboardPage', () => {
     });
   });
 
+  it('shows placeholders in the charts and the list until the first data arrives', async () => {
+    await harness.navigateByUrl('/imports/42/map');
+
+    expect(page().querySelectorAll('[data-testid="chart-placeholder"]').length).toBe(4);
+    expect(page().textContent).not.toContain('No revenue for these filters');
+    expect(page().querySelectorAll('[data-testid="points-scroller"] tbody [data-testid="row-placeholder"]').length).toBeGreaterThan(0);
+
+    http.expectOne('/api/imports/42/points').flush(POINTS);
+    summaryRequests().forEach((r) => r.flush(summary()));
+    await harness.fixture.whenStable();
+    expect(page().querySelector('[data-testid="chart-placeholder"]')).toBeNull();
+    expect(page().querySelector('[data-testid="row-placeholder"]')).toBeNull();
+  });
+
   it('shows the problem when the points cannot be loaded', async () => {
     await harness.navigateByUrl('/imports/42/map');
     http

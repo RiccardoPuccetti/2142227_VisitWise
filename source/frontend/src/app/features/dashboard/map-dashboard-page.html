@@ -49,6 +49,12 @@
           <p hlmCardDescription class="panel-subtitle">Share of the total held by each enterprise.</p>
         </div>
         <div hlmCardContent>
+          @if (loading()) {
+            <div data-testid="chart-placeholder" class="flex flex-col items-center gap-4" aria-hidden="true">
+              <hlm-skeleton class="size-40 rounded-full" />
+              <hlm-skeleton class="h-3 w-3/4" />
+            </div>
+          } @else {
           <app-donut-chart
             [slices]="enterpriseSlices()"
             [total]="formatEur(summary()?.totalRevenue, 'compact')"
@@ -56,6 +62,7 @@
             [format]="formatCompact"
             ariaLabel="Share of revenue by enterprise"
           />
+          }
         </div>
       </section>
       <section hlmCard size="sm" aria-labelledby="chart-pareto-title">
@@ -64,6 +71,9 @@
           <p hlmCardDescription class="panel-subtitle">Cumulative revenue held by the top share of points.</p>
         </div>
         <div hlmCardContent>
+          @if (loading()) {
+            <hlm-skeleton data-testid="chart-placeholder" class="h-44 w-full rounded-xl" aria-hidden="true" />
+          } @else {
           <app-area-chart
             [points]="paretoCurve()"
             [max]="1"
@@ -71,6 +81,7 @@
             [showValues]="false"
             ariaLabel="Cumulative share of revenue by share of delivery points"
           />
+          }
         </div>
       </section>
       <section hlmCard size="sm" aria-labelledby="chart-agent-title">
@@ -79,7 +90,11 @@
           <p hlmCardDescription class="panel-subtitle">Largest first.</p>
         </div>
         <div hlmCardContent>
-          <app-amount-bars [items]="agentBars()" />
+          @if (loading()) {
+            <ng-container [ngTemplateOutlet]="barsPlaceholder" />
+          } @else {
+            <app-amount-bars [items]="agentBars()" />
+          }
         </div>
       </section>
       <section hlmCard size="sm" aria-labelledby="chart-city-title">
@@ -88,7 +103,11 @@
           <p hlmCardDescription class="panel-subtitle">Largest first.</p>
         </div>
         <div hlmCardContent>
-          <app-amount-bars [items]="cityBars()" />
+          @if (loading()) {
+            <ng-container [ngTemplateOutlet]="barsPlaceholder" />
+          } @else {
+            <app-amount-bars [items]="cityBars()" />
+          }
         </div>
       </section>
     </div>
@@ -182,6 +201,9 @@
       <div hlmCardContent class="flex flex-col gap-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <app-enterprise-legend [enterprises]="enterprises()" label="Marker colors" />
+          @if (loading()) {
+            <hlm-skeleton class="h-4 w-44" aria-hidden="true" />
+          } @else {
           <p class="text-muted-foreground text-sm" aria-live="polite">
             {{ markers().length }} of {{ filteredPoints().length }} points on the map
             @if (withoutPosition() > 0) {
@@ -189,6 +211,7 @@
               <a [routerLink]="['/imports', id()]" class="text-foreground underline underline-offset-4">Fix positions</a>
             }
           </p>
+          }
         </div>
         <div class="relative">
           <app-map-view
@@ -277,6 +300,17 @@
             </tr>
           </thead>
           <tbody hlmTBody>
+            @if (loading()) {
+              @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+                <tr hlmTr data-testid="row-placeholder" aria-hidden="true">
+                  <td hlmTd class="pl-6"><hlm-skeleton class="h-4 w-40" /></td>
+                  <td hlmTd><hlm-skeleton class="h-4 w-36" /></td>
+                  <td hlmTd><hlm-skeleton class="h-4 w-20" /></td>
+                  <td hlmTd><hlm-skeleton class="h-4 w-24" /></td>
+                  <td hlmTd class="pr-6"><hlm-skeleton class="ml-auto h-4 w-20" /></td>
+                </tr>
+              }
+            }
             @for (row of paging.rows(); track row.point.id) {
               <tr hlmTr [attr.data-point-id]="row.point.id" [attr.aria-current]="row.point.id === selectedId() ? 'true' : null" [class.bg-accent]="row.point.id === selectedId()">
                 <td hlmTd class="pl-6 whitespace-normal">
@@ -297,3 +331,18 @@
     </div>
   </section>
 </div>
+
+<!-- Ranked bars while the first data loads: rank, label and amount, then the bar. -->
+<ng-template #barsPlaceholder>
+  <div data-testid="chart-placeholder" class="flex flex-col gap-3" aria-hidden="true">
+    @for (bar of [1, 2, 3, 4, 5]; track bar) {
+      <div class="flex flex-col gap-1.5">
+        <div class="flex justify-between gap-2">
+          <hlm-skeleton class="h-3.5 w-1/2" />
+          <hlm-skeleton class="h-3.5 w-16" />
+        </div>
+        <hlm-skeleton class="ml-6 h-2" [style.width.%]="100 - bar * 14" />
+      </div>
+    }
+  </div>
+</ng-template>
