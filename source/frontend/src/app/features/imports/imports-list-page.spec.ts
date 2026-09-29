@@ -124,7 +124,11 @@ describe('ImportsListPage (US-10, US-12)', () => {
     const fixture = TestBed.createComponent(ImportsListPage);
     TestBed.tick();
 
-    expect(statuses(fixture.nativeElement as HTMLElement)).toContain('Loading imports');
+    const root = fixture.nativeElement as HTMLElement;
+    expect(statuses(root)).toContain('Loading imports');
+    // The shape of the page (key figures and cards) rather than a single line, so nothing jumps.
+    expect(root.querySelector('[data-testid="kpi-headline"] hlm-skeleton')).not.toBeNull();
+    expect(root.querySelectorAll('[data-testid="import-card-placeholder"]').length).toBeGreaterThan(0);
 
     http.expectOne('/api/imports').flush([]);
     await settle(fixture);

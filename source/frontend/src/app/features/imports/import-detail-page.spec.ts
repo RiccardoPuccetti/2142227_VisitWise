@@ -82,6 +82,22 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
 
   const root = (fixture: Awaited<ReturnType<typeof render>>) => fixture.nativeElement as HTMLElement;
 
+  it('shows the shape of the page while the import loads', async () => {
+    const fixture = TestBed.createComponent(ImportDetailPage);
+    fixture.componentRef.setInput('importId', '7');
+    TestBed.tick();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(text(page.querySelector('[role="status"]'))).toContain('Loading the import');
+    expect(page.querySelector('h1 hlm-skeleton')).not.toBeNull();
+    expect(page.querySelector('[data-testid="kpi-headline"] hlm-skeleton')).not.toBeNull();
+
+    http.expectOne('/api/imports/7').flush(DETAIL);
+    http.expectOne('/api/imports/7/points').flush(POINTS);
+    http.expectOne('/api/imports/7/geocoding').flush(DONE);
+    await settle(fixture);
+  });
+
   const button = (label: string, container: ParentNode = document.body) => {
     const found = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
       (candidate) => text(candidate) === label || candidate.getAttribute('aria-label') === label,

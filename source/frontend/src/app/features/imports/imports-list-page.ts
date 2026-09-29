@@ -23,12 +23,12 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmProgressImports } from '@spartan-ng/helm/progress';
-import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { ImportSummary } from '../../core/models/api.models';
 import { problemDetail } from '../../core/auth/problem-detail';
-import { KpiSummary, PageHeader } from '../../shared';
+import { type KpiDetail, KpiSummary, PageHeader } from '../../shared';
 import { locatedPercent } from './import-detail.model';
 import { formatCreatedAt, importStatusLabel } from './import-status';
 import { ImportsView, ImportsViewPreference } from './imports-view';
@@ -52,7 +52,7 @@ import { ImportsService } from './imports.service';
     HlmCardImports,
     HlmEmptyImports,
     HlmProgressImports,
-    HlmSpinnerImports,
+    HlmSkeletonImports,
     HlmTableImports,
     HlmToggleGroupImports,
     NgIcon,
@@ -83,6 +83,12 @@ export class ImportsListPage {
   private readonly header = viewChild.required(PageHeader);
 
   protected readonly view = this.preference.view;
+  /** The detail labels of the key figures, shown with placeholders while the list loads. */
+  protected readonly loadingDetails: KpiDetail[] = [
+    { label: 'Imports', value: '', icon: 'lucideFolderOpen' },
+    { label: 'Ready to plan', value: '', icon: 'lucideCircleCheck' },
+    { label: 'Enterprises', value: '', icon: 'lucideBuilding2' },
+  ];
 
   private readonly importsResource = resource({ loader: () => this.api.list() });
 
