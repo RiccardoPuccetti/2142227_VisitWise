@@ -1,8 +1,8 @@
 /*
- * App shell layout. Below 1024 px, and when logged out, the navigation is a top bar with pill groups. From 1024 px a
- * logged-in user gets an inset layout: the sidebar sits on the app frame (--shell) and the page is one panel set into
- * it, taking the whole remaining width; the sidebar can shrink to icons. --page-pad-x/y are read by the page header
- * to reach the panel edges.
+ * App shell layout. Logged out, the navigation is a top bar with the brand and the dark mode toggle. Logged in, from
+ * 1024 px, the layout is inset: the sidebar sits on the app frame (--shell) and the page is one panel set into it,
+ * taking the whole remaining width; the sidebar can shrink to icons. Below 1024 px the same sidebar is an off-canvas
+ * drawer opened from a slim top bar. --page-pad-x/y are read by the page header to reach the panel edges.
  */
 
 /* ---------- Top bar (default) ---------- */
@@ -186,6 +186,192 @@
   }
 }
 
+/* ---------- Vertical navigation (logged in): the sidebar from 1024 px, the drawer below ---------- */
+
+.shell[data-layout='sidebar'] .sidebar {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 1.5rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1.25rem 0.875rem;
+  border-bottom: 0;
+  backdrop-filter: none;
+}
+
+.shell[data-layout='sidebar'] .brand {
+  padding: 0.125rem 0.5rem;
+}
+
+.shell[data-layout='sidebar'] .brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.shell[data-layout='sidebar'] .brand-sub {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.shell[data-layout='sidebar'] .nav-group {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.125rem;
+  overflow: visible;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.shell[data-layout='sidebar'] .nav-heading {
+  display: block;
+  overflow: hidden;
+  margin: 0 0 0.375rem;
+  padding: 0 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.shell[data-layout='sidebar'] .nav-item {
+  padding: 0.5625rem 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.shell[data-layout='sidebar'] .nav-item ng-icon {
+  display: inline-flex;
+}
+
+.shell[data-layout='sidebar'] .nav-item:not(.active):hover {
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+.shell[data-layout='sidebar'] .nav-item.active {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: var(--shadow-card);
+}
+
+.shell[data-layout='sidebar'] .nav-item.active::before {
+  position: absolute;
+  top: 0.625rem;
+  bottom: 0.625rem;
+  left: 0;
+  width: 3px;
+  border-radius: 9999px;
+  background: var(--brand);
+  content: '';
+}
+
+.shell[data-layout='sidebar'] .nav-item.active ng-icon {
+  color: var(--brand);
+}
+
+.shell[data-layout='sidebar'] .sidebar-footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-top: auto;
+  margin-left: 0;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.shell[data-layout='sidebar'] .account {
+  padding: 0.375rem;
+  border-radius: 0.75rem;
+  background: none;
+  box-shadow: none;
+}
+
+.shell[data-layout='sidebar'] .account:hover,
+.shell[data-layout='sidebar'] .account.active {
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+.shell[data-layout='sidebar'] .account-name {
+  max-width: none;
+}
+
+.shell[data-layout='sidebar'] .account-role {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.shell[data-layout='sidebar'] .logout {
+  flex: 1;
+  justify-content: flex-start;
+  gap: 0.625rem;
+}
+
+/* ---------- Drawer (logged in, below 1024 px) ---------- */
+
+@media (max-width: 63.999rem) {
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in oklab, var(--background) 85%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .shell[data-layout='sidebar'] .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    width: min(18rem, 85vw);
+    border-right: 1px solid var(--border);
+    background: var(--shell);
+    box-shadow: 0 24px 48px -12px rgb(0 0 0 / 45%);
+    /* Closed, it is also inert (set by the app), so it is out of the tab order and hidden from screen readers. */
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+  }
+
+  .shell[data-layout='sidebar'] .sidebar[data-open='true'] {
+    transform: none;
+  }
+
+  .drawer-close {
+    position: absolute;
+    top: 1.25rem;
+    right: 0.75rem;
+  }
+
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgb(0 0 0 / 50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+
+  .drawer-backdrop[data-open='true'] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* ---------- Sidebar (logged in, from 1024 px) ---------- */
 
 @media (min-width: 64rem) {
@@ -198,135 +384,17 @@
   .shell[data-layout='sidebar'] .sidebar {
     position: sticky;
     top: 0;
-    flex-direction: column;
-    flex-wrap: nowrap;
     flex-shrink: 0;
-    align-items: stretch;
-    gap: 1.5rem;
     width: 16.5rem;
     height: 100dvh;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding: 1.25rem 0.875rem;
-    border-bottom: 0;
     background: none;
-    backdrop-filter: none;
     transition: width 200ms ease;
   }
 
-  .shell[data-layout='sidebar'] .brand {
-    padding: 0.125rem 0.5rem;
-  }
-
-  .shell[data-layout='sidebar'] .brand-text {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.15;
-  }
-
-  .shell[data-layout='sidebar'] .brand-sub {
-    display: block;
-    color: var(--muted-foreground);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-  }
-
-  .shell[data-layout='sidebar'] .nav-group {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.125rem;
-    overflow: visible;
-    padding: 0;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-  }
-
-  .shell[data-layout='sidebar'] .nav-heading {
-    display: block;
-    overflow: hidden;
-    margin: 0 0 0.375rem;
-    padding: 0 0.75rem;
-    color: var(--muted-foreground);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-overflow: ellipsis;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .shell[data-layout='sidebar'] .nav-item {
-    padding: 0.5625rem 0.75rem;
-    border-radius: 0.75rem;
-  }
-
-  .shell[data-layout='sidebar'] .nav-item ng-icon {
-    display: inline-flex;
-  }
-
-  .shell[data-layout='sidebar'] .nav-item:not(.active):hover {
-    background: color-mix(in oklab, var(--foreground) 6%, transparent);
-  }
-
-  .shell[data-layout='sidebar'] .nav-item.active {
-    background: var(--background);
-    color: var(--foreground);
-    box-shadow: var(--shadow-card);
-  }
-
-  .shell[data-layout='sidebar'] .nav-item.active::before {
-    position: absolute;
-    top: 0.625rem;
-    bottom: 0.625rem;
-    left: 0;
-    width: 3px;
-    border-radius: 9999px;
-    background: var(--brand);
-    content: '';
-  }
-
-  .shell[data-layout='sidebar'] .nav-item.active ng-icon {
-    color: var(--brand);
-  }
-
-  .shell[data-layout='sidebar'] .sidebar-footer {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-    margin-top: auto;
-    margin-left: 0;
-    padding-top: 1rem;
-    border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
-  }
-
-  .shell[data-layout='sidebar'] .account {
-    padding: 0.375rem;
-    border-radius: 0.75rem;
-    background: none;
-    box-shadow: none;
-  }
-
-  .shell[data-layout='sidebar'] .account:hover,
-  .shell[data-layout='sidebar'] .account.active {
-    background: color-mix(in oklab, var(--foreground) 6%, transparent);
-  }
-
-  .shell[data-layout='sidebar'] .account-name {
-    max-width: none;
-  }
-
-  .shell[data-layout='sidebar'] .account-role {
-    display: block;
-    color: var(--muted-foreground);
-    font-size: 0.6875rem;
-  }
-
-  .shell[data-layout='sidebar'] .logout {
-    flex: 1;
-    justify-content: flex-start;
-    gap: 0.625rem;
+  .topbar,
+  .drawer-backdrop,
+  .drawer-close {
+    display: none;
   }
 
   .shell[data-layout='sidebar'] .logout ng-icon,
@@ -404,6 +472,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar,
+  .drawer-backdrop,
   .nav-item,
   .account {
     transition: none;

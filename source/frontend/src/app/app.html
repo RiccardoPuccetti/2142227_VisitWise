@@ -1,6 +1,6 @@
 <!-- App shell (owner: Rivera, task RIV-1; layout revamp US-38, Puccetti PUC-13): navigation + routed page + toaster.
-     Logged in: a sidebar from 1024 px (collapsible to icons), a top bar below. Logged out: a top bar with the dark mode
-     toggle only. Navigation and tenant menu (profile link, logout; Puccetti, PUC-9) only when logged in. -->
+     Logged in: a sidebar from 1024 px (collapsible to icons); below, a top bar whose menu button opens the same sidebar
+     as a drawer. Logged out: a top bar with the dark mode toggle only. Navigation and tenant menu (profile link, logout; Puccetti, PUC-9) only when logged in. -->
 <a
   href="#main"
   (click)="skipToMain($event)"
@@ -9,7 +9,52 @@
 >
 
 <div class="shell" [attr.data-layout]="auth.currentTenant() ? 'sidebar' : 'bar'">
-  <header id="app-sidebar" class="sidebar" [attr.data-collapsed]="sidebar.collapsed()">
+  @if (auth.currentTenant()) {
+    <!-- Below 1024 px: the top bar with the menu button, and the backdrop behind the open drawer. -->
+    <div class="topbar">
+      <button
+        #menuButton
+        hlmBtn
+        variant="ghost"
+        size="icon-sm"
+        type="button"
+        aria-label="Open menu"
+        aria-controls="app-sidebar"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="openMenu()"
+      >
+        <ng-icon name="lucideMenu" aria-hidden="true" />
+      </button>
+      <a routerLink="/imports" class="brand">
+        <span class="brand-mark" aria-hidden="true"><ng-icon name="lucideRoute" /></span>
+        VisitWise
+      </a>
+    </div>
+    <div class="drawer-backdrop" aria-hidden="true" [attr.data-open]="menuOpen()" (click)="closeMenu()"></div>
+  }
+
+  <header
+    id="app-sidebar"
+    class="sidebar"
+    [attr.data-collapsed]="sidebar.collapsed()"
+    [attr.data-open]="menuOpen()"
+    [attr.inert]="auth.currentTenant() && narrow() && !menuOpen() ? '' : null"
+    (keydown.escape)="closeMenu()"
+  >
+    @if (auth.currentTenant()) {
+      <button
+        #closeButton
+        hlmBtn
+        variant="ghost"
+        size="icon-sm"
+        type="button"
+        class="drawer-close rounded-full"
+        aria-label="Close menu"
+        (click)="closeMenu()"
+      >
+        <ng-icon name="lucideX" aria-hidden="true" />
+      </button>
+    }
     <a routerLink="/imports" class="brand" [attr.title]="sidebar.collapsed() ? 'VisitWise' : null">
       <span class="brand-mark" aria-hidden="true"><ng-icon name="lucideRoute" /></span>
       <span class="brand-text">
@@ -120,7 +165,7 @@
     }
   </header>
 
-  <main id="main" tabindex="-1" class="content outline-none">
+  <main id="main" tabindex="-1" class="content outline-none" [attr.inert]="menuOpen() ? '' : null">
     <div class="page">
       <router-outlet />
     </div>
