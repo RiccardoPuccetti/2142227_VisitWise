@@ -7,7 +7,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBuilding2, lucideKeyRound } from '@ng-icons/lucide';
+import { lucideBuilding2, lucideKeyRound, lucideMail } from '@ng-icons/lucide';
 import { AuthService } from '../../core/auth/auth.service';
 import { problemDetail } from '../../core/auth/problem-detail';
 import { PASSWORD_MAX_LENGTH, requiredText } from '../auth/text-rules';
@@ -30,12 +30,15 @@ import { ProfileService } from './profile.service';
     HlmFieldImports,
     HlmInputImports,
   ],
-  providers: [provideIcons({ lucideBuilding2, lucideKeyRound })],
+  providers: [provideIcons({ lucideBuilding2, lucideKeyRound, lucideMail })],
   template: `
     <app-page-header title="Profile">
-      <p>
-        Logged in as <span class="text-foreground font-medium">{{ auth.currentTenant()?.email }}</span>
-      </p>
+      <ul class="page-facts">
+        <li>
+          <ng-icon name="lucideMail" aria-hidden="true" /> Logged in as
+          <span class="text-foreground font-medium">{{ auth.currentTenant()?.email }}</span>
+        </li>
+      </ul>
     </app-page-header>
 
     <div class="grid gap-7 lg:grid-cols-[minmax(0,20rem)_1fr] 2xl:grid-cols-[minmax(0,24rem)_1fr]">

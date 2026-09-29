@@ -1,20 +1,11 @@
 <!-- Agent plan (owner: Rivera, task RIV-4, US-28..US-30). -->
 <div class="flex flex-col gap-7">
-  <app-page-header
-    [title]="plan()?.name ?? 'Agent plan'"
-    [trail]="[
-      { label: 'Imports', link: '/imports' },
-      { label: 'Import ' + importId(), link: ['/imports', importId()] },
-      { label: 'Scenarios', link: ['/imports', importId(), 'scenarios'] },
-    ]"
-  >
+  <app-page-header [title]="plan()?.name ?? 'Agent plan'">
     <!-- Where the page comes from: a scenario saved in the planner and opened from the scenarios page. -->
-    <ul class="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <ul class="page-facts">
       <li><span hlmBadge variant="outline"><ng-icon name="lucideBookmark" aria-hidden="true" /> Saved scenario</span></li>
       @for (item of meta(); track item.icon) {
-        <li class="inline-flex items-center gap-1.5">
-          <ng-icon [name]="item.icon" class="shrink-0" aria-hidden="true" /> {{ item.text }}
-        </li>
+        <li><ng-icon [name]="item.icon" aria-hidden="true" /> {{ item.text }}</li>
       }
     </ul>
     <div actions class="flex flex-wrap items-end gap-3">

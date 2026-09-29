@@ -17,10 +17,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
+  lucideCircleDot,
   lucideEuro,
   lucideFilter,
   lucideMapPin,
   lucideMousePointerClick,
+  lucidePalette,
   lucideTrendingUp,
   lucideUsers,
 } from '@ng-icons/lucide';
@@ -113,10 +115,12 @@ const PARETO_STEPS = 6;
   providers: [
     provideIcons({
       lucideCalendarRange,
+      lucideCircleDot,
       lucideEuro,
       lucideFilter,
       lucideMapPin,
       lucideMousePointerClick,
+      lucidePalette,
       lucideTrendingUp,
       lucideUsers,
     }),

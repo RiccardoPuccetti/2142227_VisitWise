@@ -16,9 +16,11 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideCalendarDays,
   lucideCalendarRange,
   lucideCircleCheck,
   lucideCircleSlash,
+  lucideFileSpreadsheet,
   lucideMapPin,
   lucideMapPinned,
   lucideTableProperties,
@@ -96,9 +98,11 @@ type PointFilter = 'all' | 'missing';
   ],
   providers: [
     provideIcons({
+      lucideCalendarDays,
       lucideCalendarRange,
       lucideCircleCheck,
       lucideCircleSlash,
+      lucideFileSpreadsheet,
       lucideMapPin,
       lucideMapPinned,
       lucideTableProperties,

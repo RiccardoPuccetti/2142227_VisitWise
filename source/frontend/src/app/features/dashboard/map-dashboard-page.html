@@ -1,11 +1,10 @@
 <!-- Map dashboard (owner: Rivera, task RIV-3, US-13..US-18). -->
-<app-page-header
-  [trail]="[{ label: 'Imports', link: '/imports' }, { label: 'Overview', link: ['/imports', id()] }]"
-  title="Map"
->
-  <p>
-    Delivery points of the import. Color: the enterprise with the largest revenue at the point. Size: revenue.
-  </p>
+<app-page-header title="Map">
+  <ul class="page-facts">
+    <li><ng-icon name="lucideMapPin" aria-hidden="true" /> Delivery points of the import</li>
+    <li><ng-icon name="lucidePalette" aria-hidden="true" /> Color: the enterprise with the largest revenue</li>
+    <li><ng-icon name="lucideCircleDot" aria-hidden="true" /> Size: revenue</li>
+  </ul>
   <div actions class="flex flex-wrap items-center gap-2">
     <a hlmBtn variant="outline" [routerLink]="['/imports', id(), 'planner']">
       <ng-icon name="lucideCalendarRange" aria-hidden="true" /> Plan visits

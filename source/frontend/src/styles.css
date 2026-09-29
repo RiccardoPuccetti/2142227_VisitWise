@@ -190,6 +190,16 @@
   .pill {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
   }
+  /* Facts of a page, in the strip under its title (page header): icon and text items. */
+  .page-facts {
+    @apply flex flex-wrap items-center gap-x-5 gap-y-1.5;
+  }
+  .page-facts > li {
+    @apply inline-flex items-center gap-1.5;
+  }
+  .page-facts ng-icon {
+    @apply shrink-0 text-base;
+  }
   /* Eyebrow label above a figure. */
   .eyebrow {
     @apply text-muted-foreground text-[0.6875rem] font-semibold tracking-[0.08em] uppercase;

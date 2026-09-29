@@ -1,6 +1,8 @@
 <div class="flex flex-col gap-7">
-  <app-page-header title="What-if and scenarios" [trail]="[{ label: 'Imports', link: '/imports' }, { label: 'Import ' + importId(), link: ['/imports', importId()] }]">
-    <p>See how much more revenue extra working days bring, and compare the scenarios you saved from the planner.</p>
+  <app-page-header title="What-if and scenarios">
+    <ul class="page-facts">
+      <li><ng-icon name="lucideInfo" aria-hidden="true" /> See how much more revenue extra working days bring, and compare the scenarios you saved from the planner.</li>
+    </ul>
     <div actions>
       <a hlmBtn [routerLink]="['/imports', importId(), 'planner']"><ng-icon name="lucideCalendarRange" aria-hidden="true" /> Open the planner</a>
     </div>

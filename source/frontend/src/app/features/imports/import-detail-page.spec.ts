@@ -145,7 +145,6 @@ describe('ImportDetailPage (US-07..US-09, US-11, US-12)', () => {
     const page = root(fixture);
 
     expect(text(page.querySelector('h1'))).toBe('Sample 2025');
-    expect(page.querySelector('nav[aria-label="Breadcrumb"] a[href="/imports"]')).not.toBeNull();
     expect(text(page)).toContain('sample-erp-layout.xlsx');
     expect(page.querySelector('time')?.getAttribute('datetime')).toBe('2026-09-28T10:15:00+02:00');
     // Same key figures as the map dashboard: the imported rows lead, with the share of the file they cover.

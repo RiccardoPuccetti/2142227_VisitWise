@@ -5,6 +5,7 @@ import {
   lucideArrowUpRight,
   lucideCalendarRange,
   lucideGitCompare,
+  lucideInfo,
   lucideTrash2,
   lucideTrendingUp,
 } from '@ng-icons/lucide';
@@ -74,7 +75,14 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     EurPipe,
   ],
   providers: [
-    provideIcons({ lucideArrowUpRight, lucideCalendarRange, lucideGitCompare, lucideTrash2, lucideTrendingUp }),
+    provideIcons({
+      lucideArrowUpRight,
+      lucideCalendarRange,
+      lucideGitCompare,
+      lucideInfo,
+      lucideTrash2,
+      lucideTrendingUp,
+    }),
   ],
   templateUrl: './scenario-compare-page.html',
 })

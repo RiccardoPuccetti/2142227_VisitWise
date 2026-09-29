@@ -7,15 +7,19 @@
   </div>
   <a hlmBtn variant="outline" class="self-start" routerLink="/imports">Back to the imports</a>
 } @else if (detail(); as import) {
-  <app-page-header [trail]="[{ label: 'Imports', link: '/imports' }]" [title]="import.name">
-    <p class="flex flex-wrap items-center gap-2">
-      <span>
-        Imported on <time [attr.datetime]="import.createdAt">{{ created() }}</time> from {{ import.sourceFileName }}
-      </span>
-      <span hlmBadge [variant]="import.status === 'FAILED' ? 'destructive' : import.status === 'READY' ? 'outline' : 'secondary'">
-        {{ statusLabel() }}
-      </span>
-    </p>
+  <app-page-header [title]="import.name">
+    <ul class="page-facts">
+      <li>
+        <ng-icon name="lucideCalendarDays" aria-hidden="true" /> Imported on
+        <time [attr.datetime]="import.createdAt">{{ created() }}</time>
+      </li>
+      <li><ng-icon name="lucideFileSpreadsheet" aria-hidden="true" /> {{ import.sourceFileName }}</li>
+      <li>
+        <span hlmBadge [variant]="import.status === 'FAILED' ? 'destructive' : import.status === 'READY' ? 'outline' : 'secondary'">
+          {{ statusLabel() }}
+        </span>
+      </li>
+    </ul>
     <div actions class="flex flex-wrap gap-2">
       <a hlmBtn [routerLink]="['/imports', import.id, 'planner']"><ng-icon name="lucideCalendarRange" aria-hidden="true" /> Plan visits</a>
       <hlm-alert-dialog>
