@@ -126,6 +126,17 @@ class ImportGeocodingJobTest {
     }
 
     @Test
+    void aRetryAskedWhileTheJobRunsFollowsIt() {
+        // The analyst asks for a retry (endpoint 9) while the first run waits for its first answer.
+        FakeGeocoder.beforeNextAnswer(() -> job.run(importId, true));
+
+        job.run(importId, false);
+
+        // Two lookups for the first run, two more for the retry, which asks the cached misses again.
+        assertThat(FakeGeocoder.calls()).isEqualTo(4);
+    }
+
+    @Test
     void providerOutageLeavesTheImportUsableWithAnExplanation() {
         FakeGeocoder.unavailable(true);
 

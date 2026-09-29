@@ -36,6 +36,8 @@ public class ImportGeocodingJob {
     private final GeocodingService geocoding;
     private final TransactionTemplate transactions;
     private final Set<Long> running = ConcurrentHashMap.newKeySet();
+    /** Retries asked while the import was running: each one runs once the current run ends. */
+    private final Set<Long> retryRequested = ConcurrentHashMap.newKeySet();
 
     public ImportGeocodingJob(DeliveryPointRepository points, ImportBatchRepository imports,
             GeocodingService geocoding, TransactionTemplate transactions) {
@@ -68,6 +70,9 @@ public class ImportGeocodingJob {
     /** Synchronous body, package-private for tests. */
     void run(Long importId, boolean retryMisses) {
         if (!running.add(importId)) {
+            if (retryMisses) {
+                retryRequested.add(importId);
+            }
             return;
         }
         try {
@@ -89,6 +94,9 @@ public class ImportGeocodingJob {
             transactions.executeWithoutResult(status -> finish(importId, stillPending > 0));
         } finally {
             running.remove(importId);
+        }
+        if (retryRequested.remove(importId)) {
+            run(importId, true);
         }
     }
 
