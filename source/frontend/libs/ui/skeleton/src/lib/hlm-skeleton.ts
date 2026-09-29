@@ -9,6 +9,7 @@ import { classes } from '@spartan-ng/helm/utils';
 })
 export class HlmSkeleton {
   constructor() {
-    classes(() => 'bg-muted rounded-2xl block motion-safe:animate-pulse');
+    // A tint of the text colour: bg-muted is almost the card colour in both themes, so placeholders vanished on cards.
+    classes(() => 'bg-foreground/9 rounded-2xl block motion-safe:animate-pulse');
   }
 }

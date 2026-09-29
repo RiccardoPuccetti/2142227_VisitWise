@@ -1,4 +1,5 @@
 import { Component, ElementRef, input, viewChild } from '@angular/core';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 
 /**
  * Top of every page (US-38): one row with the title and the actions, then a quiet strip with the facts of the page
@@ -11,9 +12,13 @@ import { Component, ElementRef, input, viewChild } from '@angular/core';
  *   <div actions><a hlmBtn routerLink="map">Open the map</a></div>
  * </app-page-header>
  * ```
+ *
+ * While the page loads, `[loading]="true"` shows placeholders for the title and the facts (the title stays readable
+ * by screen readers), so the page does not jump when its data arrives.
  */
 @Component({
   selector: 'app-page-header',
+  imports: [HlmSkeletonImports],
   template: `
     <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pb-4">
       <h1
@@ -21,13 +26,18 @@ import { Component, ElementRef, input, viewChild } from '@angular/core';
         tabindex="-1"
         class="min-w-0 text-[1.5rem] leading-tight font-semibold tracking-[-0.015em] text-balance outline-none"
       >
-        {{ title() }}
+        @if (loading()) {
+          <span class="sr-only">{{ title() }}</span>
+          <hlm-skeleton class="my-0.5 h-7 w-64 max-w-full" aria-hidden="true" />
+        } @else {
+          {{ title() }}
+        }
       </h1>
       <div data-slot="page-actions" class="flex shrink-0 flex-wrap items-center gap-2 empty:hidden">
         <ng-content select="[actions]" />
       </div>
     </div>
-    <div data-slot="page-description" class="text-muted-foreground border-t pt-3 text-sm empty:hidden"><ng-content /></div>
+    <div data-slot="page-description" class="text-muted-foreground border-t pt-3 text-sm empty:hidden">@if (loading()) {<hlm-skeleton class="h-5 w-80 max-w-full" aria-hidden="true" />}<ng-content /></div>
   `,
   styles: `
     /* Bleeds to the edges of the page panel (--page-pad-x/y set by the app shell), so the dividers join the frame.
@@ -47,6 +57,7 @@ import { Component, ElementRef, input, viewChild } from '@angular/core';
 })
 export class PageHeader {
   readonly title = input.required<string>();
+  readonly loading = input(false);
 
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
 

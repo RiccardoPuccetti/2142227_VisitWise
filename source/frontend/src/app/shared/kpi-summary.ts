@@ -36,10 +36,13 @@ export interface KpiDetail {
         <div hlmCardContent class="flex flex-col gap-2">
           <h3 class="text-muted-foreground text-sm font-medium">{{ label() }}</h3>
           @if (loading()) {
-            <hlm-skeleton class="h-9 w-40" />
+            <!-- The lines of the result (value, bar, hint), so nothing jumps when the figures arrive. -->
+            <hlm-skeleton class="h-8 w-44" />
+            <hlm-skeleton class="mt-1 h-1.5 w-full" />
+            <hlm-skeleton class="h-3 w-32" />
             <span class="sr-only">Loading</span>
           } @else {
-            <p class="text-[2rem] leading-none font-semibold tracking-tight tabular-nums">{{ value() }}</p>
+            <p class="motion-fade text-[2rem] leading-none font-semibold tracking-tight tabular-nums">{{ value() }}</p>
             @if (percent() !== null) {
               <hlm-progress class="mt-1 h-1.5" [value]="percent()" [attr.aria-label]="label() + ': ' + percent() + '%'">
                 <hlm-progress-indicator />
@@ -61,7 +64,8 @@ export interface KpiDetail {
             </dt>
             <dd class="flex flex-col items-end text-right">
               @if (loading()) {
-                <hlm-skeleton class="h-5 w-16" />
+                <hlm-skeleton class="h-5 w-12" />
+                <hlm-skeleton class="mt-1 h-3 w-24" />
               } @else {
                 <span class="font-semibold tabular-nums">{{ detail.value }}</span>
                 @if (detail.hint) {

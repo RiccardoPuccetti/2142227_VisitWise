@@ -65,6 +65,32 @@ describe('MapView', () => {
     fixture.destroy();
   });
 
+  it('fits the data at once when it opens, then glides to the new data when it changes', async () => {
+    const fixture = TestBed.createComponent(MapView);
+    fixture.componentRef.setInput('markers', [{ id: 1, latitude: 41.9, longitude: 12.5, color: '#2563eb' }]);
+    const view = () => fixture.componentInstance['map']!.getView();
+    await fixture.whenStable();
+    const fit = vi.spyOn(view(), 'fit');
+
+    fixture.componentRef.setInput('markers', [{ id: 2, latitude: 42.0, longitude: 12.7, color: '#2563eb' }]);
+    await fixture.whenStable();
+
+    expect(fit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 450 }));
+    fixture.destroy();
+  });
+
+  it('opens already fitted, without an animation', async () => {
+    const fixture = TestBed.createComponent(MapView);
+    await fixture.whenStable();
+    const fit = vi.spyOn(fixture.componentInstance['map']!.getView(), 'fit');
+
+    fixture.componentRef.setInput('markers', [{ id: 1, latitude: 41.9, longitude: 12.5, color: '#2563eb' }]);
+    await fixture.whenStable();
+
+    expect(fit).toHaveBeenCalledWith(expect.anything(), expect.not.objectContaining({ duration: expect.any(Number) }));
+    fixture.destroy();
+  });
+
   it('anchors the popup to its marker, so it moves with the map, and hides it without one', async () => {
     const fixture = TestBed.createComponent(MapView);
     fixture.componentRef.setInput('markers', [{ id: 2, latitude: 42.0, longitude: 12.7, color: '#2563eb' }]);

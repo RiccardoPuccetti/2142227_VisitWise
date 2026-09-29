@@ -359,6 +359,27 @@ describe('MapDashboardPage', () => {
     });
   });
 
+  it('shows placeholders in the charts and the list until the first data arrives', async () => {
+    await harness.navigateByUrl('/imports/42/map');
+
+    expect(page().querySelectorAll('[data-testid="chart-placeholder"]').length).toBe(4);
+    expect(page().textContent).not.toContain('No revenue for these filters');
+    expect(page().querySelectorAll('[data-testid="points-scroller"] tbody [data-testid="row-placeholder"]').length).toBeGreaterThan(0);
+
+    // The points arrive first: nothing of them shows yet, so the page changes once, when everything is there.
+    http.expectOne('/api/imports/42/points').flush(POINTS);
+    TestBed.tick();
+    expect(page().querySelectorAll('[data-testid="points-scroller"] tbody tr[data-point-id]').length).toBe(0);
+    expect(page().querySelector('app-enterprise-legend')).toBeNull();
+    expect(page().querySelector('app-map-view')).toBeNull();
+    expect(page().querySelector('[data-testid="map-placeholder"]')).not.toBeNull();
+
+    summaryRequests().forEach((r) => r.flush(summary()));
+    await harness.fixture.whenStable();
+    expect(page().querySelector('[data-testid="chart-placeholder"]')).toBeNull();
+    expect(page().querySelector('[data-testid="row-placeholder"]')).toBeNull();
+  });
+
   it('shows the problem when the points cannot be loaded', async () => {
     await harness.navigateByUrl('/imports/42/map');
     http

@@ -142,8 +142,11 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
         <h2 hlmCardTitle id="import-step-title" tabindex="-1" #stepTitle class="outline-none">{{ title() }}</h2>
       </div>
 
-      <div hlmCardContent class="flex flex-col gap-6">
-        @switch (step()) {
+      <div hlmCardContent>
+        <!-- One pass per step: its content is created again and slides in from the side of the way we moved. -->
+        @for (current of [step()]; track current) {
+        <div class="flex flex-col gap-6" [class]="stepMotion()">
+        @switch (current) {
           @case ('upload') {
             <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
               <label
@@ -357,6 +360,8 @@ const STEPS: readonly { id: Exclude<Step, 'done'>; label: string }[] = [
             }
           }
         }
+        </div>
+        }
       </div>
     </section>
   `,
@@ -380,6 +385,8 @@ export class ImportWizardPage {
   protected readonly summary = signal<ImportSummary | null>(null);
   protected readonly loading = signal(false);
   protected readonly dragging = signal(false);
+  /** How the next step enters: forward from the end, back from the start; nothing on the first step. */
+  protected readonly stepMotion = signal('');
   protected readonly error = signal<string | null>(null);
   /** The enterprises list error is shown only after the first Import click. */
   protected readonly attempted = signal(false);
@@ -514,6 +521,7 @@ export class ImportWizardPage {
 
   protected goTo(step: Step): void {
     this.error.set(null);
+    this.stepMotion.set(this.stepIndex(step) >= this.stepIndex(this.step()) ? 'motion-from-end' : 'motion-from-start');
     this.step.set(step);
     // Keyboard and screen reader users land on the new step's title.
     afterNextRender(() => this.stepTitle().nativeElement.focus(), { injector: this.injector });

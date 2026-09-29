@@ -1,5 +1,46 @@
 @if (loading()) {
-  <p role="status" class="flex items-center gap-2 text-sm"><hlm-spinner /> Loading the import…</p>
+  <!-- The shape of the page while the import loads: header, key figures, map and rail, then the table. -->
+  <app-page-header title="Loading the import" [loading]="true" />
+  <p role="status" class="sr-only">Loading the import…</p>
+  <div class="flex flex-col gap-7" aria-hidden="true">
+    <app-kpi-summary label="Imported" [loading]="true" [details]="loadingDetails" />
+    <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
+      <div hlmCard size="sm" class="xl:col-start-2 xl:row-start-1">
+        <div hlmCardContent class="flex h-full flex-col gap-3">
+          <div class="flex justify-between gap-3">
+            <hlm-skeleton class="h-5 w-48" />
+            <hlm-skeleton class="h-5 w-40" />
+          </div>
+          <hlm-skeleton class="h-80 w-full rounded-xl xl:h-auto xl:min-h-80 xl:flex-1" />
+        </div>
+      </div>
+      <div class="grid content-start gap-6 md:grid-cols-2 xl:col-start-1 xl:row-start-1 xl:grid-cols-1">
+        @for (card of [1, 2]; track card) {
+          <div hlmCard size="sm">
+            <div hlmCardContent class="flex flex-col gap-3">
+              <hlm-skeleton class="h-5 w-40" />
+              <hlm-skeleton class="h-4 w-full" />
+              <hlm-skeleton class="h-4 w-3/4" />
+              <hlm-skeleton class="h-4 w-2/3" />
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+    <div hlmCard class="gap-0 py-0">
+      <div class="flex flex-col gap-2 border-b px-6 py-4">
+        <hlm-skeleton class="h-5 w-36" />
+        <hlm-skeleton class="h-3 w-72 max-w-full" />
+      </div>
+      @for (row of [1, 2, 3, 4, 5]; track row) {
+        <div class="flex items-center gap-6 border-b px-6 py-3 last:border-b-0">
+          <hlm-skeleton class="h-4 w-1/4" />
+          <hlm-skeleton class="h-4 w-1/3" />
+          <hlm-skeleton class="ml-auto h-4 w-16" />
+        </div>
+      }
+    </div>
+  </div>
 } @else if (loadError(); as error) {
   <div hlmAlert variant="destructive" role="alert">
     <p hlmAlertTitle>The import could not be loaded</p>

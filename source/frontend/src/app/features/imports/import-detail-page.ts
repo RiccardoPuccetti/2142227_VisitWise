@@ -32,7 +32,7 @@ import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmProgressImports } from '@spartan-ng/helm/progress';
-import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
+import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import type { DeliveryPoint, GeocodingProgress } from '../../core/models/api.models';
@@ -44,6 +44,7 @@ import {
   type KpiDetail,
   KpiSummary,
   MapView,
+  minimumLoading,
   PageHeader,
   TablePager,
 } from '../../shared';
@@ -85,7 +86,7 @@ type PointFilter = 'all' | 'missing';
     HlmButtonImports,
     HlmCardImports,
     HlmProgressImports,
-    HlmSpinnerImports,
+    HlmSkeletonImports,
     HlmTableImports,
     HlmToggleGroupImports,
     EurPipe,
@@ -137,7 +138,7 @@ export class ImportDetailPage {
   protected readonly detail = computed(() =>
     this.detailResource.hasValue() ? this.detailResource.value() : undefined,
   );
-  protected readonly loading = computed(() => this.detailResource.isLoading() && !this.detail());
+  protected readonly loading = minimumLoading(() => this.detailResource.isLoading() && !this.detail());
   protected readonly loadError = computed(() => {
     const error = this.detailResource.error();
     return error ? problemDetail(error) : null;
@@ -151,6 +152,12 @@ export class ImportDetailPage {
     const detail = this.detail();
     return detail ? importStatusLabel(detail.status) : '';
   });
+  /** The detail labels of the key figures, shown with placeholders while the import loads. */
+  protected readonly loadingDetails: KpiDetail[] = [
+    { label: 'Skipped', value: '', icon: 'lucideCircleSlash' },
+    { label: 'Agents', value: '', icon: 'lucideUsers' },
+    { label: 'Cities', value: '', icon: 'lucideMapPin' },
+  ];
   /** The report figures, as the key figures of the map dashboard: the imported rows lead (US-07, US-11). */
   protected readonly figures = computed(() => {
     const detail = this.detail();

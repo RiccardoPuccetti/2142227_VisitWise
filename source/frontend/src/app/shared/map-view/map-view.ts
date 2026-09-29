@@ -36,6 +36,8 @@ import {
 
 /** Pixels between a marker and its popup. */
 export const POPUP_GAP = 14;
+/** How long the map glides to new data. */
+const FIT_DURATION_MS = 450;
 
 function prefersReducedMotion(): boolean {
   return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -88,6 +90,8 @@ export class MapView {
   private readonly routeSource = new VectorSource<Feature<LineString>>();
   private readonly ready = signal(false);
   private map: OlMap | null = null;
+  /** Whether the map has been fitted once: later fits are animated. */
+  private fitted = false;
   private popup: Overlay | null = null;
 
   constructor() {
@@ -207,7 +211,10 @@ export class MapView {
       ?.getCoordinates();
   }
 
-  /** Zooms to show every marker and route. Does nothing when there is no data. */
+  /**
+   * Zooms to show every marker and route. Does nothing when there is no data. The first fit is immediate (the map opens
+   * on its data); later ones glide there, e.g. to another day's route, unless the user prefers reduced motion.
+   */
   fitToData(): void {
     const extent = createEmpty();
     for (const sourceExtent of [this.markerSource.getExtent(), this.routeSource.getExtent()]) {
@@ -218,6 +225,8 @@ export class MapView {
     if (!this.map || isEmpty(extent)) {
       return;
     }
-    this.map.getView().fit(extent, { padding: [32, 32, 32, 32], maxZoom: MAX_FIT_ZOOM });
+    const glide = this.fitted && !prefersReducedMotion() ? { duration: FIT_DURATION_MS } : {};
+    this.map.getView().fit(extent, { padding: [32, 32, 32, 32], maxZoom: MAX_FIT_ZOOM, ...glide });
+    this.fitted = true;
   }
 }

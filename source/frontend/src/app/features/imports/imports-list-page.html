@@ -30,7 +30,36 @@
   }
 
   @if (loading()) {
-    <p role="status" class="flex items-center gap-2 text-sm"><hlm-spinner /> Loading imports…</p>
+    <!-- The shape of the page while the list arrives: key figures, then a row of cards. -->
+    <p role="status" class="sr-only">Loading imports…</p>
+    <app-kpi-summary label="Delivery points" [loading]="true" [details]="loadingDetails" />
+    <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-hidden="true">
+      @for (card of [1, 2, 3, 4]; track card) {
+        <li hlmCard data-testid="import-card-placeholder" class="min-w-0">
+          <div hlmCardHeader class="gap-2">
+            <hlm-skeleton class="h-6 w-3/4" />
+            <hlm-skeleton class="h-4 w-1/2" />
+            <hlm-skeleton class="h-4 w-2/3" />
+          </div>
+          <div hlmCardContent class="flex flex-col gap-4">
+            <div class="grid grid-cols-3 gap-2">
+              @for (figure of [1, 2, 3]; track figure) {
+                <div class="flex flex-col gap-1.5">
+                  <hlm-skeleton class="h-6 w-10" />
+                  <hlm-skeleton class="h-3 w-14" />
+                </div>
+              }
+            </div>
+            <hlm-skeleton class="h-1.5 w-full" />
+            <hlm-skeleton class="h-4 w-2/3" />
+          </div>
+          <div hlmCardFooter class="mt-auto flex gap-2 border-t pt-4">
+            <hlm-skeleton class="h-8 w-16" />
+            <hlm-skeleton class="h-8 w-16" />
+          </div>
+        </li>
+      }
+    </ul>
   } @else if (loadError(); as error) {
     <div hlmAlert variant="destructive" role="alert">
       <p hlmAlertTitle>The imports could not be loaded</p>
@@ -71,7 +100,13 @@
       <!-- Same columns as the KPI row above, so the card edges line up. -->
       <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Imports">
         @for (item of items(); track item.id) {
-          <li hlmCard data-testid="import-card" class="group relative min-w-0">
+          <li
+            hlmCard
+            data-testid="import-card"
+            class="motion-enter group relative min-w-0"
+            [style.--motion-index]="$index"
+            animate.leave="motion-leave"
+          >
             <div class="absolute inset-x-0 top-0 flex h-1" aria-hidden="true">
               @for (enterprise of item.enterprises; track enterprise.id) {
                 <span class="flex-1" [style.background-color]="enterprise.color"></span>
@@ -158,7 +193,7 @@
               </thead>
               <tbody hlmTBody>
                 @for (item of items(); track item.id) {
-                  <tr hlmTr>
+                  <tr hlmTr class="motion-fade" animate.leave="motion-leave">
                     <td hlmTd class="pl-6 font-medium">
                       <a class="underline-offset-4 hover:underline" [routerLink]="['/imports', item.id]">{{ item.name }}</a>
                       <span class="mt-1 flex gap-1" aria-hidden="true">

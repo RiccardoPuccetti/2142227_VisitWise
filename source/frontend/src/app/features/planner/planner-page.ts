@@ -8,7 +8,9 @@ import {
   input,
   resource,
   signal,
+  untracked,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -33,6 +35,7 @@ import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
+import { HlmSliderImports } from '@spartan-ng/helm/slider';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import { HlmTabsImports } from '@spartan-ng/helm/tabs';
@@ -59,6 +62,7 @@ import {
   validateParameters,
 } from './planner.model';
 import { PlannerService } from './planner.service';
+import { workingDaysBetween } from './working-calendar';
 
 const PERCENT = new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1 });
 const DECIMAL = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 1 });
@@ -69,6 +73,9 @@ const DATE = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 });
 const GEOCODING_POLL_MS = 3000;
+/** The planning API's upper bound, used as the horizon when there is no deadline. */
+const MAX_WORKING_DAYS = 260;
+const NO_WORKING_DAYS = 'No working days between the start date and the deadline.';
 
 /** Minimum time the "planning" view stays up, so the switch to the plan reads as a transition (0 in tests). */
 export const PLAN_REVEAL_MS = new InjectionToken<number>('PLAN_REVEAL_MS', { providedIn: 'root', factory: () => 1100 });
@@ -98,6 +105,7 @@ function dateLabel(value: string | null): string {
     HlmInputImports,
     HlmNativeSelectImports,
     HlmSkeletonImports,
+    HlmSliderImports,
     HlmSpinnerImports,
     HlmTableImports,
     HlmTabsImports,
@@ -208,6 +216,24 @@ export class PlannerPage {
     travelCostPerKm: new FormControl(2, { nonNullable: true }),
     minRevenue: new FormControl(0, { nonNullable: true }),
   });
+  private readonly startDate = toSignal(this.form.controls.startDate.valueChanges, {
+    initialValue: this.form.controls.startDate.value,
+  });
+  private readonly deadline = toSignal(this.form.controls.deadline.valueChanges, {
+    initialValue: this.form.controls.deadline.value,
+  });
+  protected readonly workingDays = toSignal(this.form.controls.workingDays.valueChanges, {
+    initialValue: this.form.controls.workingDays.value,
+  });
+  /** Working days of the chosen time frame; null without a deadline, when the horizon is free. */
+  protected readonly availableDays = computed(() =>
+    this.deadline() ? workingDaysBetween(this.startDate(), this.deadline()) : null,
+  );
+  protected readonly maxWorkingDays = computed(() => this.availableDays() ?? MAX_WORKING_DAYS);
+  protected readonly noWorkingDays = NO_WORKING_DAYS;
+  /** The last time frame the slider followed: a value at its end keeps following the end. */
+  private followedDays: number | null = null;
+
   protected readonly baseForm = new FormGroup({
     address: new FormControl('', { nonNullable: true }),
     city: new FormControl('', { nonNullable: true }),
@@ -300,6 +326,12 @@ export class PlannerPage {
       }
     });
     effect(() => {
+      const available = this.availableDays();
+      if (available) {
+        untracked(() => this.followTimeFrame(available));
+      }
+    });
+    effect(() => {
       const enterprises = this.enterprises();
       if (enterprises.length) {
         this.weights.update((current) => {
@@ -338,6 +370,10 @@ export class PlannerPage {
     if (preset) {
       this.applyPreset(preset);
     }
+  }
+
+  protected setWorkingDays(value: number[]): void {
+    this.form.controls.workingDays.setValue(value[0]);
   }
 
   protected setPlanningMode(value: string | null | undefined): void {
@@ -398,6 +434,9 @@ export class PlannerPage {
   protected async simulate(): Promise<void> {
     const parameters = this.parameters();
     const errors = validateParameters(parameters);
+    if (this.availableDays() === 0) {
+      errors.push(NO_WORKING_DAYS);
+    }
     this.validationErrors.set(errors);
     this.actionError.set(null);
     this.savedMessage.set(null);
@@ -485,6 +524,15 @@ export class PlannerPage {
       startDate: preset.startDate,
       deadline: preset.endDate,
     });
+  }
+
+  /** Starts with the whole time frame, keeps a shorter choice and never goes past the deadline. */
+  private followTimeFrame(available: number): void {
+    const control = this.form.controls.workingDays;
+    if (this.followedDays === null || control.value === this.followedDays || control.value > available) {
+      control.setValue(available);
+    }
+    this.followedDays = available;
   }
 
   /** Endpoint 18: the road route of the selected day; failures keep the straight-line polyline. */

@@ -5,6 +5,7 @@ export * from './eur.pipe';
 export * from './kpi-summary';
 export * from './map-view/map-view';
 export * from './map-view/map-view.model';
+export * from './minimum-loading';
 export * from './page-header';
 export * from './paging';
 export * from './table-pager';
