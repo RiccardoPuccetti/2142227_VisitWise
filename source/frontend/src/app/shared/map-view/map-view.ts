@@ -45,7 +45,7 @@ function prefersReducedMotion(): boolean {
 
 /**
  * OpenStreetMap map with markers and routes (OpenLayers). Shared by the map dashboard,
- * the planner and the agent plan.
+ * the import detail and the planner.
  *
  * - `markers`: circles, colored and sized by the page (e.g. enterprise color, radius from revenue).
  * - `routes`: polylines, e.g. one per planned day.
@@ -54,7 +54,7 @@ function prefersReducedMotion(): boolean {
  * - `popupId` + content marked `data-map-popup`: a popup anchored to the right of that marker, which moves with
  *   the map when it is panned or zoomed; hidden when `popupId` is null or matches no marker.
  * - `centerOn(id, padding)`: pans (same zoom) so the marker sits in the middle of the area the padding leaves free.
- * - The view fits the data whenever markers or routes change (`autoFit`, default true).
+ * - The view fits the data whenever markers or routes change.
  *
  * The map canvas is not readable by screen readers: every page that uses it must also show the same
  * points as text (table or list). Height comes from the host class (default `h-96`).
@@ -81,7 +81,6 @@ export class MapView {
   readonly highlightedId = input<MapMarker['id'] | null>(null);
   /** Marker the projected `data-map-popup` content is anchored to; null hides it. */
   readonly popupId = input<MapMarker['id'] | null>(null);
-  readonly autoFit = input(true);
   readonly ariaLabel = input('Map');
   readonly markerClick = output<MapMarker>();
 
@@ -165,7 +164,7 @@ export class MapView {
     effect(() => {
       this.markers();
       this.routes();
-      if (this.ready() && this.autoFit()) {
+      if (this.ready()) {
         this.fitToData();
       }
     });
@@ -215,7 +214,7 @@ export class MapView {
    * Zooms to show every marker and route. Does nothing when there is no data. The first fit is immediate (the map opens
    * on its data); later ones glide there, e.g. to another day's route, unless the user prefers reduced motion.
    */
-  fitToData(): void {
+  private fitToData(): void {
     const extent = createEmpty();
     for (const sourceExtent of [this.markerSource.getExtent(), this.routeSource.getExtent()]) {
       if (sourceExtent) {

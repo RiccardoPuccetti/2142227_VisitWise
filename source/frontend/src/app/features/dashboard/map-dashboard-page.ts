@@ -17,7 +17,6 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
   lucideCircleDot,
-  lucideEuro,
   lucideFilter,
   lucideMapPin,
   lucideMousePointerClick,
@@ -56,6 +55,7 @@ import {
 import { AmountBars, BarItem } from './amount-bars';
 import {
   DashboardFilter,
+  EMPTY_FILTER,
   filterFromParams,
   filterOptions,
   filterPoints,
@@ -117,7 +117,6 @@ const PARETO_STEPS = 6;
     provideIcons({
       lucideCalendarRange,
       lucideCircleDot,
-      lucideEuro,
       lucideFilter,
       lucideMapPin,
       lucideMousePointerClick,
@@ -233,15 +232,6 @@ export class MapDashboardPage {
     return share === null ? '–' : PERCENT.format(share);
   });
 
-  protected readonly enterpriseBars = computed<BarItem[]>(() =>
-    (this.summary()?.byEnterprise ?? []).map((e) => ({
-      key: String(e.enterpriseId),
-      label: e.name,
-      revenue: e.revenue,
-      pointCount: e.pointCount,
-      color: e.color,
-    })),
-  );
   protected readonly agentBars = computed<BarItem[]>(() =>
     (this.summary()?.byAgent ?? []).map((a) => ({ ...a, label: a.key })),
   );
@@ -331,7 +321,7 @@ export class MapDashboardPage {
   }
 
   protected resetFilters(): void {
-    this.update({ enterpriseIds: [], agent: null, city: null, minRevenue: 0 });
+    this.update(EMPTY_FILTER);
   }
 
   constructor() {

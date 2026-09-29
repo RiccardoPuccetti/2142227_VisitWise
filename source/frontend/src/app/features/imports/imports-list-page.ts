@@ -12,7 +12,6 @@ import {
   lucideLayoutGrid,
   lucideList,
   lucideMap,
-  lucideMapPin,
   lucideTrash2,
   lucideUpload,
 } from '@ng-icons/lucide';
@@ -70,7 +69,6 @@ import { ImportsService } from './imports.service';
       lucideLayoutGrid,
       lucideList,
       lucideMap,
-      lucideMapPin,
       lucideTrash2,
       lucideUpload,
     }),

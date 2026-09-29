@@ -50,14 +50,7 @@ export function planMarkers(result: PlanResult | null, dayIndex: number): MapMar
     return [];
   }
   return [
-    {
-      id: BASE_MARKER_ID,
-      latitude: result.parameters.base.latitude,
-      longitude: result.parameters.base.longitude,
-      color: BASE_COLOR,
-      radius: 8,
-      title: 'Starting base',
-    },
+    ...baseMarker(result.parameters.base),
     ...day.visits.map((visit) => ({
       id: visit.deliveryPointId,
       latitude: visit.latitude,

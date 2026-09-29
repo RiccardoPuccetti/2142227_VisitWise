@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 export interface DonutSlice {
   key: string;
@@ -53,7 +53,6 @@ function arcPath(start: number, end: number): string {
  */
 @Component({
   selector: 'app-donut-chart',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     @if (drawn().length === 0) {

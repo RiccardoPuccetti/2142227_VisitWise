@@ -10,7 +10,6 @@ import {
   lucideTrendingUp,
 } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
-import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
@@ -64,7 +63,6 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     NgIcon,
     PageHeader,
     HlmAlertImports,
-    HlmBadgeImports,
     HlmButtonImports,
     HlmCardImports,
     HlmFieldImports,

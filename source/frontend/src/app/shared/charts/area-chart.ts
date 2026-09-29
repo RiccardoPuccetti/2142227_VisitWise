@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 export interface ChartPoint {
   /** Label under the point on the x axis, e.g. "20 d". */
@@ -20,8 +20,8 @@ let gradientCount = 0;
 
 /**
  * A single series over ordered categories: area with a soft gradient, a line and one dot per point, with light grid
- * lines and axis labels. Values are written above the dots so the chart reads without hovering. Plain SVG, themed by
- * the CSS tokens (`--chart-1` by default).
+ * lines and axis labels; each dot names its value on hover. Plain SVG, themed by the CSS tokens (`--chart-1` by
+ * default).
  *
  * ```html
  * <app-area-chart [points]="curve()" [max]="1" [format]="percent" ariaLabel="Coverage by working days" />
@@ -29,7 +29,6 @@ let gradientCount = 0;
  */
 @Component({
   selector: 'app-area-chart',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     @if (drawn().length === 0) {
@@ -82,17 +81,6 @@ let gradientCount = 0;
           <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4.5" class="fill-card" [attr.stroke]="color()" stroke-width="2.5">
             <title>{{ point.label }}: {{ format()(point.value) }}</title>
           </circle>
-          @if (showValues()) {
-            <text
-              [attr.x]="point.x"
-              [attr.y]="point.y - 10"
-              text-anchor="middle"
-              class="fill-foreground font-medium"
-              font-size="10"
-            >
-              {{ format()(point.value) }}
-            </text>
-          }
           <text
             [attr.x]="point.x"
             [attr.y]="height - 8"
@@ -114,7 +102,6 @@ export class AreaChart {
   /** Formats a value for the axis, the labels and the tooltips. */
   readonly format = input<(value: number) => string>((value) => String(value));
   readonly color = input('var(--chart-1)');
-  readonly showValues = input(true);
   readonly ariaLabel = input('Chart');
 
   protected readonly width = WIDTH;

@@ -16,7 +16,6 @@ import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
-  lucideEuro,
   lucideInfo,
   lucideMapPin,
   lucideMapPinOff,
@@ -24,7 +23,6 @@ import {
   lucideSave,
   lucideSlidersHorizontal,
   lucideSparkles,
-  lucideUser,
 } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -117,7 +115,6 @@ function dateLabel(value: string | null): string {
   providers: [
     provideIcons({
       lucideCalendarRange,
-      lucideEuro,
       lucideInfo,
       lucideMapPin,
       lucideMapPinOff,
@@ -125,7 +122,6 @@ function dateLabel(value: string | null): string {
       lucideSave,
       lucideSlidersHorizontal,
       lucideSparkles,
-      lucideUser,
     }),
   ],
   templateUrl: './planner-page.html',
@@ -305,9 +301,8 @@ export class PlannerPage {
   protected readonly dayGroups = computed(() => groupDays(this.result()?.days ?? []));
   /** The starting point alone, for the map of step 1. */
   protected readonly baseMarkers = computed(() => baseMarker(this.base()));
-  protected readonly markers = computed(() =>
-    this.result() ? planMarkers(this.result(), this.selectedDayIndex()) : baseMarker(this.base()),
-  );
+  /** Rendered only with a result: step 1 shows the base alone through `baseMarkers`. */
+  protected readonly markers = computed(() => planMarkers(this.result(), this.selectedDayIndex()));
   protected readonly routes = computed(() =>
     planRoutes(this.result(), this.selectedDayIndex(), this.road()),
   );

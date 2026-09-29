@@ -18,7 +18,6 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarDays,
   lucideCalendarRange,
-  lucideCircleCheck,
   lucideCircleSlash,
   lucideFileSpreadsheet,
   lucideMapPin,
@@ -101,7 +100,6 @@ type PointFilter = 'all' | 'missing';
     provideIcons({
       lucideCalendarDays,
       lucideCalendarRange,
-      lucideCircleCheck,
       lucideCircleSlash,
       lucideFileSpreadsheet,
       lucideMapPin,
