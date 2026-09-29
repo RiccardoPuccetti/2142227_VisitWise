@@ -13,5 +13,4 @@ Documents produced during the development process (design, requirements, slides)
 | `architecture/AUTHENTICATION.md` | Registration, login, profile: security decisions and implementation steps |
 | `architecture/DECISIONS.md` | Decision log |
 | `team/TASKS.md` | Tasks per member and hand-offs between members |
-| `devlog/` | One entry per push: what, why, verification, slide notes |
 | `slides/` | Final PowerPoint, screenshots and diagrams (`assets/`) |

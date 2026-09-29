@@ -44,7 +44,7 @@ The root contains **exactly** these four visible items. **Never create any other
 │   ├── backend/         # Spring Boot 4.1 (Java 21, Maven) + Liquibase
 │   ├── frontend/        # Angular 22 + spartan-ng (helm/brain) + Tailwind 4 + OpenLayers
 │   └── sample-data/     # SYNTHETIC datasets + generator (safe to commit)
-└── booklets/            # documentation for the exam: architecture, user stories, mockups, devlog, slides
+└── booklets/            # documentation for the exam: architecture, user stories, mockups, slides
 ```
 
 ## 3. Stack and commands
@@ -120,7 +120,7 @@ Refs: <TASK-ID>[, US-xx]
 - Examples:
   - `feat(backend): add Excel preview endpoint with header detection` / body / `Refs: PUC-2, US-03, US-04`
   - `fix(engine): skip targets farther than maxDistanceKm` / body / `Refs: MAR-2`
-  - `docs(booklets): add devlog entry for import wizard` / `Refs: PUC-5`
+  - `docs(booklets): add task status for the import wizard` / `Refs: PUC-5`
 - One logical change per commit. Do not mix formatting with behavior changes.
 - The message describes **only what is in the diff**. No marketing words ("robust", "comprehensive", "enhanced"), no claims about things not done, no invented issue numbers.
 
@@ -136,13 +136,8 @@ Refs: <TASK-ID>[, US-xx]
 8. **Keep docs in sync in the same PR**: new endpoint -> `API_CONTRACT.md` (if agreed) + `Student_doc.md` endpoints table; new page -> `Student_doc.md` pages table; new table -> `Student_doc.md` DB structure.
 9. **Update the task status log when a task is completed** (or only partly done, when its work is merged): in the same PR, add a new dated section on top of `booklets/team/TASK_STATUS.md`: copy the previous section, change the rows of the tasks you worked on (status + evidence: commits, endpoints, pages, or what is still missing), update the summary and the blockers. Never edit older sections. Set the story status in `booklets/user-stories/USER_STORIES.md` and the spreadsheet too.
 
-## 7. Every push is documented (booklets feed the slides)
+## 7. Screenshots (booklets feed the slides)
 
-Before every `git push`, add **one new file** in `booklets/devlog/` (one file per push = no merge conflicts):
-
-- File name: `YYYY-MM-DD-HHMM-<surname>-<slug>.md` (lower case), e.g. `2026-09-28-1430-puccetti-import-preview.md`
-- Copy `booklets/devlog/_TEMPLATE.md` and fill **every** field (what, why/decisions, user stories, how verified, slide note, screenshot path if any).
-- Commit it with the work (`docs(booklets): devlog for <TASK-ID>`).
 - Screenshots of new UI go in `booklets/slides/assets/` (PNG, descriptive name). They are reused in the final PowerPoint.
 
 ## 8. NDA and data handling
@@ -158,5 +153,5 @@ Before every `git push`, add **one new file** in `booklets/devlog/` (one file pe
 - [ ] Acceptance criteria of the task in `TASKS.md` are met; related US ids are in the commits.
 - [ ] Docs updated (contract / Student_doc / architecture) where relevant.
 - [ ] `booklets/team/TASK_STATUS.md` has a new dated section with the task's new status (section 6, rule 9).
-- [ ] Devlog file added; screenshots for UI work.
+- [ ] Screenshots for UI work.
 - [ ] PR opened into `develop` with the template filled.
