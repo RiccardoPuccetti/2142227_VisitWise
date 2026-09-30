@@ -47,9 +47,10 @@
         </p>
       </div>
       <div hlmCardContent class="flex flex-col gap-4">
-        <!-- The plan beside its horizons: points on a track over the plan's working days, their values as chips. -->
+        <!-- One toolbar row: the plan, its horizons (points on a track over the plan's working days, their values as
+             chips below) and the button, level with the select and the track. -->
         <form
-          class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
+          class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
           (submit)="$event.preventDefault(); compareHorizons()"
         >
           <div hlmField>
@@ -115,7 +116,9 @@
               </li>
             </ul>
           </div>
-          <div class="flex justify-center lg:col-span-2">
+          <div hlmField>
+            <!-- Takes the height of the other labels, so the button lines up with the select and the track. -->
+            <span hlmFieldLabel class="invisible max-lg:hidden" aria-hidden="true">Compare</span>
             <button hlmBtn type="submit" [disabled]="running()">
               @if (running()) {
                 <hlm-spinner class="size-4" />
