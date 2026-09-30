@@ -150,11 +150,10 @@ describe('ScenarioComparePage', () => {
     Array.from(page().querySelectorAll('button')).find((item) =>
       item.textContent?.includes(label),
     ) as HTMLButtonElement;
-  const type = (selector: string, value: string) => {
-    const field = page().querySelector<HTMLInputElement>(selector)!;
-    field.value = value;
-    field.dispatchEvent(new Event('input'));
-  };
+  const chips = () =>
+    Array.from(page().querySelectorAll('[data-testid="whatif-horizon-chip"]')).map((chip) =>
+      chip.textContent?.replace(/\s+/g, ' ').trim(),
+    );
   const select = (selector: string, value: string) => {
     const field = page().querySelector<HTMLSelectElement>(selector)!;
     field.value = value;
@@ -170,16 +169,19 @@ describe('ScenarioComparePage', () => {
       expect(Array.from(source.options).map((option) => option.value)).toEqual([
         'campaign:CHRISTMAS',
       ]);
-      expect(page().querySelector<HTMLInputElement>('#whatif-horizons')!.value).toBe('20, 30, 40');
+      // The horizons are points on a track over the campaign's 34 working days: a third, two thirds, all of it.
+      const thumbs = page().querySelectorAll('[data-testid="whatif-horizons"] [role="slider"]');
+      expect(Array.from(thumbs).map((thumb) => thumb.getAttribute('aria-valuenow'))).toEqual(['11', '23', '34']);
+      expect(thumbs[0].getAttribute('aria-valuemax')).toBe('34');
+      expect(chips()).toEqual(['11 days', '23 days', '34 days']);
     });
 
-    it('compares the campaign defaults over the typed horizons and draws the coverage curve', async () => {
-      type('#whatif-horizons', '40, 20, 30');
+    it('compares the campaign defaults over the chosen horizons and draws the coverage curve', async () => {
       button('Compare horizons').click();
       TestBed.tick();
 
       const request = http.expectOne('/api/imports/42/plans/what-if');
-      expect(request.request.body.horizons).toEqual([20, 30, 40]);
+      expect(request.request.body.horizons).toEqual([11, 23, 34]);
       expect(request.request.body.base).toMatchObject({
         campaign: 'CHRISTMAS',
         startDate: '2026-11-02',
@@ -202,13 +204,27 @@ describe('ScenarioComparePage', () => {
       expect(page().querySelectorAll('[data-testid="whatif-curve"] circle').length).toBe(3);
     });
 
-    it('rejects invalid horizons without calling the API', () => {
-      type('#whatif-horizons', '0, 20');
-      button('Compare horizons').click();
-      TestBed.tick();
+    it('adds a horizon in the widest gap and removes horizons down to one', () => {
+      button('Add horizon').click();
       harness.detectChanges();
-      expect(text()).toContain('Horizons must be whole numbers between 1 and 260');
-      http.expectNone('/api/imports/42/plans/what-if');
+      expect(chips()).toEqual(['11 days', '17 days', '23 days', '34 days']);
+
+      for (const value of [11, 17, 23]) {
+        page().querySelector<HTMLButtonElement>(`button[aria-label="Remove ${value} days"]`)!.click();
+        harness.detectChanges();
+      }
+      expect(chips()).toEqual(['34 days']);
+      // The last horizon stays: the what-if needs at least one.
+      expect(page().querySelector<HTMLButtonElement>('button[aria-label="Remove 34 days"]')!.disabled).toBe(true);
+    });
+
+    it('stops adding horizons at five', () => {
+      button('Add horizon').click();
+      harness.detectChanges();
+      button('Add horizon').click();
+      harness.detectChanges();
+      expect(chips().length).toBe(5);
+      expect(button('Add horizon').disabled).toBe(true);
     });
   });
 

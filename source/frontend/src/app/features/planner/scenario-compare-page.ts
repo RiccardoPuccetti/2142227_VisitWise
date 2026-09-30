@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, resource, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -6,16 +6,18 @@ import {
   lucideCalendarRange,
   lucideGitCompare,
   lucideInfo,
+  lucidePlus,
   lucideTrash2,
   lucideTrendingUp,
+  lucideX,
 } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
-import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
+import { HlmSliderImports } from '@spartan-ng/helm/slider';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import type {
@@ -36,7 +38,7 @@ import {
   PageHeader,
   valueOf,
 } from '../../shared';
-import { DEFAULT_BASE } from './planner.model';
+import { DEFAULT_BASE, MAX_WORKING_DAYS } from './planner.model';
 import { PlannerService } from './planner.service';
 import {
   KPI_ROWS,
@@ -44,7 +46,9 @@ import {
   bestColumns,
   coverageCurve,
   defaultParameters,
-  parseHorizons,
+  addHorizon,
+  defaultHorizons,
+  horizonTrackMax,
 } from './scenario-compare.model';
 
 /** Drawing box of the coverage curve (SVG user units; the element scales to its container). */
@@ -53,7 +57,6 @@ const CHART = { width: 320, height: 120 } as const;
 const CHART_PADDING = 22;
 /** Side-by-side columns stay readable up to this many scenarios. */
 const MAX_COMPARED = 4;
-const DEFAULT_HORIZONS = '20, 30, 40';
 
 /**
  * MAR-5: what-if analysis of one plan over several horizons (US-26) and side-by-side comparison of the
@@ -69,9 +72,9 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     HlmButtonImports,
     HlmCardImports,
     HlmFieldImports,
-    HlmInputImports,
     HlmNativeSelectImports,
     HlmSkeletonImports,
+    HlmSliderImports,
     HlmSpinnerImports,
     HlmTableImports,
     EurPipe,
@@ -82,8 +85,10 @@ const DEFAULT_HORIZONS = '20, 30, 40';
       lucideCalendarRange,
       lucideGitCompare,
       lucideInfo,
+      lucidePlus,
       lucideTrash2,
       lucideTrendingUp,
+      lucideX,
     }),
   ],
   templateUrl: './scenario-compare-page.html',
@@ -168,7 +173,16 @@ export class ScenarioComparePage {
 
   /** `campaign:<code>` for the planner defaults or `scenario:<id>` for a saved plan. */
   protected readonly source = signal('');
-  protected readonly horizonsText = signal(DEFAULT_HORIZONS);
+  /** Last day of the horizons track: the working days of the chosen plan's window. */
+  protected readonly trackMax = computed(() => {
+    const plan = this.baseParameters();
+    return plan ? horizonTrackMax(plan) : MAX_WORKING_DAYS;
+  });
+  /** The horizons to compare, sorted; they start again from the defaults when the window changes. */
+  protected readonly horizons = linkedSignal(() => defaultHorizons(this.trackMax()));
+  protected readonly canAddHorizon = computed(
+    () => addHorizon(this.horizons(), this.trackMax()).length > this.horizons().length,
+  );
   protected readonly whatIfError = signal<string | null>(null);
   protected readonly running = signal(false);
   protected readonly whatIf = signal<WhatIfResult | null>(null);
@@ -219,16 +233,19 @@ export class ScenarioComparePage {
     }
   }
 
-  protected setHorizons(event: Event): void {
-    this.horizonsText.set((event.target as HTMLInputElement).value);
+  protected setHorizons(values: number[]): void {
+    this.horizons.set([...new Set(values)].sort((a, b) => a - b));
+  }
+
+  protected addHorizon(): void {
+    this.horizons.update((horizons) => addHorizon(horizons, this.trackMax()));
+  }
+
+  protected removeHorizon(value: number): void {
+    this.horizons.update((horizons) => (horizons.length > 1 ? horizons.filter((item) => item !== value) : horizons));
   }
 
   protected async compareHorizons(): Promise<void> {
-    const parsed = parseHorizons(this.horizonsText());
-    if ('error' in parsed) {
-      this.whatIfError.set(parsed.error);
-      return;
-    }
     const base = this.baseParameters();
     if (!base) {
       this.whatIfError.set('Choose the plan to analyse.');
@@ -237,7 +254,7 @@ export class ScenarioComparePage {
     this.whatIfError.set(null);
     this.running.set(true);
     try {
-      this.whatIf.set(await this.api.whatIf(this.id(), { base, horizons: parsed.horizons }));
+      this.whatIf.set(await this.api.whatIf(this.id(), { base, horizons: this.horizons() }));
     } catch (error) {
       this.whatIfError.set(problemDetail(error));
     } finally {
