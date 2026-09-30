@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCalendarRange,
@@ -24,6 +24,7 @@ import {
   lucideSlidersHorizontal,
   lucideSparkles,
 } from '@ng-icons/lucide';
+import { toast } from '@spartan-ng/brain/sonner';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -195,6 +196,7 @@ export class PlannerPage {
   readonly importId = input.required<string>();
 
   private readonly api = inject(PlannerService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly revealMs = inject(PLAN_REVEAL_MS);
   protected readonly id = computed(() => Number(this.importId()));
@@ -265,7 +267,6 @@ export class PlannerPage {
   protected readonly validationErrors = signal<string[]>([]);
   protected readonly actionError = signal<string | null>(null);
   protected readonly scenarioName = signal('');
-  protected readonly savedMessage = signal<string | null>(null);
 
   /** Saved base (or null): the map shows it before any plan exists. */
   protected readonly base = signal<StartingBase | null>(null);
@@ -445,7 +446,6 @@ export class PlannerPage {
     }
     this.validationErrors.set(errors);
     this.actionError.set(null);
-    this.savedMessage.set(null);
     if (errors.length) {
       return;
     }
@@ -482,7 +482,6 @@ export class PlannerPage {
   protected async saveScenario(dialog?: { close(): void }): Promise<void> {
     const result = this.result();
     const name = this.scenarioName().trim();
-    this.savedMessage.set(null);
     if (!result || !name) {
       this.actionError.set('Enter a scenario name.');
       return;
@@ -491,8 +490,18 @@ export class PlannerPage {
     this.actionError.set(null);
     try {
       const saved = await this.api.save(this.id(), name, result.parameters);
-      this.savedMessage.set(`Scenario saved: ${saved.name}.`);
       dialog?.close();
+      // Its action opens the what-if page with this scenario already chosen as the plan to analyse.
+      toast.success(`Scenario saved: ${saved.name}`, {
+        description: 'See how many working days it is worth.',
+        // Longer than the default 4 s, so there is time to reach the action (hovering also pauses it).
+        duration: 10_000,
+        action: {
+          label: 'Analyse',
+          onClick: () =>
+            void this.router.navigate(['/imports', this.id(), 'scenarios'], { queryParams: { analyse: saved.id } }),
+        },
+      });
     } catch (error) {
       this.actionError.set(problemDetail(error));
     } finally {

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, resource, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, resource, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -116,6 +116,8 @@ const DEFAULT_HORIZONS = '20, 30, 40';
 })
 export class ScenarioComparePage {
   readonly importId = input.required<string>();
+  /** `?analyse=<planId>`, e.g. from the toast after saving a scenario: that scenario is the plan to analyse. */
+  readonly analyse = input<string>();
 
   private readonly api = inject(PlannerService);
   protected readonly id = computed(() => Number(this.importId()));
@@ -194,9 +196,18 @@ export class ScenarioComparePage {
         this.selectedIds.set(plans.slice(0, MAX_COMPARED).map((plan) => plan.id));
       }
     });
+    // First choice of the plan to analyse, once the campaigns and the scenarios are there: the scenario asked for
+    // in the link, else the first campaign's defaults.
     effect(() => {
       const campaigns = this.campaigns();
-      if (campaigns.length && !this.source()) {
+      const plans = valueOf(this.plansResource);
+      if (untracked(this.source) || (!plans && !this.plansResource.error())) {
+        return;
+      }
+      const asked = Number(this.analyse());
+      if (plans?.some((plan) => plan.id === asked)) {
+        this.source.set(`scenario:${asked}`);
+      } else if (campaigns.length) {
         this.source.set(`campaign:${campaigns[0].code}`);
       }
     });

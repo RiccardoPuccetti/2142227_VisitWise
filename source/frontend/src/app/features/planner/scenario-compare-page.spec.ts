@@ -105,7 +105,7 @@ const SCENARIOS: PlanSummary[] = [
   },
 ];
 
-async function setup(scenarios: PlanSummary[]) {
+async function setup(scenarios: PlanSummary[], url = '/imports/42/scenarios') {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -118,7 +118,7 @@ async function setup(scenarios: PlanSummary[]) {
   });
   const http = TestBed.inject(HttpTestingController);
   const harness = await RouterTestingHarness.create();
-  await harness.navigateByUrl('/imports/42/scenarios');
+  await harness.navigateByUrl(url);
   http
     .expectOne((request) => request.url === '/api/planning/campaigns')
     .flush([
@@ -214,6 +214,10 @@ describe('ScenarioComparePage', () => {
 
   describe('with saved scenarios', () => {
     beforeEach(async () => ({ http, harness } = await setup(SCENARIOS)));
+
+    it('starts from the campaign defaults when no scenario is asked for', () => {
+      expect(page().querySelector<HTMLSelectElement>('select#whatif-source')!.value).toBe('campaign:CHRISTMAS');
+    });
 
     it('shows the selected scenarios side by side and marks the best value of each row', () => {
       const table = page().querySelector('[data-testid="compare-table"]')!;
@@ -332,6 +336,24 @@ describe('ScenarioComparePage before its data arrives', () => {
 
     expect(page().querySelector('[data-testid="scenarios-loading"]')).toBeNull();
     expect(page().querySelector('#whatif-title')).not.toBeNull();
+    http.verify();
+  });
+});
+
+describe('ScenarioComparePage opened from a saved scenario', () => {
+  it('sets the scenario named in the link as the plan to analyse', async () => {
+    const { http, harness } = await setup(SCENARIOS, '/imports/42/scenarios?analyse=8');
+    const source = (harness.routeNativeElement as HTMLElement).querySelector<HTMLSelectElement>('select#whatif-source')!;
+
+    expect(source.value).toBe('scenario:8');
+    http.verify();
+  });
+
+  it('keeps the campaign defaults when the linked scenario is not among the saved ones', async () => {
+    const { http, harness } = await setup(SCENARIOS, '/imports/42/scenarios?analyse=99');
+    const source = (harness.routeNativeElement as HTMLElement).querySelector<HTMLSelectElement>('select#whatif-source')!;
+
+    expect(source.value).toBe('campaign:CHRISTMAS');
     http.verify();
   });
 });
