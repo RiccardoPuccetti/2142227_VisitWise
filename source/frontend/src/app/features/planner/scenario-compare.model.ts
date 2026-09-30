@@ -6,6 +6,7 @@ import type {
   PlanSummary,
   WhatIfRow,
 } from '../../core/models/api.models';
+import { formatDecimal, formatEur, formatPercent } from '../../shared';
 import { MAX_WORKING_DAYS } from './planner.model';
 import { workingDaysBetween } from './working-calendar';
 
@@ -123,6 +124,23 @@ export const KPI_ROWS: readonly KpiRow[] = [
   { key: 'totalKm', label: 'Distance', better: 'lower', format: 'km' },
   { key: 'travelHours', label: 'Time on the road', better: 'lower', format: 'hours' },
 ];
+
+/** The value of a KPI row, in its unit ("395.000 €", "71%", "420,5 km"). */
+export function formatKpi(row: KpiRow, kpis: PlanKpis): string {
+  const value = Number(kpis[row.key]);
+  switch (row.format) {
+    case 'eur':
+      return formatEur(value, 'rounded');
+    case 'percent':
+      return formatPercent(value);
+    case 'km':
+      return `${formatDecimal(value)} km`;
+    case 'hours':
+      return `${formatDecimal(value)} h`;
+    default:
+      return String(value);
+  }
+}
 
 /**
  * For every KPI row, the column indexes of the scenarios with the best value (ties share the mark).

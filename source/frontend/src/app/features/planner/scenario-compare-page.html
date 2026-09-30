@@ -271,6 +271,22 @@
         <p hlmCardDescription>
           Tick up to {{ maxCompared }} scenarios to see them side by side. The best value of each row is highlighted.
         </p>
+        @if (scenarios().length) {
+          <div hlmCardAction>
+            <div
+              hlmToggleGroup
+              type="single"
+              variant="outline"
+              [nullable]="false"
+              [value]="compareView()"
+              (valueChange)="setCompareView($event)"
+              aria-label="Comparison view"
+            >
+              <button hlmToggleGroupItem value="table"><ng-icon name="lucideTable2" aria-hidden="true" /> Table</button>
+              <button hlmToggleGroupItem value="chart"><ng-icon name="lucideChartBar" aria-hidden="true" /> Chart</button>
+            </div>
+          </div>
+        }
       </div>
       <div hlmCardContent class="flex flex-col gap-4">
         @if (scenarioError()) {
@@ -347,7 +363,9 @@
               }
             </ul>
 
-            @if (compared().length) {
+            @if (compared().length && compareView() === 'chart') {
+              <app-scenario-bars [scenarios]="compared()" />
+            } @else if (compared().length) {
               <div hlmTableContainer class="rounded-2xl border">
                 <table hlmTable data-testid="compare-table">
                   <caption class="sr-only">Selected scenarios side by side</caption>

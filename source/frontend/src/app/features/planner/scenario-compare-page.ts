@@ -4,9 +4,11 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArrowUpRight,
   lucideCalendarRange,
+  lucideChartBar,
   lucideGitCompare,
   lucideInfo,
   lucidePlus,
+  lucideTable2,
   lucideTrash2,
   lucideTrendingUp,
   lucideX,
@@ -19,6 +21,7 @@ import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { HlmSliderImports } from '@spartan-ng/helm/slider';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
+import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import type {
   PlanKpis,
@@ -32,7 +35,6 @@ import {
   formatDate,
   formatDateTime,
   formatDecimal,
-  formatEur,
   formatPercent,
   minimumLoading,
   PageHeader,
@@ -40,16 +42,19 @@ import {
 } from '../../shared';
 import { DEFAULT_BASE, MAX_WORKING_DAYS } from './planner.model';
 import { PlannerService } from './planner.service';
+import { ScenarioBars } from './scenario-bars';
 import {
   KPI_ROWS,
   type KpiRow,
   bestColumns,
   coverageCurve,
   defaultParameters,
+  formatKpi,
   addHorizon,
   defaultHorizons,
   horizonTrackMax,
 } from './scenario-compare.model';
+import { ScenariosView, ScenariosViewPreference } from './scenarios-view';
 
 /** Drawing box of the coverage curve (SVG user units; the element scales to its container). */
 const CHART = { width: 320, height: 120 } as const;
@@ -76,6 +81,8 @@ const MAX_COMPARED = 4;
     HlmSkeletonImports,
     HlmSliderImports,
     HlmSpinnerImports,
+    HlmToggleGroupImports,
+    ScenarioBars,
     HlmTableImports,
     EurPipe,
   ],
@@ -83,9 +90,11 @@ const MAX_COMPARED = 4;
     provideIcons({
       lucideArrowUpRight,
       lucideCalendarRange,
+      lucideChartBar,
       lucideGitCompare,
       lucideInfo,
       lucidePlus,
+      lucideTable2,
       lucideTrash2,
       lucideTrendingUp,
       lucideX,
@@ -125,6 +134,9 @@ export class ScenarioComparePage {
   readonly analyse = input<string>();
 
   private readonly api = inject(PlannerService);
+  private readonly viewPreference = inject(ScenariosViewPreference);
+  /** The comparison as a table (default) or as bars; the choice is kept in this browser. */
+  protected readonly compareView = this.viewPreference.view;
   protected readonly id = computed(() => Number(this.importId()));
   protected readonly chart = CHART;
   protected readonly chartPadding = CHART_PADDING;
@@ -227,6 +239,12 @@ export class ScenarioComparePage {
     });
   }
 
+  protected setCompareView(value: unknown): void {
+    if (value === 'table' || value === 'chart') {
+      this.viewPreference.set(value satisfies ScenariosView);
+    }
+  }
+
   protected setSource(value: string | null | undefined): void {
     if (value) {
       this.source.set(value);
@@ -300,19 +318,7 @@ export class ScenarioComparePage {
   }
 
   protected kpi(row: KpiRow, kpis: PlanKpis): string {
-    const value = Number(kpis[row.key]);
-    switch (row.format) {
-      case 'eur':
-        return formatEur(value, 'rounded');
-      case 'percent':
-        return formatPercent(value);
-      case 'km':
-        return `${formatDecimal(value)} km`;
-      case 'hours':
-        return `${formatDecimal(value)} h`;
-      default:
-        return String(value);
-    }
+    return formatKpi(row, kpis);
   }
 
   protected percent(value: number): string {

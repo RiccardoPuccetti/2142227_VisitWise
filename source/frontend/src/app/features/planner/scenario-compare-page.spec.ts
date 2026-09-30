@@ -142,7 +142,11 @@ describe('ScenarioComparePage', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
 
-  afterEach(() => http.verify());
+  beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
 
   const page = () => harness.routeNativeElement as HTMLElement;
   const text = () => page().textContent?.replace(/\s+/g, ' ') ?? '';
@@ -230,6 +234,22 @@ describe('ScenarioComparePage', () => {
 
   describe('with saved scenarios', () => {
     beforeEach(async () => ({ http, harness } = await setup(SCENARIOS)));
+
+    it('compares in a table by default and switches to the bars on demand, remembering the choice', () => {
+      const view = (label: string) =>
+        Array.from(page().querySelectorAll<HTMLButtonElement>('[aria-label="Comparison view"] button')).find(
+          (item) => item.textContent?.trim() === label,
+        )!;
+      expect(page().querySelector('[data-testid="compare-table"]')).not.toBeNull();
+      expect(page().querySelector('app-scenario-bars')).toBeNull();
+
+      view('Chart').click();
+      harness.detectChanges();
+
+      expect(page().querySelector('[data-testid="compare-table"]')).toBeNull();
+      expect(page().querySelectorAll('app-scenario-bars [data-testid="kpi-bars"]').length).toBeGreaterThan(0);
+      expect(localStorage.getItem('visitwise-scenarios-view')).toBe('chart');
+    });
 
     it('starts from the campaign defaults when no scenario is asked for', () => {
       expect(page().querySelector<HTMLSelectElement>('select#whatif-source')!.value).toBe('campaign:CHRISTMAS');

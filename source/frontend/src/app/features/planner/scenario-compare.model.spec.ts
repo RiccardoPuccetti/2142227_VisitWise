@@ -6,6 +6,7 @@ import {
   addHorizon,
   defaultHorizons,
   defaultParameters,
+  formatKpi,
   horizonTrackMax,
 } from './scenario-compare.model';
 
@@ -129,5 +130,16 @@ describe('bestColumns', () => {
   it('has a row for the indicators shown side by side', () => {
     expect(KPI_ROWS.map((row) => row.key)).toContain('coveredRevenue');
     expect(KPI_ROWS.map((row) => row.key)).toContain('totalKm');
+  });
+});
+
+describe('formatKpi', () => {
+  it('writes each indicator in its unit', () => {
+    const value = (key: string) => formatKpi(KPI_ROWS.find((row) => row.key === key)!, KPIS);
+    expect(value('coveredRevenue')).toBe('395.000 €');
+    expect(value('coverage')).toBe('71%');
+    expect(value('plannedVisits')).toBe('40');
+    expect(value('totalKm')).toBe('420,5 km');
+    expect(value('travelHours')).toBe('21,9 h');
   });
 });
