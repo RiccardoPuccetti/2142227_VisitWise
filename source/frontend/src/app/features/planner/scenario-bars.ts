@@ -7,7 +7,7 @@ import { bestColumns, formatKpi, KPI_ROWS } from './scenario-compare.model';
  * stay calm beside the numbers. --chart-1 is the brand color, kept for the best value.
  */
 const SERIES = ['--chart-2', '--chart-3', '--chart-4', '--chart-5'].map(
-  (token) => `color-mix(in oklab, var(${token}) 60%, var(--card))`,
+  (token) => `color-mix(in oklab, var(${token}) 80%, var(--card))`,
 );
 
 /**
@@ -34,7 +34,7 @@ const SERIES = ['--chart-2', '--chart-3', '--chart-4', '--chart-5'].map(
     </ul>
     <div class="divide-y rounded-2xl border px-4">
       @for (row of rows(); track row.key) {
-        <div class="grid gap-x-6 gap-y-2 py-3 sm:grid-cols-[11rem_minmax(0,1fr)]">
+        <div class="grid items-center gap-x-6 gap-y-2 py-3 sm:grid-cols-[11rem_minmax(0,1fr)]">
           <div>
             <p class="text-sm">{{ row.label }}</p>
             <p class="text-muted-foreground text-xs">{{ row.better }} is better</p>
