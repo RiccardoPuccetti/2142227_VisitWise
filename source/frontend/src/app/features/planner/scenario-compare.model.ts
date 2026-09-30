@@ -6,26 +6,47 @@ import type {
   PlanSummary,
   WhatIfRow,
 } from '../../core/models/api.models';
+import { formatDecimal, formatEur, formatPercent } from '../../shared';
 import { MAX_WORKING_DAYS } from './planner.model';
+import { workingDaysBetween } from './working-calendar';
 
-const MAX_HORIZONS = 5;
+/** The planning API takes 1 to 5 distinct horizons (US-26). */
+export const MAX_HORIZONS = 5;
 
-/** Mirrors the what-if rules of the planning API: 1 to 5 distinct horizons, each 1..260 working days. */
-export function parseHorizons(text: string): { horizons: number[] } | { error: string } {
-  const tokens = text
-    .split(/[\s,;]+/)
-    .map((token) => token.trim())
-    .filter(Boolean);
-  if (tokens.length === 0 || tokens.length > MAX_HORIZONS) {
-    return { error: `Enter between 1 and ${MAX_HORIZONS} horizons in working days.` };
+/**
+ * Last day of the horizons track: the working days of the plan's window (a horizon beyond the deadline adds nothing),
+ * or the API limit when the plan has no deadline. At least 1, so there is always a day to pick.
+ */
+export function horizonTrackMax(parameters: Pick<PlanParameters, 'startDate' | 'deadline'>): number {
+  if (!parameters.deadline) {
+    return MAX_WORKING_DAYS;
   }
-  const values = tokens.map(Number);
-  if (values.some((value) => !Number.isInteger(value) || value < 1 || value > MAX_WORKING_DAYS)) {
-    return {
-      error: `Horizons must be whole numbers between 1 and ${MAX_WORKING_DAYS} working days.`,
-    };
+  const days = workingDaysBetween(parameters.startDate, parameters.deadline) ?? MAX_WORKING_DAYS;
+  return Math.min(MAX_WORKING_DAYS, Math.max(1, days));
+}
+
+/** A third, two thirds and the whole of the track (fewer on a very short track). */
+export function defaultHorizons(max: number): number[] {
+  return [...new Set([Math.round(max / 3), Math.round((max * 2) / 3), max])].filter((value) => value >= 1);
+}
+
+/** One more horizon in the middle of the widest gap (from day 0), while there are fewer than 5 and there is room. */
+export function addHorizon(horizons: readonly number[], max: number): number[] {
+  const sorted = [...horizons].sort((a, b) => a - b);
+  if (sorted.length >= MAX_HORIZONS) {
+    return sorted;
   }
-  return { horizons: [...new Set(values)].sort((a, b) => a - b) };
+  const bounds = [0, ...sorted];
+  let from = 0;
+  let to = 0;
+  for (let i = 1; i < bounds.length; i++) {
+    if (bounds[i] - bounds[i - 1] > to - from) {
+      from = bounds[i - 1];
+      to = bounds[i];
+    }
+  }
+  const middle = Math.round((from + to) / 2);
+  return middle > from && middle < to && middle <= max ? [...sorted, middle].sort((a, b) => a - b) : sorted;
 }
 
 /** The planner form defaults for a campaign: every enterprise weighted 1, all agents, per-agent plan. */
@@ -103,6 +124,23 @@ export const KPI_ROWS: readonly KpiRow[] = [
   { key: 'totalKm', label: 'Distance', better: 'lower', format: 'km' },
   { key: 'travelHours', label: 'Time on the road', better: 'lower', format: 'hours' },
 ];
+
+/** The value of a KPI row, in its unit ("395.000 €", "71%", "420,5 km"). */
+export function formatKpi(row: KpiRow, kpis: PlanKpis): string {
+  const value = Number(kpis[row.key]);
+  switch (row.format) {
+    case 'eur':
+      return formatEur(value, 'rounded');
+    case 'percent':
+      return formatPercent(value);
+    case 'km':
+      return `${formatDecimal(value)} km`;
+    case 'hours':
+      return `${formatDecimal(value)} h`;
+    default:
+      return String(value);
+  }
+}
 
 /**
  * For every KPI row, the column indexes of the scenarios with the best value (ties share the mark).

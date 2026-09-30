@@ -1,22 +1,27 @@
-import { Component, computed, effect, inject, input, resource, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArrowUpRight,
   lucideCalendarRange,
+  lucideChartBar,
   lucideGitCompare,
   lucideInfo,
+  lucidePlus,
+  lucideTable2,
   lucideTrash2,
   lucideTrendingUp,
+  lucideX,
 } from '@ng-icons/lucide';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
-import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
+import { HlmSliderImports } from '@spartan-ng/helm/slider';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
+import { HlmToggleGroupImports } from '@spartan-ng/helm/toggle-group';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import type {
   PlanKpis,
@@ -30,22 +35,26 @@ import {
   formatDate,
   formatDateTime,
   formatDecimal,
-  formatEur,
   formatPercent,
   minimumLoading,
   PageHeader,
   valueOf,
 } from '../../shared';
-import { DEFAULT_BASE } from './planner.model';
+import { DEFAULT_BASE, MAX_WORKING_DAYS } from './planner.model';
 import { PlannerService } from './planner.service';
+import { ScenarioBars } from './scenario-bars';
 import {
   KPI_ROWS,
   type KpiRow,
   bestColumns,
   coverageCurve,
   defaultParameters,
-  parseHorizons,
+  formatKpi,
+  addHorizon,
+  defaultHorizons,
+  horizonTrackMax,
 } from './scenario-compare.model';
+import { ScenariosView, ScenariosViewPreference } from './scenarios-view';
 
 /** Drawing box of the coverage curve (SVG user units; the element scales to its container). */
 const CHART = { width: 320, height: 120 } as const;
@@ -53,7 +62,6 @@ const CHART = { width: 320, height: 120 } as const;
 const CHART_PADDING = 22;
 /** Side-by-side columns stay readable up to this many scenarios. */
 const MAX_COMPARED = 4;
-const DEFAULT_HORIZONS = '20, 30, 40';
 
 /**
  * MAR-5: what-if analysis of one plan over several horizons (US-26) and side-by-side comparison of the
@@ -69,10 +77,12 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     HlmButtonImports,
     HlmCardImports,
     HlmFieldImports,
-    HlmInputImports,
     HlmNativeSelectImports,
     HlmSkeletonImports,
+    HlmSliderImports,
     HlmSpinnerImports,
+    HlmToggleGroupImports,
+    ScenarioBars,
     HlmTableImports,
     EurPipe,
   ],
@@ -80,10 +90,14 @@ const DEFAULT_HORIZONS = '20, 30, 40';
     provideIcons({
       lucideArrowUpRight,
       lucideCalendarRange,
+      lucideChartBar,
       lucideGitCompare,
       lucideInfo,
+      lucidePlus,
+      lucideTable2,
       lucideTrash2,
       lucideTrendingUp,
+      lucideX,
     }),
   ],
   templateUrl: './scenario-compare-page.html',
@@ -116,8 +130,13 @@ const DEFAULT_HORIZONS = '20, 30, 40';
 })
 export class ScenarioComparePage {
   readonly importId = input.required<string>();
+  /** `?analyse=<planId>`, e.g. from the toast after saving a scenario: that scenario is the plan to analyse. */
+  readonly analyse = input<string>();
 
   private readonly api = inject(PlannerService);
+  private readonly viewPreference = inject(ScenariosViewPreference);
+  /** The comparison as a table (default) or as bars; the choice is kept in this browser. */
+  protected readonly compareView = this.viewPreference.view;
   protected readonly id = computed(() => Number(this.importId()));
   protected readonly chart = CHART;
   protected readonly chartPadding = CHART_PADDING;
@@ -166,7 +185,16 @@ export class ScenarioComparePage {
 
   /** `campaign:<code>` for the planner defaults or `scenario:<id>` for a saved plan. */
   protected readonly source = signal('');
-  protected readonly horizonsText = signal(DEFAULT_HORIZONS);
+  /** Last day of the horizons track: the working days of the chosen plan's window. */
+  protected readonly trackMax = computed(() => {
+    const plan = this.baseParameters();
+    return plan ? horizonTrackMax(plan) : MAX_WORKING_DAYS;
+  });
+  /** The horizons to compare, sorted; they start again from the defaults when the window changes. */
+  protected readonly horizons = linkedSignal(() => defaultHorizons(this.trackMax()));
+  protected readonly canAddHorizon = computed(
+    () => addHorizon(this.horizons(), this.trackMax()).length > this.horizons().length,
+  );
   protected readonly whatIfError = signal<string | null>(null);
   protected readonly running = signal(false);
   protected readonly whatIf = signal<WhatIfResult | null>(null);
@@ -194,12 +222,27 @@ export class ScenarioComparePage {
         this.selectedIds.set(plans.slice(0, MAX_COMPARED).map((plan) => plan.id));
       }
     });
+    // First choice of the plan to analyse, once the campaigns and the scenarios are there: the scenario asked for
+    // in the link, else the first campaign's defaults.
     effect(() => {
       const campaigns = this.campaigns();
-      if (campaigns.length && !this.source()) {
+      const plans = valueOf(this.plansResource);
+      if (untracked(this.source) || (!plans && !this.plansResource.error())) {
+        return;
+      }
+      const asked = Number(this.analyse());
+      if (plans?.some((plan) => plan.id === asked)) {
+        this.source.set(`scenario:${asked}`);
+      } else if (campaigns.length) {
         this.source.set(`campaign:${campaigns[0].code}`);
       }
     });
+  }
+
+  protected setCompareView(value: unknown): void {
+    if (value === 'table' || value === 'chart') {
+      this.viewPreference.set(value satisfies ScenariosView);
+    }
   }
 
   protected setSource(value: string | null | undefined): void {
@@ -208,16 +251,19 @@ export class ScenarioComparePage {
     }
   }
 
-  protected setHorizons(event: Event): void {
-    this.horizonsText.set((event.target as HTMLInputElement).value);
+  protected setHorizons(values: number[]): void {
+    this.horizons.set([...new Set(values)].sort((a, b) => a - b));
+  }
+
+  protected addHorizon(): void {
+    this.horizons.update((horizons) => addHorizon(horizons, this.trackMax()));
+  }
+
+  protected removeHorizon(value: number): void {
+    this.horizons.update((horizons) => (horizons.length > 1 ? horizons.filter((item) => item !== value) : horizons));
   }
 
   protected async compareHorizons(): Promise<void> {
-    const parsed = parseHorizons(this.horizonsText());
-    if ('error' in parsed) {
-      this.whatIfError.set(parsed.error);
-      return;
-    }
     const base = this.baseParameters();
     if (!base) {
       this.whatIfError.set('Choose the plan to analyse.');
@@ -226,7 +272,7 @@ export class ScenarioComparePage {
     this.whatIfError.set(null);
     this.running.set(true);
     try {
-      this.whatIf.set(await this.api.whatIf(this.id(), { base, horizons: parsed.horizons }));
+      this.whatIf.set(await this.api.whatIf(this.id(), { base, horizons: this.horizons() }));
     } catch (error) {
       this.whatIfError.set(problemDetail(error));
     } finally {
@@ -272,19 +318,7 @@ export class ScenarioComparePage {
   }
 
   protected kpi(row: KpiRow, kpis: PlanKpis): string {
-    const value = Number(kpis[row.key]);
-    switch (row.format) {
-      case 'eur':
-        return formatEur(value, 'rounded');
-      case 'percent':
-        return formatPercent(value);
-      case 'km':
-        return `${formatDecimal(value)} km`;
-      case 'hours':
-        return `${formatDecimal(value)} h`;
-      default:
-        return String(value);
-    }
+    return formatKpi(row, kpis);
   }
 
   protected percent(value: number): string {

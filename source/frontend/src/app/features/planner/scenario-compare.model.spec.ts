@@ -3,8 +3,11 @@ import {
   KPI_ROWS,
   bestColumns,
   coverageCurve,
+  addHorizon,
+  defaultHorizons,
   defaultParameters,
-  parseHorizons,
+  formatKpi,
+  horizonTrackMax,
 } from './scenario-compare.model';
 
 const KPIS: PlanKpis = {
@@ -40,23 +43,28 @@ function scenario(id: number, kpis: Partial<PlanKpis>): PlanSummary {
   };
 }
 
-describe('parseHorizons', () => {
-  it('accepts up to five distinct horizons, sorted', () => {
-    expect(parseHorizons('40, 20 30')).toEqual({ horizons: [20, 30, 40] });
-    expect(parseHorizons('20;20,40')).toEqual({ horizons: [20, 40] });
+describe('horizons track', () => {
+  const christmas = { startDate: '2026-11-02', deadline: '2026-12-19' };
+
+  it('runs over the working days of the plan window, or up to the API limit without a deadline', () => {
+    expect(horizonTrackMax(christmas)).toBe(34);
+    expect(horizonTrackMax({ startDate: '2026-11-02', deadline: null })).toBe(260);
+    // A window without working days still leaves one day to pick.
+    expect(horizonTrackMax({ startDate: '2026-12-25', deadline: '2026-12-25' })).toBe(1);
   });
 
-  it('rejects empty input, non-integers, out-of-range values and more than five horizons', () => {
-    expect(parseHorizons('')).toEqual({ error: 'Enter between 1 and 5 horizons in working days.' });
-    expect(parseHorizons('1,2,3,4,5,6')).toEqual({
-      error: 'Enter between 1 and 5 horizons in working days.',
-    });
-    expect(parseHorizons('20, abc')).toEqual({
-      error: 'Horizons must be whole numbers between 1 and 260 working days.',
-    });
-    expect(parseHorizons('0, 300')).toEqual({
-      error: 'Horizons must be whole numbers between 1 and 260 working days.',
-    });
+  it('starts from a third, two thirds and the whole of the track', () => {
+    expect(defaultHorizons(34)).toEqual([11, 23, 34]);
+    expect(defaultHorizons(2)).toEqual([1, 2]);
+    expect(defaultHorizons(1)).toEqual([1]);
+  });
+
+  it('adds a horizon in the middle of the widest gap, up to five', () => {
+    expect(addHorizon([11, 23, 34], 34)).toEqual([11, 17, 23, 34]);
+    expect(addHorizon([34], 34)).toEqual([17, 34]);
+    expect(addHorizon([5, 10, 15, 20, 25], 34)).toEqual([5, 10, 15, 20, 25]);
+    // No room left on a one-day track.
+    expect(addHorizon([1], 1)).toEqual([1]);
   });
 });
 
@@ -122,5 +130,16 @@ describe('bestColumns', () => {
   it('has a row for the indicators shown side by side', () => {
     expect(KPI_ROWS.map((row) => row.key)).toContain('coveredRevenue');
     expect(KPI_ROWS.map((row) => row.key)).toContain('totalKm');
+  });
+});
+
+describe('formatKpi', () => {
+  it('writes each indicator in its unit', () => {
+    const value = (key: string) => formatKpi(KPI_ROWS.find((row) => row.key === key)!, KPIS);
+    expect(value('coveredRevenue')).toBe('395.000 €');
+    expect(value('coverage')).toBe('71%');
+    expect(value('plannedVisits')).toBe('40');
+    expect(value('totalKm')).toBe('420,5 km');
+    expect(value('travelHours')).toBe('21,9 h');
   });
 });

@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { toastState } from '@spartan-ng/brain/sonner';
 import type {
   AnalyticsSummary,
   GeocodingProgress,
@@ -11,6 +13,10 @@ import type {
   StartingBase,
 } from '../../core/models/api.models';
 import { PLAN_REVEAL_MS, PlannerPage } from './planner-page';
+
+/** Where the toast's action leads; the what-if page itself is tested in its own spec. */
+@Component({ template: '' })
+class ScenariosStub {}
 
 const BASE: StartingBase = {
   address: 'Via del Corso 300',
@@ -137,7 +143,10 @@ describe('PlannerPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter(
-          [{ path: 'imports/:importId/planner', component: PlannerPage }],
+          [
+            { path: 'imports/:importId/planner', component: PlannerPage },
+            { path: 'imports/:importId/scenarios', component: ScenariosStub },
+          ],
           withComponentInputBinding(),
         ),
       ],
@@ -391,8 +400,18 @@ describe('PlannerPage', () => {
     request.flush({ id: 7, name: 'Christmas priority' });
     await harness.fixture.whenStable();
     harness.detectChanges();
-    expect(text()).toContain('Scenario saved');
     await vi.waitFor(() => expect(dialog()).toBeNull());
+
+    // A toast confirms the save; its action opens the what-if page with this scenario as the plan to analyse.
+    const saved = toastState.toasts().find((item) => item.title === 'Scenario saved: Christmas priority');
+    expect(saved?.type).toBe('success');
+    // Up long enough to reach its action.
+    expect(saved?.duration).toBe(10_000);
+    const action = saved!.action as { label: string; onClick: (event: MouseEvent) => void };
+    expect(action.label).toBe('Analyse');
+    action.onClick(new MouseEvent('click'));
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/imports/42/scenarios?analyse=7');
   });
 
   const tab = (label: string) =>

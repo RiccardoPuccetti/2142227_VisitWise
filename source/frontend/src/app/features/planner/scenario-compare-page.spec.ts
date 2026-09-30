@@ -105,7 +105,7 @@ const SCENARIOS: PlanSummary[] = [
   },
 ];
 
-async function setup(scenarios: PlanSummary[]) {
+async function setup(scenarios: PlanSummary[], url = '/imports/42/scenarios') {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -118,7 +118,7 @@ async function setup(scenarios: PlanSummary[]) {
   });
   const http = TestBed.inject(HttpTestingController);
   const harness = await RouterTestingHarness.create();
-  await harness.navigateByUrl('/imports/42/scenarios');
+  await harness.navigateByUrl(url);
   http
     .expectOne((request) => request.url === '/api/planning/campaigns')
     .flush([
@@ -142,7 +142,11 @@ describe('ScenarioComparePage', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
 
-  afterEach(() => http.verify());
+  beforeEach(() => localStorage.clear());
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
 
   const page = () => harness.routeNativeElement as HTMLElement;
   const text = () => page().textContent?.replace(/\s+/g, ' ') ?? '';
@@ -150,11 +154,10 @@ describe('ScenarioComparePage', () => {
     Array.from(page().querySelectorAll('button')).find((item) =>
       item.textContent?.includes(label),
     ) as HTMLButtonElement;
-  const type = (selector: string, value: string) => {
-    const field = page().querySelector<HTMLInputElement>(selector)!;
-    field.value = value;
-    field.dispatchEvent(new Event('input'));
-  };
+  const chips = () =>
+    Array.from(page().querySelectorAll('[data-testid="whatif-horizon-chip"]')).map((chip) =>
+      chip.textContent?.replace(/\s+/g, ' ').trim(),
+    );
   const select = (selector: string, value: string) => {
     const field = page().querySelector<HTMLSelectElement>(selector)!;
     field.value = value;
@@ -170,16 +173,19 @@ describe('ScenarioComparePage', () => {
       expect(Array.from(source.options).map((option) => option.value)).toEqual([
         'campaign:CHRISTMAS',
       ]);
-      expect(page().querySelector<HTMLInputElement>('#whatif-horizons')!.value).toBe('20, 30, 40');
+      // The horizons are points on a track over the campaign's 34 working days: a third, two thirds, all of it.
+      const thumbs = page().querySelectorAll('[data-testid="whatif-horizons"] [role="slider"]');
+      expect(Array.from(thumbs).map((thumb) => thumb.getAttribute('aria-valuenow'))).toEqual(['11', '23', '34']);
+      expect(thumbs[0].getAttribute('aria-valuemax')).toBe('34');
+      expect(chips()).toEqual(['11 days', '23 days', '34 days']);
     });
 
-    it('compares the campaign defaults over the typed horizons and draws the coverage curve', async () => {
-      type('#whatif-horizons', '40, 20, 30');
+    it('compares the campaign defaults over the chosen horizons and draws the coverage curve', async () => {
       button('Compare horizons').click();
       TestBed.tick();
 
       const request = http.expectOne('/api/imports/42/plans/what-if');
-      expect(request.request.body.horizons).toEqual([20, 30, 40]);
+      expect(request.request.body.horizons).toEqual([11, 23, 34]);
       expect(request.request.body.base).toMatchObject({
         campaign: 'CHRISTMAS',
         startDate: '2026-11-02',
@@ -202,18 +208,52 @@ describe('ScenarioComparePage', () => {
       expect(page().querySelectorAll('[data-testid="whatif-curve"] circle').length).toBe(3);
     });
 
-    it('rejects invalid horizons without calling the API', () => {
-      type('#whatif-horizons', '0, 20');
-      button('Compare horizons').click();
-      TestBed.tick();
+    it('adds a horizon in the widest gap and removes horizons down to one', () => {
+      button('Add horizon').click();
       harness.detectChanges();
-      expect(text()).toContain('Horizons must be whole numbers between 1 and 260');
-      http.expectNone('/api/imports/42/plans/what-if');
+      expect(chips()).toEqual(['11 days', '17 days', '23 days', '34 days']);
+
+      for (const value of [11, 17, 23]) {
+        page().querySelector<HTMLButtonElement>(`button[aria-label="Remove ${value} days"]`)!.click();
+        harness.detectChanges();
+      }
+      expect(chips()).toEqual(['34 days']);
+      // The last horizon stays: the what-if needs at least one.
+      expect(page().querySelector<HTMLButtonElement>('button[aria-label="Remove 34 days"]')!.disabled).toBe(true);
+    });
+
+    it('stops adding horizons at five', () => {
+      button('Add horizon').click();
+      harness.detectChanges();
+      button('Add horizon').click();
+      harness.detectChanges();
+      expect(chips().length).toBe(5);
+      expect(button('Add horizon').disabled).toBe(true);
     });
   });
 
   describe('with saved scenarios', () => {
     beforeEach(async () => ({ http, harness } = await setup(SCENARIOS)));
+
+    it('compares in a table by default and switches to the bars on demand, remembering the choice', () => {
+      const view = (label: string) =>
+        Array.from(page().querySelectorAll<HTMLButtonElement>('[aria-label="Comparison view"] button')).find(
+          (item) => item.textContent?.trim() === label,
+        )!;
+      expect(page().querySelector('[data-testid="compare-table"]')).not.toBeNull();
+      expect(page().querySelector('app-scenario-bars')).toBeNull();
+
+      view('Chart').click();
+      harness.detectChanges();
+
+      expect(page().querySelector('[data-testid="compare-table"]')).toBeNull();
+      expect(page().querySelectorAll('app-scenario-bars [data-testid="kpi-bars"]').length).toBeGreaterThan(0);
+      expect(localStorage.getItem('visitwise-scenarios-view')).toBe('chart');
+    });
+
+    it('starts from the campaign defaults when no scenario is asked for', () => {
+      expect(page().querySelector<HTMLSelectElement>('select#whatif-source')!.value).toBe('campaign:CHRISTMAS');
+    });
 
     it('shows the selected scenarios side by side and marks the best value of each row', () => {
       const table = page().querySelector('[data-testid="compare-table"]')!;
@@ -332,6 +372,24 @@ describe('ScenarioComparePage before its data arrives', () => {
 
     expect(page().querySelector('[data-testid="scenarios-loading"]')).toBeNull();
     expect(page().querySelector('#whatif-title')).not.toBeNull();
+    http.verify();
+  });
+});
+
+describe('ScenarioComparePage opened from a saved scenario', () => {
+  it('sets the scenario named in the link as the plan to analyse', async () => {
+    const { http, harness } = await setup(SCENARIOS, '/imports/42/scenarios?analyse=8');
+    const source = (harness.routeNativeElement as HTMLElement).querySelector<HTMLSelectElement>('select#whatif-source')!;
+
+    expect(source.value).toBe('scenario:8');
+    http.verify();
+  });
+
+  it('keeps the campaign defaults when the linked scenario is not among the saved ones', async () => {
+    const { http, harness } = await setup(SCENARIOS, '/imports/42/scenarios?analyse=99');
+    const source = (harness.routeNativeElement as HTMLElement).querySelector<HTMLSelectElement>('select#whatif-source')!;
+
+    expect(source.value).toBe('campaign:CHRISTMAS');
     http.verify();
   });
 });

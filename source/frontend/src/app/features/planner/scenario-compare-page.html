@@ -47,9 +47,10 @@
         </p>
       </div>
       <div hlmCardContent class="flex flex-col gap-4">
-        <!-- One toolbar row: the fields and the button share the bottom line; the hint sits under the whole row. -->
+        <!-- One toolbar row: the plan, its horizons (points on a track over the plan's working days, their values as
+             chips below) and the button, level with the select and the track. -->
         <form
-          class="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+          class="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
           (submit)="$event.preventDefault(); compareHorizons()"
         >
           <div hlmField>
@@ -67,28 +68,65 @@
               }
             </hlm-native-select>
           </div>
-          <div hlmField>
-            <label hlmFieldLabel for="whatif-horizons">Horizons (working days)</label
-            ><input
-              hlmInput
-              id="whatif-horizons"
-              inputmode="numeric"
-              placeholder="20, 30, 40"
-              aria-describedby="whatif-horizons-hint"
-              [value]="horizonsText()"
-              (input)="setHorizons($event)"
+          <div hlmField data-testid="whatif-horizons">
+            <div class="flex items-baseline justify-between gap-3">
+              <span hlmFieldLabel id="whatif-horizons-label">Horizons (working days)</span>
+              <span class="text-muted-foreground text-xs tabular-nums">up to {{ trackMax() }} days</span>
+            </div>
+            <!-- Separate points, not a range: the fill between the first and the last point is hidden. -->
+            <hlm-slider
+              class="py-3.5 [&_[brnSliderRange]]:hidden"
+              aria-labelledby="whatif-horizons-label"
+              [min]="1"
+              [max]="trackMax()"
+              [minStepsBetweenThumbs]="1"
+              [value]="horizons()"
+              (valueChange)="setHorizons($event)"
             />
+            <ul class="flex flex-wrap items-center gap-2" aria-label="Chosen horizons">
+              @for (horizon of horizons(); track horizon) {
+                <li
+                  data-testid="whatif-horizon-chip"
+                  class="bg-muted inline-flex h-7 items-center gap-1 rounded-full ps-3 pe-1 text-sm tabular-nums"
+                >
+                  {{ horizon }} days
+                  <button
+                    type="button"
+                    class="hover:bg-background grid size-5 place-items-center rounded-full disabled:opacity-40"
+                    [attr.aria-label]="'Remove ' + horizon + ' days'"
+                    [disabled]="horizons().length === 1"
+                    (click)="removeHorizon(horizon)"
+                  >
+                    <ng-icon name="lucideX" class="text-xs" aria-hidden="true" />
+                  </button>
+                </li>
+              }
+              <li>
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="h-7 rounded-full"
+                  [disabled]="!canAddHorizon()"
+                  (click)="addHorizon()"
+                >
+                  <ng-icon name="lucidePlus" aria-hidden="true" /> Add horizon
+                </button>
+              </li>
+            </ul>
           </div>
-          <button hlmBtn type="submit" class="sm:col-span-2 lg:col-span-1" [disabled]="running()">
-            @if (running()) {
-              <hlm-spinner class="size-4" />
-            }
-            Compare horizons
-          </button>
+          <div hlmField>
+            <!-- Takes the height of the other labels, so the button lines up with the select and the track. -->
+            <span hlmFieldLabel class="invisible max-lg:hidden" aria-hidden="true">Compare</span>
+            <button hlmBtn type="submit" [disabled]="running()">
+              @if (running()) {
+                <hlm-spinner class="size-4" />
+              }
+              Compare horizons
+            </button>
+          </div>
         </form>
-        <p id="whatif-horizons-hint" class="text-muted-foreground -mt-1 text-xs">
-          Up to 5 horizons, separated by commas.
-        </p>
 
         @if (whatIfError()) {
           <p class="text-destructive text-sm" role="alert">{{ whatIfError() }}</p>
@@ -233,6 +271,22 @@
         <p hlmCardDescription>
           Tick up to {{ maxCompared }} scenarios to see them side by side. The best value of each row is highlighted.
         </p>
+        @if (scenarios().length) {
+          <div hlmCardAction>
+            <div
+              hlmToggleGroup
+              type="single"
+              variant="outline"
+              [nullable]="false"
+              [value]="compareView()"
+              (valueChange)="setCompareView($event)"
+              aria-label="Comparison view"
+            >
+              <button hlmToggleGroupItem value="table"><ng-icon name="lucideTable2" aria-hidden="true" /> Table</button>
+              <button hlmToggleGroupItem value="chart"><ng-icon name="lucideChartBar" aria-hidden="true" /> Chart</button>
+            </div>
+          </div>
+        }
       </div>
       <div hlmCardContent class="flex flex-col gap-4">
         @if (scenarioError()) {
@@ -309,7 +363,9 @@
               }
             </ul>
 
-            @if (compared().length) {
+            @if (compared().length && compareView() === 'chart') {
+              <app-scenario-bars [scenarios]="compared()" />
+            } @else if (compared().length) {
               <div hlmTableContainer class="rounded-2xl border">
                 <table hlmTable data-testid="compare-table">
                   <caption class="sr-only">Selected scenarios side by side</caption>
