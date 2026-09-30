@@ -2,8 +2,13 @@ import { Component, computed, input } from '@angular/core';
 import type { PlanSummary } from '../../core/models/api.models';
 import { bestColumns, formatKpi, KPI_ROWS } from './scenario-compare.model';
 
-/** Scenario colors, in the order of the compared scenarios. --chart-1 is the brand color, kept for the best value. */
-const SERIES = ['var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+/**
+ * Scenario colors, in the order of the compared scenarios: the chart tokens softened with the card color, so the bars
+ * stay calm beside the numbers. --chart-1 is the brand color, kept for the best value.
+ */
+const SERIES = ['--chart-2', '--chart-3', '--chart-4', '--chart-5'].map(
+  (token) => `color-mix(in oklab, var(${token}) 60%, var(--card))`,
+);
 
 /**
  * US-27: the compared scenarios as bars, one row per indicator, one bar per scenario scaled to the row's largest value;
